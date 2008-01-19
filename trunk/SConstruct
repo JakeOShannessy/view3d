@@ -17,7 +17,7 @@ srcs = Split("""
 
 env.Append(
 	CPPFLAGS=['-Wall']
-	,LIBS=['m','c']
+	,LIBS=['m']
 )
 
 prog = env.Program('view3d', srcs)
