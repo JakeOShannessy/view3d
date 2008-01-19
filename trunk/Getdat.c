@@ -15,6 +15,8 @@
 #include "view3d.h"
 #include "prtyp.h"
 
+#include "strcmpi.h"
+
 #define PI 3.141592653589793238
 #define deg2rad(x)  ((x)*PI/180.) /* angle: degrees -> radians */
 #define rad2deg(x)  ((x)*180./PI)  /* angle: radians -> degrees */
