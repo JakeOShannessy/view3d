@@ -477,9 +477,9 @@ I1 *IntStr( I4 i )
 
   }  /* end of IntStr */
 
-#include <conio.h>  /* prototype: _getch(MSC), getch(TC) */
 
 #if( _MSC_VER )   /* VISUAL C version */
+#include <conio.h>  /* prototype: _getch(MSC), getch(TC) */
 /***  GetKey.c  **************************************************************/
 
 IX GetKey( void )
@@ -493,6 +493,7 @@ IX GetKey( void )
   }  /* end GetKey */
 
 #elif( __TURBOC__ || __WATCOMC__ )
+#include <conio.h>  /* prototype: _getch(MSC), getch(TC) */
 /***  GetKey.c  **************************************************************/
 
 IX GetKey( void )
