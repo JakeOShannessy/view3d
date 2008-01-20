@@ -1,5 +1,5 @@
 
-version = '0.20080119'
+version = '0.20080121'
 
 env = Environment(
 	tools=['default','disttar']
