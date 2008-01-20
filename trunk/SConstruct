@@ -6,6 +6,19 @@ env = Environment(
 	,toolpath=['scons']
 )
 
+#-------------
+# OPTIONS
+
+opts = Options()
+
+opts.Add(BoolOption(
+	"DEBUG"
+	,"Debugging mode (for gdb symbols, plus extra output)"
+	,1
+))
+
+opts.Update(env)
+
 #------------
 # Create the program
 
@@ -19,6 +32,9 @@ env.Append(
 	CPPFLAGS=['-Wall']
 	,LIBS=['m']
 )
+
+if env.get('DEBUG'):
+	env.Append(CPPDEFINES=['_DEBUG'])
 
 prog = env.Program('view3d', srcs)
 
