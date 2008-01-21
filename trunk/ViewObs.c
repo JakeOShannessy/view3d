@@ -317,7 +317,7 @@ R8 V1AIpart( const IX nv, const VERTEX3D p2[],
 
   return sum;
 
-  }  /* end of V1AIpart
+  }  /* end of V1AIpart */
 
 /***  View1AI.c  *************************************************************/
 

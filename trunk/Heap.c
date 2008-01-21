@@ -126,7 +126,7 @@ void *Alc_E( I4 length, I1 *file, IX line )
   if( p == NULL )
     {
     MemNet( "Alc_E error" );
-    sprintf( _heapmsg, "Memory allocation failed for %u bytes\n", length );
+    sprintf( _heapmsg, "Memory allocation failed for %lu bytes\n", length );
     error( 3, file, line, _heapmsg, "" );
     }
 
@@ -584,7 +584,7 @@ void *Alc_V( IX min_index, I4 max_index, IX size, I1 *file, IX line )
 
   if( length < 1 )
     {
-    sprintf( _heapmsg, "Max index (%d) < min index (%d)",
+    sprintf( _heapmsg, "Max index (%ld) < min index (%d)",
       max_index, min_index );
     error( 3, file, line, _heapmsg, "" );
     }

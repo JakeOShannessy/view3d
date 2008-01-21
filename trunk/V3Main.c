@@ -281,7 +281,7 @@ IX main( IX argc, I1 **argv )
     time1 = CPUtime( time1 );
     if( time1 > 1 )
       {
-      sprintf( _string, "\n %.2f seconds to allocate %ld byte view factor matrix\n",
+      sprintf( _string, "\n %.2f seconds to allocate %d byte view factor matrix\n",
         time1, 4*(n+1)*n );
       fputs( _string, stderr );
       fputs( _string, _ulog );

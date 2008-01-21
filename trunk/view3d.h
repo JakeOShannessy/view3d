@@ -327,7 +327,7 @@ void DumpVA( I1 *title, const IX rows, const IX cols, R8 *a );
      /* post processing */
 IX DelNull( const IX nSrf, SRFDAT3D *srf, IX *base, IX *cmbn,
   R4 *emit, R4 *area, I1 **name, R8 **AF );
-void NormAF( const nSrf, const R4 *emit, const R4 *area, R8 **AF,
+void NormAF( const int nSrf, const R4 *emit, const R4 *area, R8 **AF,
   const R8 eMax, const IX itMax );
 IX Combine( const IX nSrf, const IX *cmbn, R4 *area, I1 **name, R8 **AF );
 void Separate( const IX nSrf, const IX *base, R4 *area, R8 **AF );
