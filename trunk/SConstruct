@@ -23,8 +23,8 @@ opts.Update(env)
 # Create the program
 
 srcs = Split("""
-	Ctrans.c  Heap.c  Polygn.c  SaveVF.c  V3Main.c  ViewObs.c  ViewUnob.c
-	Getdat.c  Misc.c  ReadVF.c  Test3D.c  View3D.c  ViewPP.c
+	ctrans.c  heap.c  polygn.c  savevf.c  v3main.c  viewobs.c  viewunob.c
+	getdat.c  misc.c  readvf.c  test3d.c  view3d.c  viewpp.c
 	strcmpi.c
 """)
 
