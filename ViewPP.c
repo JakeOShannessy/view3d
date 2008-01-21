@@ -164,7 +164,7 @@ void Separate( const IX nSrf, const IX *base, R4 *area, R8 **AF )
 /*    Normalize the view factors for an enclosure so that for each row i
  *    SUM(F[i,j]) = EMIT[i] and also AF(i,j) = AF(j,i) for all i, j.  */
 
-void NormAF( const nSrf, const R4 *emit, const R4 *area, R8 **AF,
+void NormAF( const int nSrf, const R4 *emit, const R4 *area, R8 **AF,
   const R8 eMax, const IX itMax )
 /*  nSrf; number of surfaces
  *  emit; surface emittances
@@ -245,7 +245,7 @@ void IntFac( const IX nSrf, const R4 *emit, const R4 *area, R8 **AF )
     {
     memset( w+1, 0, nSrf*sizeof(R8) );
     w[n] = -a[n];
-    LUSolveSymm( nSrf, AF, w );
+    LUSolveSymm( nSrf, (const R8**) AF, w );
     fwrite( w+1, sizeof(R8), nSrf, tmpf );
     }
   

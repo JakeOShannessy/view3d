@@ -466,7 +466,7 @@ IX IntCon( I1 *str, IX *i )
 I1 *IntStr( I4 i )
   {
   static I1 string[NMAX][12];  // strings long enough for 32-bit integers
-  static index=0;
+  static int index=0;
 
   if( ++index == NMAX )
     index = 0;

@@ -370,11 +370,11 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
     {
     fprintf( _ulog, "Average number of obstructions per pair:   %6.2f\n",
       (R8)nObstr / (R8)nAFwO );
-    fprintf( _ulog, "Adaptive viewpoint evaluations used:   %10u\n",
+    fprintf( _ulog, "Adaptive viewpoint evaluations used:   %10lu\n",
       vfCtrl->usedVObs );
-    fprintf( _ulog, "Adaptive viewpoint evaluations lost:   %10u\n",
+    fprintf( _ulog, "Adaptive viewpoint evaluations lost:   %10lu\n",
       vfCtrl->wastedVObs );
-    fprintf( _ulog, "Non-zero viewpoint evaluations:        %10u\n",
+    fprintf( _ulog, "Non-zero viewpoint evaluations:        %10lu\n",
       vfCtrl->totVpt );
 /***fprintf( _ulog, "Number of 1AI point-polygon evaluations: %8u\n",
       vfCtrl->totPoly );***/
