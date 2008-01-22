@@ -1,4 +1,4 @@
-/*subfile:  view3d.c  ********************************************************/
+/*subfile:  View3D.c  ********************************************************/
 
 #ifdef _DEBUG
 # define DEBUG 1
@@ -74,7 +74,7 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
   VECTOR3D vNM;    /* vector between centroids of srfN and srfM */
   R8 distNM;       /* distance between centroids of srfN and srfM */
   R8 minArea;      /* area of smaller surface */
-  UX nAF0=0,       /* number of AF which must equal 0 */
+  U4 nAF0=0,       /* number of AF which must equal 0 */
      nAFnO=0,      /* number of AF without obstructing surfaces */
      nAFwO=0,      /* number of AF with obstructing surfaces */
      nObstr=0;     /* total number of obstructions considered */
@@ -349,8 +349,8 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
     }  /* end of row N */
   fputc( '\n', stderr );
 
-  fprintf( _ulog, "\nSurface pairs where F(i,j) must be zero: %8u\n", nAF0 );
-  fprintf( _ulog, "\nSurface pairs without obstructed views:  %8u\n", nAFnO );
+  fprintf( _ulog, "\nSurface pairs where F(i,j) must be zero: %8lu\n", nAF0 );
+  fprintf( _ulog, "\nSurface pairs without obstructed views:  %8lu\n", nAFnO );
   bins[4][5] = bins[0][5] + bins[1][5] + bins[2][5] + bins[3][5];
   fprintf( _ulog, "   nd %7s %7s %7s %7s %7s\n",
     methods[0], methods[1], methods[2], methods[3], methods[4] );
@@ -365,8 +365,8 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
   ViewsInit( 4, 0 );
   fprintf( _ulog, "Adaptive line integral evaluations used: %8lu\n",
     vfCtrl->usedV1LIadapt );
-  fprintf( _ulog, "\nSurface pairs with obstructed views:   %10u\n", nAFwO );
-  if( nAFwO>0 )
+  fprintf( _ulog, "\nSurface pairs with obstructed views:   %10lu\n", nAFwO );
+  if( nAFwO > 0 )
     {
     fprintf( _ulog, "Average number of obstructions per pair:   %6.2f\n",
       (R8)nObstr / (R8)nAFwO );

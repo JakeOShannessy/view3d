@@ -1,4 +1,4 @@
-/*subfile:  ctrans.c  ********************************************************/
+/*subfile:  Ctrans.c  ********************************************************/
 
 #ifdef _DEBUG
 # define DEBUG 1
@@ -165,7 +165,7 @@ void CTRotateU( const DIRCOS *u, R8 t[4][4] )
  *  (Constants in row 4 are assumed; i.e., no perspective transformation.)
  */
 
-void CT3D( const IX nv, const R8 t[4][4], const VECTOR3D *p, VECTOR3D *q )
+void CT3D( const IX nv, R8 t[4][4], const VECTOR3D *p, VECTOR3D *q )
   {
   IX n;
 
@@ -270,13 +270,13 @@ void CoordTrans3D( SRFDAT3D *srf, SRFDATNM *srf1, SRFDATNM *srf2,
       z[n] = srfOT->v[n].z;
       if( z[n] > zmax )
         zmax = z[n];
-      if( z[n] < 0.0 ){
-        if( z[n] < eps ){    /* round-off errors for co-planar srfs */
+      if( z[n] < 0.0 )
+        {
+        if( z[n] < eps )    /* round-off errors for co-planar srfs */
           clip = 1;
-        }else{
+        else
           z[n]=0.0;
-		}
-	  }
+        }
       }
     srfOT->ztmax = zmax;
     if( clip )    /* this may never be needed for plane polygons */

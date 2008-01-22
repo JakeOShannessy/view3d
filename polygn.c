@@ -1,4 +1,4 @@
-/*subfile:  polygn.c  ********************************************************/
+/*subfile:  Polygn.c  ********************************************************/
 
 /* The functions in this file maintain:
  *   a stack of free vertex/edge structures,
@@ -546,7 +546,7 @@ void InitTmpVertMem( void )
 void InitPolygonMem( const R8 epsdist, const R8 epsarea )
   {
   if( _memPoly )  /* clear existing polygon structures data */
-    _memPoly = Clr_EC( _memPoly );
+    _memPoly = Clr_EC( _memPoly, __FILE__, __LINE__ );
   else            /* allocate polygon structures heap pointer */
     _memPoly = Alc_ECI( 8000, __FILE__, __LINE__ );
 
@@ -556,8 +556,8 @@ void InitPolygonMem( const R8 epsdist, const R8 epsarea )
   _nextFreePD = NULL;
   _nextUsedPD = NULL;
 #if( DEBUG > 1 )
-  fprintf( _ulog, "InitPolygonMem: epsDist %g epsArea %g\n",
-    _epsDist, _epsArea );
+  fprintf( _ulog, "InitPolygonMem: epsDist %g epsArea %g at [%p]\n",
+    _epsDist, _epsArea, _memPoly );
 #endif
 
   }  /* end InitPolygonMem */

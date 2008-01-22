@@ -1,4 +1,4 @@
-/*subfile:  view3d.h *********************************************************/
+/*subfile:  view3d.h  ********************************************************/
 /*  include file for the VIEW3D program */
 
 #include <string.h> /* prototype: memcpy */
@@ -229,8 +229,8 @@ void GetVS3Da( I1 **name, R4 *emit, IX *base, IX *cmbn,
   SRFDAT3D *srf, VERTEX3D *xyz, VFCTRL *vfCtrl );
 R8 VolPrism( VERTEX3D *a, VERTEX3D *b, VERTEX3D *c );
 void SetPlane( SRFDAT3D *srf );
-void ReportAF( const IX nSrf, const IX encl, const I1 *title, const I1 **name, 
-  const R4 *area, const R4 *emit, const IX *base, const R8 **AF, IX flag );
+void ReportAF( const IX nSrf, const IX encl, const I1 *title, I1 **name, 
+  const R4 *area, const R4 *emit, const IX *base, R8 **AF, IX flag );
 
      /* 3-D view factor functions */
 void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
@@ -242,10 +242,10 @@ IX errorf( IX severity, I1 *file, IX line, ... );
 R8 ViewUnobstructed( VFCTRL *vfCtrl, IX row, IX col );
 R8 View2AI( const IX nss1, const DIRCOS *dc1, const VERTEX3D *pt1, const R8 *area1,
             const IX nss2, const DIRCOS *dc2, const VERTEX3D *pt2, const R8 *area2 );
-R8 View2LI( const IX nd1, const IX nv1, const EDGEDCS *rc1, const EDGEDIV **dv1,
-  const IX nd2, const IX nv2, const EDGEDCS *rc2, const EDGEDIV **dv2 );
+R8 View2LI( const IX nd1, const IX nv1, const EDGEDCS *rc1, EDGEDIV **dv1,
+  const IX nd2, const IX nv2, const EDGEDCS *rc2, EDGEDIV **dv2 );
 R8 View1LI( const IX nd1, const IX nv1, const EDGEDCS *rc1,
-  const EDGEDIV **dv1, const VERTEX3D *v1, const IX nv2, const VERTEX3D *v2 );
+  EDGEDIV **dv1, const VERTEX3D *v1, const IX nv2, const VERTEX3D *v2 );
 R8 V1LIpart( const VERTEX3D *pp, const VERTEX3D *b0, const VERTEX3D *b1,
   const VECTOR3D *B, const R8 b2, IX *flag );
 R8 V1LIxact( const VERTEX3D *a0, const VERTEX3D *a1, const R8 a, 
@@ -327,13 +327,13 @@ void DumpVA( I1 *title, const IX rows, const IX cols, R8 *a );
      /* post processing */
 IX DelNull( const IX nSrf, SRFDAT3D *srf, IX *base, IX *cmbn,
   R4 *emit, R4 *area, I1 **name, R8 **AF );
-void NormAF( const int nSrf, const R4 *emit, const R4 *area, R8 **AF,
+void NormAF( const IX nSrf, const R4 *emit, const R4 *area, R8 **AF,
   const R8 eMax, const IX itMax );
 IX Combine( const IX nSrf, const IX *cmbn, R4 *area, I1 **name, R8 **AF );
 void Separate( const IX nSrf, const IX *base, R4 *area, R8 **AF );
 void IntFac( const IX nSrf, const R4 *emit, const R4 *area, R8 **AF );
 void LUFactorSymm( const IX neq, R8 **a );
-void LUSolveSymm( const IX neq, const R8 **a, R8 *b );
+void LUSolveSymm( const IX neq, R8 **a, R8 *b );
 void DAXpY( const IX n, const R8 a, const R8 *x, R8 *y );
 R8 DotProd( const IX n, const R8 *x, const R8 *y );
 

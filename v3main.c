@@ -1,4 +1,4 @@
-/*subfile:  v3main.c  ********************************************************/
+/*subfile:  V3Main.c  ********************************************************/
 
 /*  Main program for batch processing of 3-D view factors.  */
 
@@ -88,7 +88,7 @@ IX main( IX argc, I1 **argv )
   _ulog = fopen( fileName, "w" );
 #endif
   if( !_ulog )
-    error( 3, __FILE__, __LINE__, "Failed to open VIEW3D.LOG", "" );
+    error( 3, __FILE__, __LINE__, "Failed to open View3D.log", "" );
 
 #if( DEBUG > 0 )
   _echo = 1;
@@ -264,7 +264,7 @@ IX main( IX argc, I1 **argv )
     fputs( "\n", _ulog );
   fflush( _ulog );
 
-  if( vfCtrl.row )
+  if( vfCtrl.row )  // may not work with some compilers. GNW 2008/01/22
     {
     AF = Alc_MC( vfCtrl.row, vfCtrl.row, 1, nSrf0, sizeof(R8), __FILE__, __LINE__ );
     if( vfCtrl.col )
@@ -276,28 +276,23 @@ IX main( IX argc, I1 **argv )
     }
   else
     {
-    time1 = CPUtime( 0.0 );
+#ifdef __TURBOC__
     AF = Alc_MSR( 1, nSrf0, sizeof(R8), __FILE__, __LINE__ );
-    time1 = CPUtime( time1 );
-    if( time1 > 1 )
-      {
-      sprintf( _string, "\n %.2f seconds to allocate %d byte view factor matrix\n",
-        time1, 4*(n+1)*n );
-      fputs( _string, stderr );
-      fputs( _string, _ulog );
-      }
+#else
+    AF = Alc_MSC( 1, nSrf0, sizeof(R8), __FILE__, __LINE__ );
+#endif
     fprintf( stderr, "\nComputing view factors for all %d surfaces\n\n", nSrf0 );
     }
 
   if( _list>0 )
-    MemRem( "At start of View3D()" );
+    MemNet( "At start of View3D()" );
   time1 = CPUtime( 0.0 );
 
   View3D( srf, base, possibleObstr, AF, &vfCtrl );  /*** view factor calculation ***/
 
   fprintf( _ulog, "\n%7.2f seconds to compute view factors.\n", CPUtime(time1) );
   if( _list>0 )
-    MemRem( "At end of View3D()" );
+    MemNet( "At end of View3D()" );
 
   Fre_V( possibleObstr, 1, vfCtrl.nAllSrf, sizeof(IX), __FILE__, __LINE__ );
   FreeTmpVertMem();  /* free polygon overlap vertices */
@@ -451,7 +446,7 @@ IX main( IX argc, I1 **argv )
   else
     ReportAF( nSrf, encl, title, name, area, vtmp, base, AF, 0 );
 
-  CPUtime( 0.0 );
+  time1 = CPUtime( 0.0 );
   SaveVF( outFile, program, version, vfCtrl.outFormat, vfCtrl.enclosure,
           vfCtrl.emittances, nSrf, area, emit, AF, vtmp );
   sprintf( _string, "%7.2f seconds to write view factors.\n", CPUtime(time1) );
@@ -459,9 +454,9 @@ IX main( IX argc, I1 **argv )
   fputs( _string, _ulog );
 
 
+#ifdef XXX
   fprintf( _ulog, "\nFinal list of surfaces:\n" );
   fprintf( _ulog, "   #        name     area  emit\n" );
-#ifdef XXX
   for( n=1; n<=nSrf; n++ )
     fprintf( _ulog, "%4d %12s %8.3f %5.3f\n", n, name[n], area[n], emit[n] );
 #endif
@@ -470,7 +465,13 @@ FreeMemory:
   if( vfCtrl.row )
     Fre_MC( AF, vfCtrl.row, vfCtrl.row, 1, nSrf0, sizeof(R8), __FILE__, __LINE__ );
   else
+    {
+#ifdef __TURBOC__
     Fre_MSR( (void **)AF, 1, nSrf0, sizeof(R8), __FILE__, __LINE__ );
+#else
+    Fre_MSC( (void **)AF, 1, nSrf0, sizeof(R8), __FILE__, __LINE__ );
+#endif
+    }
   Fre_V( srf, 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
   Fre_V( cmbn, 1, nSrf0, sizeof(IX), __FILE__, __LINE__ );
   Fre_V( base, 1, nSrf0, sizeof(IX), __FILE__, __LINE__ );
@@ -478,7 +479,8 @@ FreeMemory:
   Fre_V( emit, 1, nSrf0, sizeof(R4), __FILE__, __LINE__ );
   Fre_V( area, 1, nSrf0, sizeof(R4), __FILE__, __LINE__ );
   Fre_MC( (void **)name, 1, nSrf0, 0, NAMELEN, sizeof(I1), __FILE__, __LINE__ );
-  MemRem( "After all calculations" );
+  if( MemNet("\nAfter all calculations") )
+    MemList();
 
   fprintf( _ulog, "\n%7.2f seconds for all calculations.\n", CPUtime(time0) );
   time(&bintime);
@@ -513,8 +515,8 @@ R8 VolPrism( VERTEX3D *a, VERTEX3D *b, VERTEX3D *c )
 
 /***  ReportAF.c  ************************************************************/
 
-void ReportAF( const IX nSrf, const IX encl, const I1 *title, const I1 **name,
-  const R4 *area, const R4 *emit, const IX *base, const R8 **AF, IX flag )
+void ReportAF( const IX nSrf, const IX encl, const I1 *title, I1 **name,
+  const R4 *area, const R4 *emit, const IX *base, R8 **AF, IX flag )
   {
   IX n;    /* row */
   IX m;    /* column */
