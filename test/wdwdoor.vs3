@@ -1,0 +1,50 @@
+T define windows and doors by subsurfaces and combined surfaces.
+C encl=0 list=2 eps=1.e-6
+F 3
+!  #   x    y    z
+V  1   0.   0.   0.   ! floor 
+V  2   6.   0.   0.
+V  3   6.   5.   0.
+V  4   0.   5.   0.
+V  5   0.   0.   3.   ! ceiling
+V  6   6.   0.   3.
+V  7   6.   5.   3.
+V  8   0.   5.   3.
+V  9   1.   0.   0.   ! y=0 door & window
+V 10   2.   0.   0.
+V 11   3.   0.   1.
+V 12   5.   0.   1.
+V 13   1.   0.   2.
+V 14   2.   0.   2.
+V 15   3.   0.   2.
+V 16   5.   0.   2.
+V 17   1.   5.   0.   ! y=5 door & window & wall
+V 18   2.   5.   0.
+V 19   3.   5.   0.
+V 20   5.   5.   0.
+V 21   3.   5.   1.
+V 22   5.   5.   1.
+V 23   0.   5.   2.
+V 24   1.   5.   2.
+V 25   2.   5.   2.
+V 26   3.   5.   2.
+V 27   5.   5.   2.
+V 28   6.   5.   2.
+V 29   3.   5.   3.
+!  #   v1  v2  v3  v4 base cmb emit  name
+S  1    1   2   3   4   0   0  0.90  z=0
+S  2    8   7   6   5   0   0  0.90  z=3
+S  3    1   4   8   5   0   0  0.90  x=0
+S  4    3   2   6   7   0   0  0.90  x=6
+S  5    5   6   2   1   0   0  0.90  y=0       ! wall with subsurfaces
+S  6   13  14  10   9   5   0  0.90  door:y=0  ! subsurface; base = 5
+S  7   15  16  12  11   5   0  0.90  wdw:y=0   ! subsurface; base = 5
+S  8    4  17  24  23   0   0  0.90  y=5       ! part of wall
+S  9   17  18  25  24   0   0  0.90  door:y=5  ! door
+S 10   21  22  27  26   0   0  0.90  wdw:y=5   ! window
+S 11   18  19  26  25   0   8  0.90  y=5       ! combine to create wall
+S 12   19  20  22  21   0   8  0.90  y=5
+S 13   20   3  28  27   0   8  0.90  y=5
+S 14   23  26  29   8   0   8  0.90  y=5
+S 15   26  28   7  29   0   8  0.90  y=5
+End of data
