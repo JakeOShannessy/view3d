@@ -9,7 +9,7 @@
 /* MEMTEST: 0 = no tests; 1 = test guard bytes;
  *          2 = test for leaks; 3 = log actions */
 #ifdef _DEBUG
-# define MEMTEST 3
+# define MEMTEST 2
 # define DEBUG 1
 #else
 # define MEMTEST 0
@@ -126,7 +126,7 @@ void *Alc_E( I4 length, I1 *file, IX line )
   if( p == NULL )
     {
     MemNet( "Alc_E error" );
-    sprintf( _heapmsg, "Memory allocation failed for %lu bytes\n", length );
+    sprintf( _heapmsg, "Memory allocation failed for %ld bytes\n", length );
     error( 3, file, line, _heapmsg, "" );
     }
 
@@ -221,7 +221,7 @@ void *Fre_E( void *pm, UX length, I1 *file, IX line )
  *  file;   name of file for originating call.
  *  line;   line in file. */
   {
-  U1 *p=(U1 *)pm;     // pointer to allocated memory
+  U1 *p=pm;     // pointer to allocated memory
 #if( MEMTEST > 1 )
   MEMLIST *pml, *pmlt=NULL;
 #endif
@@ -459,13 +459,16 @@ void *Alc_ECI( I4 size, I1 *file, IX line )
 
 /*  Check data blocks allocated by Alc_EC.  */
 
-void Chk_EC( I1 *block, I1 *file, IX line )
+void Chk_EC( void *block, I1 *file, IX line )
 /*  block;  pointer to current (last in list) memory block. */
   {
   IX status=0;
-  MEMBLOCK *mb;
+  MEMBLOCK *mb=block;
 
-  for( mb=(void *)block; mb->nextBlock; mb=mb->nextBlock )
+  for( ; mb->prevBlock; mb=mb->prevBlock )
+    ;  // guarantee mb at start of list
+
+  for( ; mb; mb=mb->nextBlock )  // loop to end of list
     {
     U1 *p = (void *)mb;
     U4 *pt = (U4 *)(p + mb->blockSize);
@@ -474,8 +477,8 @@ void Chk_EC( I1 *block, I1 *file, IX line )
       error( 2, file, line, "Overrun at end of data allocation", "" );
       status = 1;
       }
-    if( mb->dataOffset < sizeof(MEMBLOCK) ||
-        mb->dataOffset > mb->blockSize )
+    if( mb->dataOffset < sizeof(MEMBLOCK) ||  // smallest value of offset
+        mb->dataOffset > mb->blockSize )      // largest value of offset
       {
       error( 2, file, line, "Overrun before data allocation", "" );
       status = 1;
@@ -508,26 +511,27 @@ void Chk_EC( I1 *block, I1 *file, IX line )
 /*  Clear (but do not free) blocks allocated by Alc_EC.
  *  Return pointer to first block in linked list.  */
 
-void *Clr_EC( I1 *block )
+void *Clr_EC( void *block, I1 *file, IX line )
 /*  block;  pointer to current (last in list) memory block. */
   {
-  I1 *p;      /* pointer to the block */
-  MEMBLOCK *mb, *nb;
-  IX header=sizeof(MEMBLOCK);  // size of header data
+  U1 *p;      /* pointer to the block */
+  MEMBLOCK *mb=block;
 
-  for( mb=(void *)block; mb->nextBlock; mb=mb->nextBlock )
+#if( MEMTEST > 0 )
+  Chk_EC( mb, file, line );
+#endif
+
+  for( ; mb->nextBlock; mb=mb->nextBlock )
     ;  // guarantee mb at end of list
 
-  while( mb )
+  for( p=(void *)mb; mb; mb=mb->prevBlock )  // loop to start of list
     {
     p = (void *)mb;
-    nb = mb->prevBlock;
-    memset( p + header, 0, mb->blockSize - header );
-    mb->dataOffset = header;
-    mb = nb;
+    memset( p + sizeof(MEMBLOCK), 0, mb->blockSize - sizeof(MEMBLOCK) );
+    mb->dataOffset = sizeof(MEMBLOCK);
     }
 
-  return (void *)p;
+  return (void *)p;  // return start of linked list
 
   }  /*  end of Clr_EC  */
 
@@ -535,21 +539,24 @@ void *Clr_EC( I1 *block )
 
 /*  Free blocks allocated by Alc_EC.  */
 
-void *Fre_EC( I1 *block, I1 *file, IX line )
+void *Fre_EC( void *block, I1 *file, IX line )
 /*  block;  pointer to current memory block.
  *  file;   name of file for originating call.
  *  line;   line in file. */
   {
-  MEMBLOCK *mb, *nb;
+  MEMBLOCK *mb, *nb=block;
 
-  for( mb=(void *)block; mb->nextBlock; mb=mb->nextBlock )
+#if( MEMTEST > 0 )
+  Chk_EC( nb, file, line );
+#endif
+
+  for( mb=nb; mb->nextBlock; mb=mb->nextBlock )
     ;  // guarantee mb at end of list
 
-  while( mb )
+  for( ; mb; mb=nb )  // loop to start of list
     {
-    nb = mb->prevBlock;
+    nb=mb->prevBlock;
     Fre_E( mb, mb->blockSize, file, line );
-    mb = nb;
     }
 
   return (NULL);
@@ -833,6 +840,107 @@ void *Fre_MC( void *m, IX min_row_index, IX max_row_index, IX min_col_index,
 
   }  /*  end of Fre_MC  */
 
+/***  Alc_MSC.c  *************************************************************/
+
+/*  Allocate (contiguously) a symmertic matrix, M[i][j].
+ *  This matrix is accessed (and stored) in a triangular form:
+ *  +------------+------------+------------+------------+-------
+ *  | [i  ][i  ] |     -      |     -      |     -      |    - 
+ *  +------------+------------+------------+------------+-------
+ *  | [i+1][i  ] | [i+1][i+1] |     -      |     -      |    - 
+ *  +------------+------------+------------+------------+-------
+ *  | [i+2][i  ] | [i+2][i+1] | [i+2][i+2] |     -      |    - 
+ *  +------------+------------+------------+------------+-------
+ *  | [i+3][i  ] | [i+3][i+1] | [i+3][i+2] | [i+3][i+3] |    - 
+ *  +------------+------------+------------+------------+-------
+ *  |    ...     |    ...     |    ...     |    ...     |   ...
+ *  where i is the minimum array index (usually 0 or 1).
+ *  NOTE!  M[i][j] is valid when j <= i.  */
+
+void *Alc_MSC( IX min_index, IX max_index, IX size, I1 *file, IX line )
+/*  min_index;  minimum matrix index.
+ *  max_index;  maximum matrix index.
+ *  size;   size (bytes) of one data element.
+ *  file;   name of file for originating call.
+ *  line;   line in file. */
+  {  // prow - vector of pointers to rows of M
+  I1 **prow = (I1 **)Alc_V( min_index, max_index, sizeof(I1 *), file, line );
+
+     // pdata - vector of contiguous M[i][j] data values
+  IX nrow = max_index - min_index + 1;    // number of rows
+  IX nval = nrow * (nrow + 1) / 2;        // number of values
+  IX tot_index = min_index + nval - 1;    // max pdata index
+  I1 *pdata = (I1 *)Alc_V( min_index, tot_index, size, file, line );
+     // If nrow < 1, allocation of prow will fail with fatal error message. 
+
+  IX n, m;
+  prow[min_index] = pdata;
+  for( m=1,n=min_index+1; n<=max_index; n++ ) 
+    prow[n] = prow[n-1] + size*m++;  // set row pointers
+  
+  return ((void *)prow);
+
+  }  /*  end of Alc_MSC  */
+
+#if( MEMTEST > 0 )
+/***  Chk_MSC.c  *************************************************************/
+
+/*  Check a symmetric matrix allocated by Alc_MSC().  */
+
+void Chk_MSC( void *m, IX min_index, IX max_index, IX size, I1 *file, IX line )
+  {
+  IX nrow = max_index - min_index + 1;
+  IX nval = nrow * (nrow + 1) / 2;
+  IX tot_index = min_index + nval - 1;
+  I1 **prow = (I1 **)m;
+  I1 *pdata = prow[min_index];
+
+  Chk_V( pdata, min_index, tot_index, size, file, line );
+  Chk_V( prow, min_index, max_index, sizeof(I1 *), file, line );
+
+  }  /*  end of Chk_MSC  */
+#endif
+
+/***  Clr_MSC.c  *************************************************************/
+
+/*  Clear (zero all elements of) a symmetric matrix created by Alc_MSC( ).  */
+
+void Clr_MSC( void *m, IX min_index, IX max_index, IX size, I1 *file, IX line )
+  {
+  IX nrow = max_index - min_index + 1;
+  IX nval = nrow * (nrow + 1) / 2;
+  IX tot_index = min_index + nval - 1;
+  I1 **prow = (I1 **)m;
+  I1 *pdata = prow[min_index];
+
+  Clr_V( pdata, min_index, tot_index, size, file, line );
+
+#if( MEMTEST > 0 )
+  Chk_V( pdata, min_index, tot_index, size, file, line );
+#endif
+
+  }  /*  end of Clr_MSC  */
+
+/***  Fre_MSC.c  *************************************************************/
+
+/*  Free a symmertic matrix allocated by Alc_MSC.  */
+
+void *Fre_MSC( void *m, IX min_index, IX max_index, IX size, I1 *file, IX line )
+/*  v;      pointer to allocated vector. */
+  {
+  IX nrow = max_index - min_index + 1;
+  IX nval = nrow * (nrow + 1) / 2;
+  IX tot_index = min_index + nval - 1;
+  I1 **prow = (I1 **)m;
+  I1 *pdata = prow[min_index];
+
+  Fre_V( pdata, min_index, tot_index, size, file, line );
+  Fre_V( prow, min_index, max_index, sizeof(I1 *), file, line );
+
+  return (NULL);
+
+  }  /*  end of Fre_MSC  */
+
 /***  Alc_MSR.c  *************************************************************/
 
 /*  Allocate (by rows) a symmertic matrix.
@@ -935,250 +1043,4 @@ void *Fre_MSR( void *v, IX min_index, IX max_index, IX size, I1 *file, IX line )
   return (NULL);
 
   }  /*  end of Fre_MSR  */
-
-/***  DumpV_IX.c  ************************************************************/
-
-/*  Dump IX vector to FILE (with format control).  */
-
-void DumpV_IX( IX *v, IX jmin, IX jmax,
-  I1 *title, I1 *format, IX nmax, FILE *file )
-  {
-  IX j,  // vector index
-   n=0;  // number of values printed
-
-#if( DEBUG > 0 )
-  if( !v ) error( 3, __FILE__, __LINE__, "NULL vector for ", title, "" );
-  if( !file ) error( 3, __FILE__, __LINE__, "NULL file for ", title, "" );
-  if( !strchr( format, '%') ) error( 3, __FILE__, __LINE__,
-    "Invalid format [", format, "] for ", title, "" );
-#endif
-
-  fprintf( file, "%s [%d:%d]", title, jmin, jmax );  // header line
-  if( jmax-jmin+2 > nmax )
-    fprintf( file, "\n" );  // force data to next line
-  for( j=jmin; j<=jmax; j++ )
-    {
-    fprintf( file, format, v[j] );
-    if( ++n == nmax )  // nmax values per row
-      {
-      n = 0;
-      fprintf( file, "\n" );
-      }
-    }
-  if( n != 0 )  // terminate last line of values
-    fprintf( file, "\n" );
-#if( DEBUG > 0 )
-  fflush( file );
-#endif
-
-  }  /* end DumpV_IX */
-
-/***  DumpV_R4.c  ************************************************************/
-
-/*  Dump R4 vector to FILE (with format control).  */
-
-void DumpV_R4( R4 *v, IX jmin, IX jmax,
-  I1 *title, I1 *format, IX nmax, FILE *file )
-  {
-  IX j,  // vector index
-   n=0;  // number of values printed
-
-#if( DEBUG > 0 )
-  if( !v ) error( 3, __FILE__, __LINE__, "NULL vector for ", title, "" );
-  if( !file ) error( 3, __FILE__, __LINE__, "NULL file for ", title, "" );
-  if( !strchr( format, '%') ) error( 3, __FILE__, __LINE__,
-    "Invalid format [", format, "] for ", title, "" );
-#endif
-
-  fprintf( file, "%s [%d:%d]", title, jmin, jmax );  // header line
-  if( jmax-jmin+2 > nmax )
-    fprintf( file, "\n" );  // force data to next line
-  for( j=jmin; j<=jmax; j++ )
-    {
-    fprintf( file, format, v[j] );
-    if( ++n == nmax )  // nmax values per row
-      {
-      n = 0;
-      fprintf( file, "\n" );
-      }
-    }
-  if( n != 0 )  // terminate last line of values
-    fprintf( file, "\n" );
-#if( DEBUG > 0 )
-  fflush( file );
-#endif
-
-  }  /* end DumpV_R4 */
-
-/***  DumpV_R8.c  ************************************************************/
-
-/*  Dump R8 vector to FILE (with format control).  */
-
-void DumpV_R8( R8 *v, IX jmin, IX jmax,
-  I1 *title, I1 *format, IX nmax, FILE *file )
-  {
-  IX j,  // vector index
-   n=0;  // number of values printed
-
-#if( DEBUG > 0 )
-  if( !v ) error( 3, __FILE__, __LINE__, "NULL vector for ", title, "" );
-  if( !file ) error( 3, __FILE__, __LINE__, "NULL file for ", title, "" );
-  if( !strchr( format, '%') ) error( 3, __FILE__, __LINE__,
-    "Invalid format [", format, "] for ", title, "" );
-#endif
-
-  fprintf( file, "%s [%d:%d]", title, jmin, jmax );  // header line
-  if( jmax-jmin+2 > nmax )
-    fprintf( file, "\n" );  // force data to next line
-  for( j=jmin; j<=jmax; j++ )
-    {
-    fprintf( file, format, v[j] );
-    if( ++n == nmax )  // nmax values per row
-      {
-      n = 0;
-      fprintf( file, "\n" );
-      }
-    }
-  if( n != 0 )  // terminate last line of values
-    fprintf( file, "\n" );
-#if( DEBUG > 0 )
-  fflush( file );
-#endif
-
-  }  /* end DumpV_R8 */
-
-/***  DumpM_IX.c  ************************************************************/
-
-/*  Dump IX matrix to FILE (with format control).  */
-
-void DumpM_IX( IX **v, IX rmin, IX rmax, IX cmin, IX cmax, 
-  I1 *title, I1 *format, IX nmax, FILE *file )
-  {
-  IX i,  // row index
-     j,  // column index
-     n;  // number of values printed - current row
-
-#if( DEBUG > 0 )
-  if( !v ) error( 3, __FILE__, __LINE__, "NULL vector for ", title, "" );
-  if( !file ) error( 3, __FILE__, __LINE__, "NULL file for ", title, "" );
-  if( !strchr( format, '%') ) error( 3, __FILE__, __LINE__,
-    "Invalid format [", format, "] for ", title, "" );
-#endif
-
-  fprintf( file, "%s [%d:%d][%d:%d]\nrow %2d:",
-    title, rmin, rmax, cmin, cmax, rmin );  // matrix header
-  for( i=rmin; i<=rmax; i++ )
-    {
-    n = 0;
-    for( j=cmin; j<=cmax; j++ )
-      {
-      fprintf( file, format, v[i][j] );
-      if( ++n == nmax )  // nmax values per row
-        {
-        n = 0;
-        fprintf( file, "\n" );
-        if( j < cmax )
-          fprintf( file, "       " );
-        }
-      }
-    if( n != 0 )  // terminate line of values
-      fprintf( file, "\n" );
-    if( i < rmax )     // next row header
-      fprintf( file, "row %2d:", i+1 );
-    }
-#if( DEBUG > 0 )
-  fflush( file );
-#endif
-
-  }  /* end DumpM_IX */
-
-/***  DumpM_R4.c  ************************************************************/
-
-/*  Dump R4 matrix to FILE (with format control).  */
-
-void DumpM_R4( R4 **v, IX rmin, IX rmax, IX cmin, IX cmax, 
-  I1 *title, I1 *format, IX nmax, FILE *file )
-  {
-  IX i,  // row index
-     j,  // column index
-     n;  // number of values printed - current row
-
-#if( DEBUG > 0 )
-  if( !v ) error( 3, __FILE__, __LINE__, "NULL vector for ", title, "" );
-  if( !file ) error( 3, __FILE__, __LINE__, "NULL file for ", title, "" );
-  if( !strchr( format, '%') ) error( 3, __FILE__, __LINE__,
-    "Invalid format [", format, "] for ", title, "" );
-#endif
-
-  fprintf( file, "%s [%d:%d][%d:%d]\nrow %2d:",
-    title, rmin, rmax, cmin, cmax, rmin );  // matrix header
-  for( i=rmin; i<=rmax; i++ )
-    {
-    n = 0;
-    for( j=cmin; j<=cmax; j++ )
-      {
-      fprintf( file, format, v[i][j] );
-      if( ++n == nmax )  // nmax values per row
-        {
-        n = 0;
-        fprintf( file, "\n" );
-        if( j < cmax )
-          fprintf( file, "       " );
-        }
-      }
-    if( n != 0 )  // terminate line of values
-      fprintf( file, "\n" );
-    if( i < rmax )     // next row header
-      fprintf( file, "row %2d:", i+1 );
-    }
-#if( DEBUG > 0 )
-  fflush( file );
-#endif
-
-  }  /* end DumpM_R4 */
-
-/***  DumpM_R8.c  ************************************************************/
-
-/*  Dump R8 matrix to FILE (with format control).  */
-
-void DumpM_R8( R8 **v, IX rmin, IX rmax, IX cmin, IX cmax, 
-  I1 *title, I1 *format, IX nmax, FILE *file )
-  {
-  IX i,  // row index
-     j,  // column index
-     n;  // number of values printed - current row
-
-#if( DEBUG > 0 )
-  if( !v ) error( 3, __FILE__, __LINE__, "NULL vector for ", title, "" );
-  if( !file ) error( 3, __FILE__, __LINE__, "NULL file for ", title, "" );
-  if( !strchr( format, '%') ) error( 3, __FILE__, __LINE__,
-    "Invalid format [", format, "] for ", title, "" );
-#endif
-
-  fprintf( file, "%s [%d:%d][%d:%d]\nrow %2d:",
-    title, rmin, rmax, cmin, cmax, rmin );  // matrix header
-  for( i=rmin; i<=rmax; i++ )
-    {
-    n = 0;
-    for( j=cmin; j<=cmax; j++ )
-      {
-      fprintf( file, format, v[i][j] );
-      if( ++n == nmax )  // nmax values per row
-        {
-        n = 0;
-        fprintf( file, "\n" );
-        if( j < cmax )
-          fprintf( file, "       " );
-        }
-      }
-    if( n != 0 )  // terminate line of values
-      fprintf( file, "\n" );
-    if( i < rmax )     // next row header
-      fprintf( file, "row %2d:", i+1 );
-    }
-#if( DEBUG > 0 )
-  fflush( file );
-#endif
-
-  }  /* end DumpM_R8 */
 

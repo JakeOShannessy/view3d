@@ -72,6 +72,7 @@ void PtrXchg( void **p1, void **p2 );
 I1 *strctr( I1 *s, IX n );
 I1 *strcpys( I1 *s, const IX mx, ...  );
 IX streql( I1 *s1, I1 *s2 );
+IX streqli( I1 *s1, I1 *s2 );
 
      /* functions in heap.c */
 void *Alc_E( I4 length, I1 *file, IX line );
@@ -83,9 +84,9 @@ void MemRem( I1 *msg );
 
 void *Alc_EC( I1 **block, I4 size, I1 *file, IX line );
 void *Alc_ECI( I4 size, I1 *, IX );
-void Chk_EC( I1 *block, I1 *, IX );
-void *Clr_EC( I1 *block );
-void *Fre_EC( I1 *block, I1 *, IX );
+void Chk_EC( void *block, I1 *, IX );
+void *Clr_EC( void *block, I1 *, IX );
+void *Fre_EC( void *block, I1 *, IX );
 
 void *Alc_V( IX min_index, I4 max_index, IX size, I1 *file, IX line );
 void Chk_V( void *, IX, IX, IX, I1 *, IX );
@@ -116,6 +117,7 @@ void *Fre_MSC( void *m, IX, IX, IX, I1 *, IX );
 
 void *Alc_MSR( IX min_index, IX max_index, IX size, I1 *file, IX line );
 void Chk_MSR( void *m, IX, IX, IX, I1 *, IX );
+void Clr_MSR( void *m, IX, IX, IX, I1 *, IX );
 void *Fre_MSR( void *m, IX, IX, IX, I1 *, IX );
 
 void *Alc_MVC( IX min_index, IX max_index, IX *elements, IX size,

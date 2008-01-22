@@ -1,4 +1,4 @@
-/*subfile:  viewunob.c  ******************************************************/
+/*subfile:  ViewUnob.c  ******************************************************/
 
 /*  Compute unobstructed view factors  */
 
@@ -95,7 +95,7 @@ R8 ViewUnobstructed( VFCTRL *vfCtrl, IX row, IX col )
       {
       AF0 = AF1;
       DivideEdges( nDiv, srf1->nv, srf1->v, _rc1, _dv1 );
-      AF1 = View1LI( nDiv, srf1->nv, _rc1, (const EDGEDIV **)_dv1, srf1->v, srf2->nv, srf2->v );
+      AF1 = View1LI( nDiv, srf1->nv, _rc1, _dv1, srf1->v, srf2->nv, srf2->v );
 #if( DEBUG > 1 )
       fprintf( _ulog, " %g", AF1 );
 #endif
@@ -112,7 +112,7 @@ R8 ViewUnobstructed( VFCTRL *vfCtrl, IX row, IX col )
       AF0 = AF1;
       DivideEdges( nDiv, srf1->nv, srf1->v, _rc1, _dv1 );
       DivideEdges( nDiv, srf2->nv, srf2->v, _rc2, _dv2 );
-      AF1 = View2LI( nDiv, srf1->nv, _rc1, (const EDGEDIV **)_dv1, nDiv, srf2->nv, _rc2, (const EDGEDIV **)_dv2 );
+      AF1 = View2LI( nDiv, srf1->nv, _rc1, _dv1, nDiv, srf2->nv, _rc2, _dv2 );
 #if( DEBUG > 1 )
       fprintf( _ulog, " %g", AF1 );
 #endif
@@ -194,8 +194,8 @@ R8 View2AI( const IX nss1, const DIRCOS *dc1, const VERTEX3D *pt1, const R8 *are
  *  Both surfaces described by directions cosines of edges and 
  *  subdivisions of those edges for numerical integration.  */
 
-R8 View2LI( const IX nd1, const IX nv1, const EDGEDCS *rc1, const EDGEDIV **dv1,
-            const IX nd2, const IX nv2, const EDGEDCS *rc2, const EDGEDIV **dv2 )
+R8 View2LI( const IX nd1, const IX nv1, const EDGEDCS *rc1, EDGEDIV **dv1,
+            const IX nd2, const IX nv2, const EDGEDCS *rc2, EDGEDIV **dv2 )
 /* nd1 - number of edge divisions of polygon 1.
  * nv1 - number of vertices/edges of polygon 1.
  * rc1 - vector of direction cosines of edges of polygon 1.
@@ -250,7 +250,7 @@ R8 View2LI( const IX nd1, const IX nv1, const EDGEDCS *rc1, const EDGEDIV **dv1,
  *  Surface 2 described by its vertices.  */
 
 R8 View1LI( const IX nd1, const IX nv1, const EDGEDCS *rc1,
-  const EDGEDIV **dv1, const VERTEX3D *v1, const IX nv2, const VERTEX3D *v2 )
+  EDGEDIV **dv1, const VERTEX3D *v1, const IX nv2, const VERTEX3D *v2 )
 /* nd1 - number of edge divisions of polygon 1.
  * nv1 - number of vertices/edges of polygon 1.
  * rc1 - vector of direction cosines of edges of polygon 1.
@@ -408,14 +408,14 @@ R8 V1LIadapt( VERTEX3D Pold[3], R8 dFold[3], R8 h, const VERTEX3D *b0,
   h *= 0.5;
   F5 = h * (dF[0] + 4.0*dF[1] + 2.0*dF[2] + 4.0*dF[3] + dF[4]);
 
-  if( fabs( F5 - F3 ) > vfCtrl->epsAF ){    /* test convergence */
-    if( ++level > vfCtrl->maxRecursALI ){   /* limit maximum recursions */
+  if( fabs( F5 - F3 ) > vfCtrl->epsAF )    /* test convergence */
+    {
+    if( ++level > vfCtrl->maxRecursALI )   /* limit maximum recursions */
       vfCtrl->failViewALI = 1;
-    }else{             /* one more level of adaptive integration */
+    else             /* one more level of adaptive integration */
       F5 = V1LIadapt( P+0, dF+0, h, b0, b1, B, b2, level, vfCtrl )
          + V1LIadapt( P+2, dF+2, h, b0, b1, B, b2, level, vfCtrl );
-	}
-  }
+    }
 
   return F5;
 

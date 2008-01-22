@@ -2,22 +2,25 @@
 
 /*    utility functions   */
 
+#ifdef _DEBUG
+#  define DEBUG 1
+#else
+#  define DEBUG 0
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdarg.h> /* variable argument list macro definitions */
-#include "types.h"  /* define U1, I2, etc.  */
-#include "prtyp.h"  /* miscellaneous function prototypes */
+#include <stdarg.h> // variable argument list macro definitions
+#include "types.h"  // define U1, I2, etc.
+#include "prtyp.h"  // miscellaneous function prototypes
 
-extern FILE *_ulog;   /* LOG output file */
-extern I1 _string[LINELEN];  /* buffer for ReadXX(); helps debugging */
+extern FILE *_ulog;  // LOG output file
+extern I1 _string[LINELEN];  // buffer for ReadXX(); helps debugging
 
-#define NMAX 4        /* maximum number of calls to xxxStr at one time */
-#if( __TURBOC__ )
-# define BIGBUF 1     /* Control buffering in NxtWrd() and FileCopy() */
-#else                 /* size of large buffer; >= 5120 to be useful */
-# define BIGBUF 5120
-#endif
+#define NMAX 4      // maximum number of calls to xxxStr at one time
+#define NXTBUF 1    // buffer size (if > 1023)
+#define ANSIC 1     // 1 to use only ANSI C code for Path functions
 
 IX _emode=1;   /* error message mode: 0=logFile, 1=DOS console, 2=Windows */
 
@@ -100,9 +103,6 @@ IX error( IX severity, I1 *file, IX line, ... )
       errora( head[severity], message, source );
     if( severity>2 )
       {
-#ifdef _DEBUG
-      Pause();  // hold screen (stdout) display
-#endif
       if( _ulog )
         fclose( _ulog );  // exit() closes files
       exit( 1 );
@@ -133,44 +133,6 @@ I1 *sfname( I1* fullpath )
   return name;
 
   }  /* end sfname */
-
-/***  LogNote.c  *************************************************************/
-
-/*  Note to .LOG file for non-interactive debugging.
- *  Unlike error() there is no message to the console.  */
-
-void LogNote( I1 *file, IX line, ... )
-/* file;      file name: __FILE__
- * line;      line number: __LINE__
- * ...;       string variables (up to LINELEN characters total) */
-  {
-  if( _ulog )
-    {
-    I1 message[LINELEN]; /* merged message */
-    I1 name[32];         /* short file name */
-    va_list argp;        /* variable argument list */
-    I1 start[]=" ";      /* leading blank in message */
-    I1 *msg, *s;
-    IX n=1;
-
-    msg = start;   /* merge message strings */
-    s = message;
-    va_start( argp, line );
-    while( *msg && n<LINELEN )
-      {
-      while( *msg && n++<LINELEN )
-        *s++ = *msg++;
-      msg = (I1 *)va_arg( argp, I1 * );
-      }
-    *s = '\0';
-    va_end( argp );
-
-    PathSplit( file, NULL, 0, NULL, 0, name, sizeof(name), NULL, 0 );
-    fprintf( _ulog, "%s (file %s, line %d)\n", message, name, line );
-    fflush( _ulog );
-    }
-
-  }  /*  end LogNote  */
 
 #if( __GNUC__ )
 #include <unistd.h> // prototypes: getcwd
@@ -329,10 +291,10 @@ void PathSplit( I1 *fullpath, I1 *drv, IX szd, I1 *path, IX szp,
     {
     n = 0;
     if( p )  // p = last period in fullpath
-      while( c<p && n<sze )
+      while( c<p && n<szn )
         name[n++] = *c++;
     else     // no period in/after name
-      while( *c && n<sze )
+      while( *c && n<szn )
         name[n++] = *c++;
     if( n == szn )
       { errorc( 2, "pathsplit: file name overrun" ); n--; }
@@ -396,209 +358,6 @@ void PathCWD( I1 *path, IX szp )
 #endif
 
   }  /* end PathCWD */
-
-#include <limits.h> /* define: SHRT_MAX, SHRT_MIN */
-
-/***  LongCon.c  *************************************************************/
-
-/*  Use ANSI functions to convert a \0 terminated string to a long integer.
- *  Return 1 if string is invalid, 0 if valid.
- *  Global errno will indicate overflow.
- *  Used in place of atol() because of error processing.  */
-
-IX LongCon( I1 *str, I4 *i )
-  {
-  I1 *endptr;
-  I4 value;
-  IX eflag=0;
-#if( !__GNUC__)
-  extern IX errno;
-  errno = 0;
-#endif
-
-  endptr = str;
-  value = strtol( str, &endptr, 0 );
-  if( *endptr ) eflag = 1;
-#if( !__GNUC__)
-  if( errno ) eflag = 1;
-#endif
-
-  if( eflag )
-    *i = 0L;
-  else
-    *i = value;
-  return eflag;
-  
-  }  /* end of LongCon */
-
-/***  IntCon.c  **************************************************************/
-
-/*  Use ANSI functions to convert a \0 terminated string to a short integer.
- *  Return 1 if string is invalid, 0 if valid.
- *  Short integers are in the range -32767 to +32767 (INT_MIN to INT_MAX).
- *  Used in place of atoi() because of error processing.  */
-
-IX IntCon( I1 *str, IX *i )
-  {
-  I4 value;    /* compute result in long integer, then chop */
-  IX eflag=0;
-
-  if( LongCon( str, &value ) ) eflag = 1;
-  if( value > SHRT_MAX ) eflag = 1;
-  if( value < SHRT_MIN ) eflag = 1;
-
-  if( eflag )
-    *i = 0;
-  else
-    *i = (IX)value;
-  return eflag;
-  
-  }  /* end of IntCon */
-
-/***  IntStr.c  **************************************************************/
-
-/*  Convert an integer to a string of characters.
- *  Can handle short or long integers by conversion to long.
- *  Static variables required to retain results in calling function.
- *  NMAX allows up to NMAX calls to IntStr() in one statement. 
- *  Replaces nonstandard ITOA & LTOA functions for radix 10.  */
-
-I1 *IntStr( I4 i )
-  {
-  static I1 string[NMAX][12];  // strings long enough for 32-bit integers
-  static int index=0;
-
-  if( ++index == NMAX )
-    index = 0;
-
-  sprintf( string[index], "%ld", i );
-
-  return string[index];
-
-  }  /* end of IntStr */
-
-
-#if( _MSC_VER )   /* VISUAL C version */
-#include <conio.h>  /* prototype: _getch(MSC), getch(TC) */
-/***  GetKey.c  **************************************************************/
-
-IX GetKey( void )
-  {
-  IX c = _getch();       /* <conio.h> read keystroke */
-  if( !c )               /* function & arrow characters above 127 */
-    c = 128 + _getch();
-
-  return c;
-
-  }  /* end GetKey */
-
-#elif( __TURBOC__ || __WATCOMC__ )
-#include <conio.h>  /* prototype: _getch(MSC), getch(TC) */
-/***  GetKey.c  **************************************************************/
-
-IX GetKey( void )
-  {
-  IX c = getch();        /* <conio.h> read keystroke */
-  if( !c )               /* function & arrow characters above 127 */
-    c = 128 + getch();
-
-  return c;
-
-  }  /* end GetKey */
-
-#else
-/***  GetKey.c  **************************************************************/
-
-IX GetKey( void )
-  {
-  IX c = getchar();  // ANSI, requies ENTER key also
-
-  return c;
-
-  }  /* end GetKey */
-#endif
-
-/***  GetStr.c  **************************************************************/
-
-/*  Get a string from the keyboard (user).  */
-
-I1 *GetStr( I1 *prompt, I1 *str )
-  {
-  if( prompt[0] )
-    {
-    fputs( prompt, stderr );
-    fputs( ": ", stderr );
-    }
-  if( !gets( str ) )
-    error( 3, __FILE__, __LINE__, "Failed to process input", "" );
-
-  return str;
-
-  }  /* end GetStr */
-
-/***  NoYes.c  ***************************************************************/
-
-/*  Obtain n/y response to query.  NO returns 0; YES returns 1.  */
-
-IX NoYes( I1 *question )
-  {
-  IX i = -1;
-
-  while( i == -1 )
-    {
-    IX response;
-         /* print input prompt */
-    fputs( question, stderr );
-    fputs( "? (y/n)  ", stderr );
-
-         /* get user response */
-    response = GetKey();
-#if( _MSC_VER || __TURBOC__ || __WATCOMC__ )
-    fputc( response, stderr );
-    fputc( '\n', stderr );
-#endif
-
-         /* process user response */
-    switch( response )
-      {
-      case 'y':
-      case 'Y':
-      case '1':
-        i = 1;
-        break;
-      case 'n':
-      case 'N':
-      case '0':
-        i = 0;
-        break;
-      default:
-        fputs( " Valid responses are:  y or Y for yes, n or N for no.\n", stderr);
-      }
-    }  /* end while loop */
-
-  return i;
-
-  }  /*  end NoYes  */
-
-/***  Pause.c  ***************************************************************/
-
-/*  Wait for user response before continuing.  */
-
-void Pause( void )
-  {
-#if( _MSC_VER || __TURBOC__ || __WATCOMC__ )
-  fputs( "Press any key to continue...", stderr );
-#else
-  fputs( "Press the ENTER key to continue...", stderr );
-#endif
-
-  GetKey();   /* wait for user response */
-
-#if( _MSC_VER || __TURBOC__ || __WATCOMC__ )
-  fputc( '\n', stderr );
-#endif
-
-  }  /*  end Pause  */
 
 extern FILE *_unxt;   /* NXT input file */
 extern IX _echo;      /* if true, echo NXT input file */
@@ -710,9 +469,13 @@ I1 *NxtWord( I1 *str, IX flag, IX maxlen )
     if( c != '\n' )  // last call did not end at EOL; ready to read next char.
       {                // would miss first char if reading first line of file.
       if( flag == 2 )
+        {
+        if( ftell( _unxt) == 1 ) // 2008/01/16
+          ungetc( c, _unxt );  // restore first char of first line
         NxtLine( str, maxlen );  // read to EOL filling buffer
+        }
       else
-        NxtLine( str, 0 );  // skip to EOL
+        NxtLine( str, 0 );       // skip to EOL; fix size 2008/01/16
         // if flag = 1; continue to read first word on next line
       }
     if( flag > 1 )
@@ -735,7 +498,7 @@ I1 *NxtWord( I1 *str, IX flag, IX maxlen )
       return str;
       }
     }
-  else
+  else  // flag == 0
     {
 #ifdef _DEBUG
     if( flag < 0 )
@@ -810,52 +573,6 @@ I1 *NxtWord( I1 *str, IX flag, IX maxlen )
   }  /* end NxtWord */
 
 #include <float.h>  /* define: FLT_MAX, FLT_MIN */
-
-/***  ReadR8.c  **************************************************************/
-
-R8 ReadR8( IX flag )
-  {
-  R8 value;
-
-  NxtWord( _string, flag, sizeof(_string) );
-  if( DblCon( _string, &value ) )
-    error( 2, __FILE__, __LINE__, _string, " is not a (valid) number", "" );
-  return value;
-
-  }  /* end ReadR8 */
-
-/***  ReadR4.c  **************************************************************/
-
-/*  Convert next word from file _unxt to R4 real. */
-
-R4 ReadR4( IX flag )
-  {
-  R8 value;
-
-  NxtWord( _string, flag, sizeof(_string) );
-  if( DblCon( _string, &value ) || value > FLT_MAX || value < -FLT_MAX )
-    error( 2, __FILE__, __LINE__, "Bad float value: ", _string, "" );
-
-  return (R4)value;
-
-  }  /* end ReadR4 */
-
-/***  ReadIX.c  **************************************************************/
-
-/*  Convert next word from file _unxt to IX integer. */
-
-IX ReadIX( IX flag )
-  {
-  I4 value;
-
-  NxtWord( _string, flag, sizeof(_string) );
-  if( LongCon( _string, &value ) ||
-      value > INT_MAX || value < INT_MIN )  // max/min depends on compiler
-    error( 2, __FILE__, __LINE__, "Bad integer: ", _string, "" );
-
-  return (IX)value;
-
-  }  /* end ReadIX */
 
 /***  DblCon.c  **************************************************************/
 
@@ -937,7 +654,134 @@ I1 *FltStr( R8 f, IX n )
 
   }  /* end of FltStr */
 
+/***  ReadR8.c  **************************************************************/
+
+R8 ReadR8( IX flag )
+  {
+  R8 value;
+
+  NxtWord( _string, flag, sizeof(_string) );
+  if( DblCon( _string, &value ) )
+    error( 2, __FILE__, __LINE__, _string, " is not a (valid) number", "" );
+  return value;
+
+  }  /* end ReadR8 */
+
+/***  ReadR4.c  **************************************************************/
+
+/*  Convert next word from file _unxt to R4 real. */
+
+R4 ReadR4( IX flag )
+  {
+  R8 value;
+
+  NxtWord( _string, flag, sizeof(_string) );
+  if( DblCon( _string, &value ) || value > FLT_MAX || value < -FLT_MAX )
+    error( 2, __FILE__, __LINE__, "Bad float value: ", _string, "" );
+
+  return (R4)value;
+
+  }  /* end ReadR4 */
+
+#include <limits.h> /* define: SHRT_MAX, SHRT_MIN */
+
+/***  LongCon.c  *************************************************************/
+
+/*  Use ANSI functions to convert a \0 terminated string to a long integer.
+ *  Return 1 if string is invalid, 0 if valid.
+ *  Global errno will indicate overflow.
+ *  Used in place of atol() because of error processing.  */
+
+IX LongCon( I1 *str, I4 *i )
+  {
+  I1 *endptr;
+  I4 value;
+  IX eflag=0;
+#if( !__GNUC__)
+  extern IX errno;
+  errno = 0;
+#endif
+
+  endptr = str;
+  value = strtol( str, &endptr, 0 );
+  if( *endptr ) eflag = 1;
+#if( !__GNUC__)
+  if( errno ) eflag = 1;
+#endif
+
+  if( eflag )
+    *i = 0L;
+  else
+    *i = value;
+  return eflag;
+  
+  }  /* end of LongCon */
+
+/***  IntCon.c  **************************************************************/
+
+/*  Use ANSI functions to convert a \0 terminated string to a short integer.
+ *  Return 1 if string is invalid, 0 if valid.
+ *  Short integers are in the range -32767 to +32767 (INT_MIN to INT_MAX).
+ *  Used in place of atoi() because of error processing.  */
+
+IX IntCon( I1 *str, IX *i )
+  {
+  I4 value;    /* compute result in long integer, then chop */
+  IX eflag=0;
+
+  if( LongCon( str, &value ) ) eflag = 1;
+  if( value > SHRT_MAX ) eflag = 1;
+  if( value < SHRT_MIN ) eflag = 1;
+
+  if( eflag )
+    *i = 0;
+  else
+    *i = (IX)value;
+  return eflag;
+  
+  }  /* end of IntCon */
+
+/***  IntStr.c  **************************************************************/
+
+/*  Convert an integer to a string of characters.
+ *  Can handle short or long integers by conversion to long.
+ *  Static variables required to retain results in calling function.
+ *  NMAX allows up to NMAX calls to IntStr() in one statement. 
+ *  Replaces nonstandard ITOA & LTOA functions for radix 10.  */
+
+I1 *IntStr( I4 i )
+  {
+  static I1 string[NMAX][12];  // strings long enough for 32-bit integers
+  static IX index=0;
+
+  if( ++index == NMAX )
+    index = 0;
+
+  sprintf( string[index], "%ld", i );
+
+  return string[index];
+
+  }  /* end of IntStr */
+
+/***  ReadIX.c  **************************************************************/
+
+/*  Convert next word from file _unxt to IX integer. */
+
+IX ReadIX( IX flag )
+  {
+  I4 value;
+
+  NxtWord( _string, flag, sizeof(_string) );
+  if( LongCon( _string, &value ) ||
+      value > INT_MAX || value < INT_MIN )  // max/min depends on compiler
+    error( 2, __FILE__, __LINE__, "Bad integer: ", _string, "" );
+
+  return (IX)value;
+
+  }  /* end ReadIX */
+
 #include <time.h>   /* prototype: clock;  define CLOCKS_PER_SEC */
+#include <math.h>   /* prototype: fabs */
 
 /***  CPUtime.c  *************************************************************/
 
@@ -949,112 +793,44 @@ R4 CPUtime( R4 t1 )
   R4 t2;
 
   t2 = (R4)clock() / (R4)CLOCKS_PER_SEC;
-  return (t2-t1);
+  t2 = (R4)(fabs(t2-t1));  // clear -0.0
+
+  return t2;
 
   }  /* end CPUtime */
 
-/***  FileOpen.c  ************************************************************/
-
-/*  Check/open fileName. If fileName is empty or or cannot be opened, 
- *  request a name from the user.  */
-
-FILE *FileOpen( I1 *prompt, I1 *fileName, I1 *mode, IX flag )
-/*  prompt;   message to user.
- *  fileName; name of file (string _FILE_PATH long).
- *  mode;     access mode - see fopen() arguments -
- *              text files: "r" read, "w" write, "a" append;
- *            binary files: "rb" read, "wb" write, "ab" append.
- *  flag;     1 = return pointer to file; 0 = close pfile, return NULL */
-  {
-  FILE *pfile=NULL;
-  I1 modr[4];
-  IX open=1;
-
-#ifdef _DEBUG
-  I1 c=mode[0];
-  IX err=0;
-  if( !( c == 'r' || c == 'w' || c == 'a' ) )
-    err = 1;
-  c = mode[1];
-  if( !( c == '\0' || c == 'b' ) )
-    err = 1;
-  if( ( c == 'b' && mode[2] != '\0' ) )
-    err = 1;
-  if( err )
-    {
-    error( 1, __FILE__, __LINE__, "For: ", prompt, "" );
-    error( 3, __FILE__, __LINE__, "Invalid access mode: ", mode, "" );
-    }
-#endif
-
-  if( mode[0] != 'r' )
-    {
-    strcpy( modr, mode );
-    modr[0] = 'r';
-    if( mode[0] == 'a' )
-      fputs( "  Opening to append: ", stderr );
-    else
-      fputs( "  Opening to create: ", stderr );
-    if( fileName[0] )
-      fputs( fileName, stderr );
-    fputc( '\n', stderr );
-    }
-
-  while( !pfile )
-    {
-    if( fileName[0] )   /* try to open file */
-      {
-      if( mode[0] != 'r' )  /* test write & append modes */
-        {
-        FILE *test = fopen( fileName, modr );
-        if( mode[0] == 'w' )
-          {
-          if( test )
-            open = NoYes( "File exists; replace" );
-          }
-        else
-          {
-          if( !test )
-            open = NoYes( "File does not exist; create" );
-          }
-        if( test )
-          fclose( test );
-        }
-      if( open )
-        {
-        pfile = fopen( fileName, mode );
-        if( !pfile ) error( 2, __FILE__, __LINE__,
-          "Failed to open: ", fileName, "\nTry again.\n", "" );
-        }
-      }
-    if( !pfile )        /* ask for file name */
-      GetStr( prompt, fileName );
-    }
-
-  if( flag )
-    return pfile;
-  else
-    fclose( pfile );
-  return NULL;
-
-  }  /*  end of FileOpen  */
+#include <ctype.h> /* prototype: toupper */
 
 /***  streql.c  **************************************************************/
 
-/*  Test for equality of two strings; return 1 if equal, 0 if not.
- *  Benchmark tests with optimized Visual C++ 7.0 indicate this 
- *  function is faster if strings differ in first 3 characters, 
- *  !strcmp( s1, s2 ) is faster otherwise.   */
+/*  Test for equality of two strings; return 1 if equal, 0 if not.  */
 
 IX streql( I1 *s1, I1 *s2 )
   {
-  for( ; *s1; s1++, s2++ )   // not checking for s2 NULL
-    if( *s1 != *s2 ) break;
+  for( ; *s1 && *s2 && *s1 == *s2; ++s1, ++s2 )
+    ;
 
   if( *s1 == *s2 )  // both must equal '\0'
     return 1;
-  else              // either might equal '\0'
+  else
     return 0;
 
   }  /* end of streql */
+
+/***  streqli.c  *************************************************************/
+
+/*  Test for equality of two strings; ignore differences in case.
+ *  Return 1 if equal, 0 if not.  */
+
+IX streqli( I1 *s1, I1 *s2 )
+  {
+  for( ; *s1 && *s2 && (toupper(*s1) == toupper(*s2)); ++s1, ++s2 )
+    ;
+
+  if( *s1 == *s2 )  // both must equal '\0'
+    return 1;
+  else
+    return 0;
+
+  }  /* end of streqli */
 

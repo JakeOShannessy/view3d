@@ -1,4 +1,4 @@
-/*subfile:  getdat.c  ********************************************************/
+/*subfile:  Getdat.c  ********************************************************/
 
 #ifdef _DEBUG
 # define DEBUG 1
@@ -14,8 +14,6 @@
 #include "types.h"
 #include "view3d.h"
 #include "prtyp.h"
-
-#include "strcmpi.h"
 
 #define PI 3.141592653589793238
 #define deg2rad(x)  ((x)*PI/180.) /* angle: degrees -> radians */
@@ -42,7 +40,7 @@ void GetCtrl( I1 *str, VFCTRL *vfCtrl )
   p = strtok( str, "= ," );
   while( p )
     {
-    if( strcmpi( p, "eps" ) == 0 )
+    if( streqli( p, "eps" ) )
       {
       p = strtok( NULL, "= ," );
       if( FltCon( p, &r ) )
@@ -56,7 +54,7 @@ void GetCtrl( I1 *str, VFCTRL *vfCtrl )
           error( 1, __FILE__, __LINE__, "Convergence limit > 1.0e-2", "" );
         }
       }
-    else if( strcmpi( p, "list" ) == 0 )
+    else if( streqli( p, "list" ) )
       {
       p = strtok( NULL, "= ," );
       if( IntCon( p, &i ) )
@@ -64,7 +62,7 @@ void GetCtrl( I1 *str, VFCTRL *vfCtrl )
       else
         _list = i;
       }
-    else if( strcmpi( p, "out" ) == 0 )
+    else if( streqli( p, "out" ) )
       {
       p = strtok( NULL, "= ," );
       if( IntCon( p, &i ) )
@@ -75,7 +73,7 @@ void GetCtrl( I1 *str, VFCTRL *vfCtrl )
         else
           vfCtrl->outFormat = i;
       }
-    else if( strcmpi( p, "encl" ) == 0 )
+    else if( streqli( p, "encl" ) )
       {
       p = strtok( NULL, "= ," );
       if( IntCon( p, &i ) )
@@ -83,7 +81,7 @@ void GetCtrl( I1 *str, VFCTRL *vfCtrl )
       else
         if( i ) vfCtrl->enclosure = 1;
       }
-    else if( strcmpi( p, "emit" ) == 0 )
+    else if( streqli( p, "emit" ) )
       {
       p = strtok( NULL, "= ," );
       if( IntCon( p, &i ) )
@@ -91,7 +89,7 @@ void GetCtrl( I1 *str, VFCTRL *vfCtrl )
       else
         if( i ) vfCtrl->emittances = 1;
       }
-    else if( strcmpi( p, "maxU" ) == 0 )
+    else if( streqli( p, "maxU" ) )
       {
       p = strtok( NULL, "= ," );
       if( IntCon( p, &i ) )
@@ -110,7 +108,7 @@ void GetCtrl( I1 *str, VFCTRL *vfCtrl )
         vfCtrl->maxRecursALI = i;
         }
       }
-    else if( strcmpi( p, "maxO" ) == 0 )
+    else if( streqli( p, "maxO" ) )
       {
       p = strtok( NULL, "= ," );
       if( IntCon( p, &i ) )
@@ -129,7 +127,7 @@ void GetCtrl( I1 *str, VFCTRL *vfCtrl )
         vfCtrl->maxRecursion = i;
         }
       }
-    else if( strcmpi( p, "minO" ) == 0 )
+    else if( streqli( p, "minO" ) )
       {
       p = strtok( NULL, "= ," );
       if( IntCon( p, &i ) )
@@ -144,7 +142,7 @@ void GetCtrl( I1 *str, VFCTRL *vfCtrl )
         vfCtrl->minRecursion = i;
         }
       }
-    else if( strcmpi( p, "row" ) == 0 )
+    else if( streqli( p, "row" ) )
       {
       p = strtok( NULL, "= ," );
       if( IntCon( p, &i ) )
@@ -156,7 +154,7 @@ void GetCtrl( I1 *str, VFCTRL *vfCtrl )
         vfCtrl->row = i;
         }
       }
-    else if( strcmpi( p, "col" ) == 0 )
+    else if( streqli( p, "col" ) )
       {
       p = strtok( NULL, "= ," );
       if( IntCon( p, &i ) )
@@ -168,7 +166,7 @@ void GetCtrl( I1 *str, VFCTRL *vfCtrl )
         vfCtrl->col = i;
         }
       }
-    else if( strcmpi( p, "prjD" ) == 0 )
+    else if( streqli( p, "prjD" ) )
       {
       p = strtok( NULL, "= ," );
       if( IntCon( p, &i ) )
@@ -176,7 +174,7 @@ void GetCtrl( I1 *str, VFCTRL *vfCtrl )
       else
         if( i ) vfCtrl->prjReverse = 1;
       }
-    else if( strcmpi( p, "maxV" ) == 0 )
+    else if( streqli( p, "maxV" ) )
       {
       p = strtok( NULL, "= ," );
       if( IntCon( p, &i ) )
@@ -238,8 +236,7 @@ void CountVS3D( char *title, VFCTRL *vfCtrl )
         NxtWord( _string, 0, sizeof(_string) );
         vfCtrl->format = 0;
         if( streql( _string, "3"  ) ) vfCtrl->format = 3;
-        if( streql( _string, "3a" ) ||
-            streql( _string, "3A" ) ) vfCtrl->format = 4;
+        if( streqli( _string, "3a" ) ) vfCtrl->format = 4;
         if( vfCtrl->format < 3 ) error( 2, __FILE__, __LINE__,
           "Invalid input geometry: ", _string, "" );
         break;
@@ -252,7 +249,7 @@ void CountVS3D( char *title, VFCTRL *vfCtrl )
       default:
         break;
       }
-	flag = 1;
+    flag = 1;
     }
 finish:
   vfCtrl->nAllSrf = vfCtrl->nRadSrf + vfCtrl->nObstrSrf;
@@ -338,7 +335,7 @@ void GetSrfD( I1 **name, R4 *emit, IX *base, IX *cmbn,
 void GetVS3D( I1 **name, R4 *emit, IX *base, IX *cmbn,
   SRFDAT3D *srf, VERTEX3D *xyz, VFCTRL *vfCtrl )
   {
-  I1 c;       /* first character in line */
+  IX c;       /* first character in line */
   IX nv=0;    /* number of vertices */
   IX ns=0;    /* number of surfaces */
   IX n;
@@ -436,7 +433,7 @@ void GetVS3D( I1 **name, R4 *emit, IX *base, IX *cmbn,
           "Undefined input identifier: ", _string, "" );
         break;
       }
-	flag = 1;
+    flag = 1;
     }
 
 finish:
@@ -463,8 +460,8 @@ void GetVS3Da( I1 **name, R4 *emit, IX *base, IX *cmbn,
   R8 azm, tilt;     /* azimuth and tilt angles of surface plane */
   R8 sa, ca, st, ct;
   VERTEX3D v[4];
-  I1 s;       /* shape indicator: T=triangle, R=rectangle, Q=quadrilateral */
-  I1 c;       /* first character in line */
+  IX s;       /* shape indicator: T=triangle, R=rectangle, Q=quadrilateral */
+  IX c;       /* first character in line */
   IX nv=0;    /* number of vertices */
   IX ns=0;    /* number of surfaces */
   IX j, n;

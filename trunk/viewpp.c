@@ -1,4 +1,4 @@
-/*subfile:  viewpp.c  *********************************************************/
+/*subfile:  ViewPP.c  *********************************************************/
 
 /*  Functions for post-processing of view factors. */
 
@@ -164,7 +164,7 @@ void Separate( const IX nSrf, const IX *base, R4 *area, R8 **AF )
 /*    Normalize the view factors for an enclosure so that for each row i
  *    SUM(F[i,j]) = EMIT[i] and also AF(i,j) = AF(j,i) for all i, j.  */
 
-void NormAF( const int nSrf, const R4 *emit, const R4 *area, R8 **AF,
+void NormAF( const IX nSrf, const R4 *emit, const R4 *area, R8 **AF,
   const R8 eMax, const IX itMax )
 /*  nSrf; number of surfaces
  *  emit; surface emittances
@@ -245,7 +245,7 @@ void IntFac( const IX nSrf, const R4 *emit, const R4 *area, R8 **AF )
     {
     memset( w+1, 0, nSrf*sizeof(R8) );
     w[n] = -a[n];
-    LUSolveSymm( nSrf, (const R8**) AF, w );
+    LUSolveSymm( nSrf, AF, w );
     fwrite( w+1, sizeof(R8), nSrf, tmpf );
     }
   
@@ -323,7 +323,7 @@ R8 DotProd( const IX n, const R8 *x, const R8 *y )
  *  stored by rows) has already been reduced to L-U form in LUFactorSymm(). 
  *  The solution vector {X} over-writes {B}.  */
 
-void LUSolveSymm( const IX neq, const R8 **a, R8 *b )
+void LUSolveSymm( const IX neq, R8 **a, R8 *b )
   {
   IX i;
 
