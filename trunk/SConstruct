@@ -25,7 +25,6 @@ opts.Update(env)
 srcs = Split("""
 	ctrans.c  heap.c  polygn.c  savevf.c  v3main.c  viewobs.c  viewunob.c
 	getdat.c  misc.c  readvf.c  test3d.c  view3d.c  viewpp.c
-	strcmpi.c
 """)
 
 env.Append(
