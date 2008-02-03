@@ -45,13 +45,15 @@ IX main( IX argc, I1 **argv )
   I1 version[]="3.3";      /* program version */
   I1 inFile[_MAX_PATH]=""; /* input file name */
   I1 outFile[_MAX_PATH]="";/* output file name */
+#ifndef ANSI
   I1 fileName[_MAX_PATH];  /* name of file */
   I1 vdrive[_MAX_DRIVE];   /* drive letter for program View3D.exe */
   I1 vdir[_MAX_DIR];       /* directory path for program View3D.exe */
+#endif
   I1 title[LINELEN];  /* project title */
   I1 **name;       /* surface names [1:nSrf][0:NAMELEN] */
   I1 *types[]={"rsrf","subs","mask","nuls","obso"};
-  VERTEX3D *xyz;   /* vector of vertces [1:nVrt] - for ease in 
+  VERTEX3D *xyz;   /* vector of vertces [1:nVrt] - for ease in
                         converting V3MAIN to a subroutine */
   SRFDAT3D *srf;   /* vector of surface data structures [1:nSrf] */
   VFCTRL vfCtrl;   /* VF calculation control parameters - avoid globals */
@@ -410,7 +412,7 @@ IX main( IX argc, I1 **argv )
       }
     }
 
-  if( encl || vfCtrl.emittances )    // intermediate report - 
+  if( encl || vfCtrl.emittances )    // intermediate report -
     if( _list < 2 )                  // unnormalized view factors
       ReportAF( nSrf, encl, title, name, area, vtmp, base, AF, 1 );
 
@@ -644,6 +646,7 @@ void FindFile( I1 *msg, I1 *fileName, I1 *type )
     if( !pfile )        /* ask for file name */
       {
       fprintf( stderr, "%s: ", msg );
+      fflush(stderr);
       scanf( "%s", fileName );
       }
     }
