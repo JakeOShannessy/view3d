@@ -1,8 +1,14 @@
 
 version = '0.20080121'
 
+import os
+if os.environ.get('TERM')=="msys":
+	deftool = ['mingw']
+else:
+	deftool = ['default']
+
 env = Environment(
-	tools=['default','disttar']
+	tools=deftool + ['disttar']
 	,toolpath=['scons']
 )
 
@@ -29,6 +35,7 @@ srcs = Split("""
 
 env.Append(
 	CPPFLAGS=['-Wall']
+	,CPPDEFINES=['ANSI']
 	,LIBS=['m']
 )
 
