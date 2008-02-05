@@ -1,5 +1,5 @@
 
-version = '0.20080121'
+version = '0.20080122'
 
 import os
 if os.environ.get('TERM')=="msys":
@@ -22,6 +22,12 @@ opts.Add(BoolOption(
 	,"Debugging mode (for gdb symbols, plus extra output)"
 	,1
 ))
+
+opts.Add(
+	"CC"
+	,"C Compiler"
+	,"gcc"
+)
 
 opts.Update(env)
 
