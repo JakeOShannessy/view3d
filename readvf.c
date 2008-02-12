@@ -4,19 +4,19 @@
 
 #include <stdio.h>
 #include "types.h"
-IX error( IX severity, I1 *file, IX line, ... );
-I1 *IntStr( I4 i );
+
+#include "readvf.h"
+#include "misc.h"
 
 /***  ReadF0s.c  *************************************************************/
 
 /*  Read view factors + area + emit; text format.  Save in square array.  */
 
-void ReadF0s( I1 *fileName, IX nSrf, R4 *area, R4 *emit, R4 **F )
-  {
+static void ReadF0s( char *fileName, int nSrf, float *area, float *emit, float **F ){
   FILE *vfin;
-  I1 header[36];
-  IX n;    /* row */
-  IX m;    /* column */
+  char header[36];
+  int n;    /* row */
+  int m;    /* column */
 
   vfin = fopen( fileName, "r" );
   fgets( header, 35, vfin );
@@ -31,18 +31,17 @@ void ReadF0s( I1 *fileName, IX nSrf, R4 *area, R4 *emit, R4 **F )
     fscanf( vfin, "%f", &emit[n] );
   fclose( vfin );
 
-  }  /* end of SaveF0s */
+}  /* end of ReadF0s */
 
 /***  ReadF0t.c  *************************************************************/
 
 /*  Read view factors + area + emit; text format. Save in triangular array.  */
 
-void ReadF0t( I1 *fileName, IX nSrf, R4 *area, R4 *emit, R8 **AF )
-  {
+static void ReadF0t( char *fileName, int nSrf, float *area, float *emit, double **AF ){
   FILE *vfin;
-  I1 header[36];
-  IX n;    /* row */
-  IX m;    /* column */
+  char header[36];
+  int n;    /* row */
+  int m;    /* column */
 
   vfin = fopen( fileName, "r" );
   fgets( header, 35, vfin );
@@ -51,7 +50,7 @@ void ReadF0t( I1 *fileName, IX nSrf, R4 *area, R4 *emit, R8 **AF )
 
   for( n=1; n<=nSrf; n++ )      /* process AF values for row n */
     {
-    R4 F;
+    float F;
     for( m=1; m<=n; m++ )      /* process column values */
       {
       fscanf( vfin, "%f", &F );
@@ -65,94 +64,84 @@ void ReadF0t( I1 *fileName, IX nSrf, R4 *area, R4 *emit, R8 **AF )
     fscanf( vfin, "%f", &emit[n] );
   fclose( vfin );
 
-  }  /* end of SaveF0t */
+}  /* end of ReadF0t */
 
 /***  ReadF1s.c  *************************************************************/
 
 /*  Read view factors + area + emit; binary format.  Save in square array.  */
 
-void ReadF1s( I1 *fileName, IX nSrf, R4 *area, R4 *emit, R4 **F )
-  {
+static void ReadF1s( char *fileName, int nSrf, float *area, float *emit, float **F){
   FILE *vfin;
-  I1 header[36];
-  IX n;    /* row */
+  char header[36];
+  int n;    /* row */
 
   vfin = fopen( fileName, "rb" );
-  fread( header, sizeof(I1), 32, vfin );
-  fread( area+1, sizeof(R4), nSrf, vfin );
+  fread( header, sizeof(char), 32, vfin );
+  fread( area+1, sizeof(float), nSrf, vfin );
 
   for( n=1; n<=nSrf; n++ )      /* process AF values for row n */
-    fread( F[n]+1, sizeof(R4), nSrf, vfin );
+    fread( F[n]+1, sizeof(float), nSrf, vfin );
 
-  fread( emit+1, sizeof(R4), nSrf, vfin );
+  fread( emit+1, sizeof(float), nSrf, vfin );
   fclose( vfin );
 
-  }  /* end of SaveF1s */
+}  /* end of ReadF1s */
 
 /***  ReadF1t.c  *************************************************************/
 
 /* Read view factors + area + emit; binary format. Save in triangular array. */
 
-void ReadF1t( I1 *fileName, IX nSrf, R4 *area, R4 *emit, R8 **AF )
-  {
+static void ReadF1t( char *fileName, int nSrf, float *area, float *emit, double **AF ){
   FILE *vfin;
-  I1 header[36];
-  IX n;    /* row */
-  IX m;    /* column */
+  char header[36];
+  int n;    /* row */
+  int m;    /* column */
 
   vfin = fopen( fileName, "rb" );
-  fread( header, sizeof(I1), 32, vfin );
-  fread( area+1, sizeof(R4), nSrf, vfin );
+  fread( header, sizeof(char), 32, vfin );
+  fread( area+1, sizeof(float), nSrf, vfin );
 
-  for( n=1; n<=nSrf; n++ )      /* process AF values for row n */
-    {
-    fread( emit+1, sizeof(R4), nSrf, vfin );  /* read F into emit */
+  for( n=1; n<=nSrf; n++ ){      /* process AF values for row n */
+    fread( emit+1, sizeof(float), nSrf, vfin );  /* read F into emit */
     for( m=1; m<=n; m++ )      /* process column values */
       AF[n][m] = emit[m] * area[n];
-    }
+  }
 
-  fread( emit+1, sizeof(R4), nSrf, vfin );
+  fread( emit+1, sizeof(float), nSrf, vfin );
   fclose( vfin );
-
-  }  /* end of SaveF1t */
+}  /* end of ReadF1t */
 
 /***  ReadVF.c  **************************************************************/
 
 /*  Read view factors file.  */
 
-void ReadVF( I1 *fileName, I1 *program, I1 *version,
-             IX *format, IX *encl, IX *didemit, IX *nSrf,
-             R4 *area, R4 *emit, R8 **AF, R4 **F, IX init, IX shape )
-  {
-  if( init )
-    {
-    I1 header[36];
+void ReadVF( char *fileName, char *program, char *version,
+		int *format, int *encl, int *didemit, int *nSrf,
+		float *area, float *emit, double **AF, float **F, int init, int shape
+){
+  if(init){
+    char header[36];
     FILE *vfin = fopen( fileName, "r" );
     fgets( header, 35, vfin );
-    sscanf( header, "%s %s %d %d %d %d",
-      program, version, format, encl, didemit, nSrf );
+    sscanf( header, "%s %s %d %d %d %d"
+		, program, version, format, encl, didemit, nSrf
+	);
     fclose( vfin );
-    }
-  else
-    {
-    IX ns = *nSrf;
-    if( *format == 0 )
-      {
+  }else{
+    int ns = *nSrf;
+    if( *format == 0 ){
       if( shape == 0 )
         ReadF0t( fileName, ns, area, emit, AF );
       else
         ReadF0s( fileName, ns, area, emit, F );
-      }
-    else if( *format == 1 )
-      {
+    }else if( *format == 1 ){
       if( shape == 0 )
         ReadF1t( fileName, ns, area, emit, AF );
       else
         ReadF1s( fileName, ns, area, emit, F );
-      }
-    else
+    }else{
       error( 3, __FILE__, __LINE__, "Undefined format: ", IntStr(*format), "" );
-    }
-
-  }  /* end ReadVF */
+	}
+  }
+}  /* end ReadVF */
 

@@ -8,33 +8,37 @@
 # define DEBUG 1
 #endif
 
+#define V3D_BUILD
+#include "viewpp.h"
+
 #include <stdio.h>
 #include <string.h> /* prototype: memset, strncpy */
 #include <math.h>   /* prototype: fabs */
 #include <float.h>  /* define: FLT_EPSILON */
 #include "types.h"
 #include "view3d.h"
-#include "prtyp.h" 
+#include "misc.h" 
+#include "heap.h"
 
 extern FILE *_ulog; /* log file */
-extern IX _list;    /* output control, higher value = more output */
+extern int _list;    /* output control, higher value = more output */
 
 /***  DelNull.c  *************************************************************/
 
 /*  Delete NULS surfaces from AF and supporting vectors.
 //  Return reduced number of surfaces, nSrf.  */
 
-IX DelNull( const IX nSrf, SRFDAT3D *srf, IX *base, IX *cmbn,
-            R4 *emit, R4 *area, I1 **name, R8 **AF )
+int DelNull( const int nSrf, SRFDAT3D *srf, int *base, int *cmbn,
+            float *emit, float *area, char **name, double **AF )
   {
-  IX j, n, m;
+  int j, n, m;
 
   for( j=0,n=1; n<=nSrf; n++ )
     if( srf[n].type == NULS )   /* adjust surface areas */
       area[base[n]] -= area[n];   /* requires subsurface after base */
     else
       {
-      IX i=0;
+      int i=0;
       base[++j] = base[n];
       cmbn[j] = cmbn[n];
       emit[j] = emit[n];
@@ -54,7 +58,7 @@ IX DelNull( const IX nSrf, SRFDAT3D *srf, IX *base, IX *cmbn,
 /*  Combine surface interchange areas.
  *  Note: AF[row][col] with col <= row in lower triangle matrix.  */
 
-IX Combine( const IX nSrf, const IX *cmbn, R4 *area, I1 **name, R8 **AF )
+int Combine( const int nSrf, const int *cmbn, float *area, char **name, double **AF )
 /*  nSrf; number of surfaces
  *  cmbn; combination surface numbers
  *  area; surface areas
@@ -62,7 +66,7 @@ IX Combine( const IX nSrf, const IX *cmbn, R4 *area, I1 **name, R8 **AF )
  *  AF;   radiation interchange factors
  */
   {
-  IX i, j, m, n;
+  int i, j, m, n;
 
   for( n=1; n<=nSrf; n++ )  /* adjust AF and area */
     {
@@ -121,14 +125,14 @@ IX Combine( const IX nSrf, const IX *cmbn, R4 *area, I1 **name, R8 **AF )
 
 /*  Separate subsurfaces from base surfaces.  */
 
-void Separate( const IX nSrf, const IX *base, R4 *area, R8 **AF )
+void Separate( const int nSrf, const int *base, float *area, double **AF )
 /*  nSrf; number of surfaces
  *  base; base surface numbers
  *  area; surface areas
  *  AF;   radiation interchange factors (area*F)
  */
   {
-  IX k, m, n;
+  int k, m, n;
 
   for( n=1; n<=nSrf; n++ )   /* Adjust AF values */
     {
@@ -164,8 +168,8 @@ void Separate( const IX nSrf, const IX *base, R4 *area, R8 **AF )
 /*    Normalize the view factors for an enclosure so that for each row i
  *    SUM(F[i,j]) = EMIT[i] and also AF(i,j) = AF(j,i) for all i, j.  */
 
-void NormAF( const IX nSrf, const R4 *emit, const R4 *area, R8 **AF,
-  const R8 eMax, const IX itMax )
+void NormAF( const int nSrf, const float *emit, const float *area, double **AF,
+  const double eMax, const int itMax )
 /*  nSrf; number of surfaces
  *  emit; surface emittances
  *  area; surface areas
@@ -174,12 +178,12 @@ void NormAF( const IX nSrf, const R4 *emit, const R4 *area, R8 **AF,
  *  itMax; maximum number of iterations
  */
   {
-  IX n;    /* row */
-  IX m;    /* column */
-  IX iter; /* iterations count */
-  R8 err;  /* row error value */
-  R8 maxError=1.0;   /* max error value */
-  R8 sumAF, sumF;
+  int n;    /* row */
+  int m;    /* column */
+  int iter; /* iterations count */
+  double err;  /* row error value */
+  double maxError=1.0;   /* max error value */
+  double sumAF, sumF;
 
   for( iter=0; iter<itMax && maxError>eMax; iter++ )
     {
@@ -217,19 +221,19 @@ void NormAF( const IX nSrf, const R4 *emit, const R4 *area, R8 **AF,
  *  pp 84-86. Requires solution of [A]*{W} = {B}.
  *  [A] is symmetric, negative-definite.  */
 
-void IntFac( const IX nSrf, const R4 *emit, const R4 *area, R8 **AF )
+void IntFac( const int nSrf, const float *emit, const float *area, double **AF )
 /*  nSrf; number of surfaces
  *  emit; surface emittances, 0 < emit < 1
  *  area; surface areas
  *  AF;   radiation interchange factors [triangular]
  */
   {
-  IX  m, n;
-  R8 *a, *w;
+  int  m, n;
+  double *a, *w;
   FILE *tmpf=tmpfile();
 
-  a = Alc_V( 1, nSrf, sizeof(R8), __FILE__, __LINE__ );
-  w = Alc_V( 1, nSrf, sizeof(R8), __FILE__, __LINE__ );
+  a = Alc_V( 1, nSrf, sizeof(double), __FILE__, __LINE__ );
+  w = Alc_V( 1, nSrf, sizeof(double), __FILE__, __LINE__ );
 
 /* subtract AREA/RHO from diagonal elements */
   for( n=1; n<=nSrf; n++ )
@@ -243,17 +247,17 @@ void IntFac( const IX nSrf, const R4 *emit, const R4 *area, R8 **AF )
   
   for( n=1; n<=nSrf; n++ )  /* determine response vectors */
     {
-    memset( w+1, 0, nSrf*sizeof(R8) );
+    memset( w+1, 0, nSrf*sizeof(double) );
     w[n] = -a[n];
     LUSolveSymm( nSrf, AF, w );
-    fwrite( w+1, sizeof(R8), nSrf, tmpf );
+    fwrite( w+1, sizeof(double), nSrf, tmpf );
     }
   
   fflush( tmpf );
   rewind( tmpf );
   for( n=1; n<=nSrf; n++ )    /* compute total interchange areas */
     {
-    m = fread( w+1, sizeof(R8), nSrf, tmpf );
+    m = fread( w+1, sizeof(double), nSrf, tmpf );
     for( m=1; m<n; m++ )
       AF[n][m] = a[m] * w[m];
     AF[n][n] = a[n] * (w[n] - emit[n]);
@@ -261,8 +265,8 @@ void IntFac( const IX nSrf, const R4 *emit, const R4 *area, R8 **AF )
       AF[m][n] = 0.5 * ( AF[m][n] + a[m] * w[m] );
     }
 
-  Fre_V( a, 1, nSrf, sizeof(R8), __FILE__, __LINE__ );
-  Fre_V( w, 1, nSrf, sizeof(R8), __FILE__, __LINE__ );
+  Fre_V( a, 1, nSrf, sizeof(double), __FILE__, __LINE__ );
+  Fre_V( w, 1, nSrf, sizeof(double), __FILE__, __LINE__ );
   fclose( tmpf );
 
   }  /* end of IntFac */
@@ -275,10 +279,10 @@ void IntFac( const IX nSrf, const R4 *emit, const R4 *area, R8 **AF )
  *  Decomposition of this form of matrix is supposed to be very stable
  *  without pivoting: _Numerical Recipes in C_, 2nd ed., p 97.  */
 
-void LUFactorSymm( const IX neq, R8 **a )
+void LUFactorSymm( const int neq, double **a )
   {
-  IX i, j;
-  R8 dot, tmp;
+  int i, j;
+  double dot, tmp;
 
   a[1][1] = 1.0 / a[1][1];
   for( i=2; i<=neq; i++ )    /* process column i */
@@ -305,10 +309,10 @@ void LUFactorSymm( const IX neq, R8 **a )
 /*  Double precision dot product.  dot = SUM( x[1]*y[1] ... x[n]*y[n] ).
  *  Passing pointers to x[0] and y[0].  */
 
-R8 DotProd( const IX n, const R8 *x, const R8 *y )
+double DotProd( const int n, const double *x, const double *y )
   {
-  IX j;
-  R8 dot=0.0;
+  int j;
+  double dot=0.0;
 
   for( j=n; j; j-- )
     dot += x[j] * y[j];
@@ -323,9 +327,9 @@ R8 DotProd( const IX n, const R8 *x, const R8 *y )
  *  stored by rows) has already been reduced to L-U form in LUFactorSymm(). 
  *  The solution vector {X} over-writes {B}.  */
 
-void LUSolveSymm( const IX neq, R8 **a, R8 *b )
+void LUSolveSymm( const int neq, double **a, double *b )
   {
-  IX i;
+  int i;
 
   for( i=2; i<=neq; i++ )     /*  forward substitution  */
     b[i] -= DotProd( i-1, a[i], b );
@@ -343,9 +347,9 @@ void LUSolveSymm( const IX neq, R8 **a, R8 *b )
 /*  Double precision product:  Yi = Yi + A * Xi  for i = 1 to N.
  *  Passing pointers to x[0] and y[0].  */
 
-void DAXpY( const IX n, const R8 a, const R8 *x, R8 *y )
+void DAXpY( const int n, const double a, const double *x, double *y )
   {
-  IX j;
+  int j;
 
   for( j=n; j; j-- )
     y[j] += a * x[j];

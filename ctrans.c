@@ -1,5 +1,8 @@
 /*subfile:  Ctrans.c  ********************************************************/
 
+#define V3D_BUILD
+#include "ctrans.h"
+
 #ifdef _DEBUG
 # define DEBUG 1
 #else
@@ -10,20 +13,19 @@
 #include <math.h>   /* prototypes: fabs, sqrt */
 #include <float.h>  /* define: FLT_EPSILON */
 #include "types.h" 
-#include "view3d.h"
-#include "prtyp.h" 
-
-extern FILE *_ulog; /* log file */
+#include "misc.h" 
+#include "test3d.h"
+#include "common.h"
 
 /***  CTIdent.c  *************************************************************/
 
 /*  Set up 4 X 4 identity matrix [T].  Contiguous storage.  */
 
-void CTIdent( R8 t[4][4] )
+void CTIdent( double t[4][4] )
   {
-  IX j;
+  int j;
 
-  memset( (void *)t, 0, 16*sizeof(R8) );
+  memset( (void *)t, 0, 16*sizeof(double) );
   for( j=0; j<4; j++ )
     t[j][j] = 1.0;
 
@@ -39,9 +41,9 @@ void CTIdent( R8 t[4][4] )
  *         |  0  0  0  1  |   | t30 t31 t32 t33 |
  */
 
-void CTScale( const R8 s, R8 t[4][4] )
+void CTScale( const double s, double t[4][4] )
   {
-  IX i,j;
+  int i,j;
 
   for( i=0; i<3; i++ )
     for( j=0; j<4; j++ )
@@ -60,9 +62,9 @@ void CTScale( const R8 s, R8 t[4][4] )
  *         |  0  0  0  1   |   | t30 t31 t32 t33 |
  */
 
-void CTShift( const VERTEX3D *s, R8 t[4][4] )
+void CTShift( const Vec3 *s, double t[4][4] )
   {
-  IX j;
+  int j;
 
   for( j=0; j<4; j++ )
     t[0][j] -= s->x * t[3][j];
@@ -83,9 +85,9 @@ void CTShift( const VERTEX3D *s, R8 t[4][4] )
  *         |  0   0  0  1  |   | t30 t31 t32 t33 |
  */
 
-void CTRotateX( const R8 cosAngle, const R8 sinAngle, R8 t[4][4] )
+void CTRotateX( const double cosAngle, const double sinAngle, double t[4][4] )
   {
-  IX j;
+  int j;
 
 #if( DEBUG > 0 )
   if( cosAngle*cosAngle + sinAngle*sinAngle - 1.0 > 2.0*FLT_EPSILON )
@@ -94,7 +96,7 @@ void CTRotateX( const R8 cosAngle, const R8 sinAngle, R8 t[4][4] )
 
   for( j=0; j<4; j++ )
     {
-    R8 tmp = t[1][j];
+    double tmp = t[1][j];
     t[1][j] = cosAngle * tmp - sinAngle * t[2][j];
     t[2][j] = sinAngle * tmp + cosAngle * t[2][j];
     }
@@ -111,9 +113,9 @@ void CTRotateX( const R8 cosAngle, const R8 sinAngle, R8 t[4][4] )
  *         |  0  0  0  1  |   | t30 t31 t32 t33 |
  */
 
-void CTRotateZ( const R8 cosAngle, const R8 sinAngle, R8 t[4][4] )
+void CTRotateZ( const double cosAngle, const double sinAngle, double t[4][4] )
   {
-  IX j;
+  int j;
 
 #if( DEBUG > 0 )
   if( cosAngle*cosAngle + sinAngle*sinAngle - 1.0 > 2.0*FLT_EPSILON )
@@ -122,7 +124,7 @@ void CTRotateZ( const R8 cosAngle, const R8 sinAngle, R8 t[4][4] )
 
   for( j=0; j<4; j++ )
     {
-    R8 tmp = t[0][j];
+    double tmp = t[0][j];
     t[0][j] = cosAngle * tmp - sinAngle * t[1][j];
     t[1][j] = sinAngle * tmp + cosAngle * t[1][j];
     }
@@ -135,9 +137,9 @@ void CTRotateZ( const R8 cosAngle, const R8 sinAngle, R8 t[4][4] )
  *  from direction U.  This is done by a Z-rotation followed by an X-rotation.
  */
 
-void CTRotateU( const DIRCOS *u, R8 t[4][4] )
+void CTRotateU( const DirCos *u, double t[4][4] )
   {
-  R8 v;
+  double v;
 
 #if( DEBUG > 0 )
   if( fabs( sqrt( u->x*u->x + u->y*u->y + u->z*u->z ) - 1.0 )
@@ -165,9 +167,9 @@ void CTRotateU( const DIRCOS *u, R8 t[4][4] )
  *  (Constants in row 4 are assumed; i.e., no perspective transformation.)
  */
 
-void CT3D( const IX nv, R8 t[4][4], const VECTOR3D *p, VECTOR3D *q )
+void CT3D( const int nv, double t[4][4], const Vec3 *p, Vec3 *q )
   {
-  IX n;
+  int n;
 
   for( n=nv; n; n--,p++,q++ )
     {
@@ -184,7 +186,7 @@ void CT3D( const IX nv, R8 t[4][4], const VECTOR3D *p, VECTOR3D *q )
  *  in the Z=0 plane and fits within the -1<x<1 and -1<y<1 square.  */
 
 void CoordTrans3D( SRFDAT3D *srf, SRFDATNM *srf1, SRFDATNM *srf2,
-  IX *probableObstr, VFCTRL *vfCtrl )
+  int *probableObstr, View3DControlData *vfCtrl )
 /* srf  - data for all surfaces.
  * xyz  - coordinates of vertices.
  * srf1 - data for surface 1.
@@ -194,20 +196,20 @@ void CoordTrans3D( SRFDAT3D *srf, SRFDATNM *srf1, SRFDATNM *srf2,
  * scale - coordinate scaling factor.
  */
   {
-  VERTEX3D vs[MAXNV1]; /* temporary vertices */
+  Vec3 vs[MAXNV1]; /* temporary vertices */
   SRFDAT3X *srf1T;  /* pointer to surface 1 */
   SRFDAT3X *srf2T;  /* pointer to surface 2 */
   SRFDAT3X *srfOT;  /* pointer to obstrucing surface */
   SRFDAT3D *ps;     /* pointer to original surface */
-  R8 z[MAXNV1];  /* Z coordinates */
-  R8 a[4][4]; /* coordinates transformation matrix */
-  R8 b[4][4]; /* coordinate rotation matrix */
-  R8 scale; /* coordinate scaling factor */
-  R8 zmax;  /* Z coordinate of highest vertex */
-  R8 eps=-1.0e-6f;
-  IX clip;  /* if true, clip portion of surface below Z=0 plane */
-  IX nv;    /* number of vertices */
-  IX j, n;
+  double z[MAXNV1];  /* Z coordinates */
+  double a[4][4]; /* coordinates transformation matrix */
+  double b[4][4]; /* coordinate rotation matrix */
+  double scale; /* coordinate scaling factor */
+  double zmax;  /* Z coordinate of highest vertex */
+  double eps=-1.0e-6f;
+  int clip;  /* if true, clip portion of surface below Z=0 plane */
+  int nv;    /* number of vertices */
+  int j, n;
 
   scale = 1.0f / srf2->rc;   /* distance scaling factor */
 #if( DEBUG > 1 )
@@ -284,7 +286,7 @@ void CoordTrans3D( SRFDAT3D *srf, SRFDATNM *srf1, SRFDATNM *srf2,
 #if( DEBUG > 1 )
       fprintf( _ulog, " Clipping obstruction surface %d\n", srfOT->nr );
 #endif
-      memcpy( vs, srfOT->v, nv*sizeof(VERTEX3D) );
+      memcpy( vs, srfOT->v, nv*sizeof(Vec3) );
       srfOT->nv = ClipPolygon( 1, nv, vs, z, srfOT->v );
       }
     }
@@ -304,9 +306,9 @@ void CoordTrans3D( SRFDAT3D *srf, SRFDATNM *srf1, SRFDATNM *srf2,
 
 /*  Dump SRFDAT3D structure.  */
 
-void DumpSrf3D( I1 *title, SRFDAT3D *srf )
+void DumpSrf3D( char *title, SRFDAT3D *srf )
   {
-  IX n;
+  int n;
   fprintf( _ulog, "%s:  %d  area %.3e\n",
     title, srf->nr, srf->area );
   DumpVA( " ctd", 1, 3, &srf->ctd.x );
@@ -320,9 +322,9 @@ void DumpSrf3D( I1 *title, SRFDAT3D *srf )
 
 /*  Dump SRFDATNM structure.  */
 
-void DumpSrfNM( I1 *title, SRFDATNM *srf )
+void DumpSrfNM( char *title, SRFDATNM *srf )
   {
-  IX n;
+  int n;
   fprintf( _ulog, "%s:  %d  area %.3e\n",
     title, srf->nr, srf->area );
   DumpVA( " ctd", 1, 3, &srf->ctd.x );
@@ -336,9 +338,9 @@ void DumpSrfNM( I1 *title, SRFDATNM *srf )
 
 /*  Dump SRFDAT3X structure.  */
 
-void Dump3X( I1 *title, SRFDAT3X *srfT )
+void Dump3X( char *title, SRFDAT3X *srfT )
   {
-  IX n;
+  int n;
   fprintf( _ulog, "%s:  %d  %.3e  %f\n",
     title, srfT->nr, srfT->area, srfT->ztmax );
   DumpVA( " dct", 1, 4, &srfT->dc.x );
@@ -350,13 +352,13 @@ void Dump3X( I1 *title, SRFDAT3X *srfT )
 
 /***  DumpVA.c  **************************************************************/
 
-/*  Dump a vector {A} or array [A] (R8 values) to file _ulog.
+/*  Dump a vector {A} or array [A] (double values) to file _ulog.
  *  A vector has only one row.
  */
 
-void DumpVA( I1 *title, const IX rows, const IX cols, R8 *a )
+void DumpVA( char *title, const int rows, const int cols, double *a )
   {
-  IX i, j, n;
+  int i, j, n;
 
   fprintf( _ulog, "%s:", title );
   if( rows>1 )

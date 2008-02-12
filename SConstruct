@@ -29,14 +29,83 @@ opts.Add(
 	,"gcc"
 )
 
+opts.Add(BoolOption(
+	'WITH_GCCVISIBILITY'
+	,"Whether to use GCC Visibility features (only applicable if available)"
+	,True
+))
+
 opts.Update(env)
+
+#------------
+# Configuration tests
+
+# GCC
+
+gcc_test_text = """
+#ifndef __GNUC__
+# error "Not using GCC"
+#endif
+
+int main(void){
+	return __GNUC__;
+}
+"""
+
+def CheckGcc(context):
+	context.Message("Checking for GCC... ")
+	is_ok = context.TryCompile(gcc_test_text,".c")
+	context.Result(is_ok)
+	return is_ok
+
+# GCC VISIBILITY feature
+
+gccvisibility_test_text = """
+#if __GNUC__ < 4
+# error "Require GCC version 4 or newer"
+#endif
+
+__attribute__ ((visibility("default"))) int x;
+
+int main(void){
+	extern int x;
+	x = 4;
+}
+"""
+
+def CheckGccVisibility(context):
+	context.Message("Checking for GCC 'visibility' capability... ")
+	if not context.env.has_key('WITH_GCCVISIBILITY') or not env['WITH_GCCVISIBILITY']:
+		context.Result("disabled")
+		return 0
+	is_ok = context.TryCompile(gccvisibility_test_text,".c")
+	context.Result(is_ok)
+	return is_ok
+
+conf = Configure(env
+	, custom_tests = { 
+		'CheckGcc' : CheckGcc
+		, 'CheckGccVisibility' : CheckGccVisibility
+	}
+)
+
+if conf.CheckGcc():
+	conf.env['HAVE_GCC']=True;
+	if env['WITH_GCCVISIBILITY'] and conf.CheckGccVisibility():
+		conf.env['HAVE_GCCVISIBILITY']=True;
+		conf.env.Append(CCFLAGS=['-fvisibility=hidden'])
+		conf.env.Append(CPPDEFINES=['HAVE_GCCVISIBILITY'])
+	conf.env.Append(CCFLAGS=['-Wall'])
+
+conf.Finish()
 
 #------------
 # Create the program
 
 srcs = Split("""
-	ctrans.c  heap.c  polygn.c  savevf.c  v3main.c  viewobs.c  viewunob.c
+	ctrans.c  heap.c  polygn.c  savevf.c  viewobs.c  viewunob.c
 	getdat.c  misc.c  readvf.c  test3d.c  view3d.c  viewpp.c
+	common.c
 """)
 
 env.Append(
@@ -48,7 +117,11 @@ env.Append(
 if env.get('DEBUG'):
 	env.Append(CPPDEFINES=['_DEBUG'])
 
-prog = env.Program('view3d', srcs)
+lib = env.SharedLibrary('view3d',srcs)
+
+prog = env.Program('view3d', ['v3main.c'], LIBS=['view3d'], LIBPATH=['#'])
+
+#viewer = env.Prog
 
 #------------
 # create distribution tarball

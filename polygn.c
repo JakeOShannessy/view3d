@@ -12,29 +12,31 @@
 #else
 # define DEBUG 1
 #endif
+
+#define V3D_BUILD
+#include "polygn.h"
+
 #include <stdio.h>
 #include <string.h> /* prototype: memset, memcpy */
 #include <math.h>   /* prototype: fabs */
 #include <limits.h> /* define UINT_MAX */
 #include "types.h" 
 #include "view3d.h"
-#include "prtyp.h"
+#include "misc.h"
+#include "heap.h"
 
-extern FILE *_ulog; /* log file */
-extern IX _maxNVT;  /* maximum number of temporary vertices */
+static int TransferVrt(Vec2 *toVrt, const Vec2 *fromVrt, int nFromVrt);
 
-IX TransferVrt( VERTEX2D *toVrt, const VERTEX2D *fromVrt, IX nFromVrt );
-
-I1 *_memPoly=NULL; /* memory block for polygon descriptions; must start NULL */
-HCVE *_nextFreeVE; /* pointer to next free vertex/edge */
-POLY *_nextFreePD; /* pointer to next free polygon descripton */
-POLY *_nextUsedPD; /* pointer to top-of-stack used polygon */
-R8 _epsDist;   /* minimum distance between vertices */
-R8 _epsArea;   /* minimum surface area */
-VERTEX2D *_leftVrt;  /* coordinates of vertices to left of edge */
-VERTEX2D *_rightVrt; /* coordinates of vertices to right of edge */
-VERTEX2D *_tempVrt;  /* coordinates of temporary polygon */
-IX *_u=NULL;  /* +1 = vertex left of edge; -1 = vertex right of edge */
+char *_memPoly=NULL; /* memory block for polygon descriptions; must start NULL */
+PolygonVertexEdge *_nextFreeVE; /* pointer to next free vertex/edge */
+Polygon *_nextFreePD; /* pointer to next free polygon descripton */
+Polygon *_nextUsedPD; /* pointer to top-of-stack used polygon */
+double _epsDist;   /* minimum distance between vertices */
+double _epsArea;   /* minimum surface area */
+Vec2 *_leftVrt;  /* coordinates of vertices to left of edge */
+Vec2 *_rightVrt; /* coordinates of vertices to right of edge */
+Vec2 *_tempVrt;  /* coordinates of temporary polygon */
+int *_u=NULL;  /* +1 = vertex left of edge; -1 = vertex right of edge */
 
 /*  Extensive use is made of 'homogeneous coordinates' (HC) which are not 
  *  familiar to most engineers.  The important properties of HC are 
@@ -69,19 +71,18 @@ IX *_u=NULL;  /* +1 = vertex left of edge; -1 = vertex right of edge */
  *  Return 0 if P2 outside P1, 1 if P2 inside P1, 2 for partial overlap.
  */
 
-IX PolygonOverlap( const POLY *p1, POLY *p2, const IX savePD, IX freeP2 )
-  {
-  POLY *pp;     /* pointer to polygon */
-  POLY *initUsedPD;  /* initial top-of-stack pointer */
-  HCVE *pv1;    /* pointer to edge of P1 */
-  IX nLeftVrt;  /* number of vertices to left of edge */
-  IX nRightVrt; /* number of vertices to right of edge */
-  IX nTempVrt;  /* number of vertices of temporary polygon */
-//  VERTEX2D leftVrt[MAXNVT];  /* coordinates of vertices to left of edge */
-//  VERTEX2D rightVrt[MAXNVT]; /* coordinates of vertices to right of edge */
-//  VERTEX2D tempVrt[MAXNVT];  /* coordinates of temporary polygon */
-  IX overlap=0; /* 0: P2 outside P1; 1: P2 inside P1; 2: part overlap */
-  IX j, jm1;    /* vertex indices;  jm1 = j - 1 */
+int PolygonOverlap(const Polygon *p1, Polygon *p2, const int savePD, int freeP2){
+  Polygon *pp;     /* pointer to polygon */
+  Polygon *initUsedPD;  /* initial top-of-stack pointer */
+  PolygonVertexEdge *pv1;    /* pointer to edge of P1 */
+  int nLeftVrt;  /* number of vertices to left of edge */
+  int nRightVrt; /* number of vertices to right of edge */
+  int nTempVrt;  /* number of vertices of temporary polygon */
+//  Vec2 leftVrt[MAXNVT];  /* coordinates of vertices to left of edge */
+//  Vec2 rightVrt[MAXNVT]; /* coordinates of vertices to right of edge */
+//  Vec2 tempVrt[MAXNVT];  /* coordinates of temporary polygon */
+  int overlap=0; /* 0: P2 outside P1; 1: P2 inside P1; 2: part overlap */
+  int j, jm1;    /* vertex indices;  jm1 = j - 1 */
 
 #if( DEBUG > 1 )
   fprintf( _ulog, "PolygonOverlap:  P1 [%p]  P2 [%p]  flag %d\n",
@@ -98,10 +99,10 @@ IX PolygonOverlap( const POLY *p1, POLY *p2, const IX savePD, IX freeP2 )
   pv1 = p1->firstVE;
   do{  /*  process tempVrt against each edge of P1 (long loop) */
        /*  transfer tempVrt into leftVrt and/or rightVrt  */
-    R8 a1, b1, c1; /* HC for current edge of P1 */
-//    IX u[MAXNVT];  /* +1 = vertex left of edge; -1 = vertex right of edge */
-    IX left=1;     /* true if all vertices left of edge */
-    IX right=1;    /* true if all vertices right of edge */
+    double a1, b1, c1; /* HC for current edge of P1 */
+//    int u[MAXNVT];  /* +1 = vertex left of edge; -1 = vertex right of edge */
+    int left=1;     /* true if all vertices left of edge */
+    int right=1;    /* true if all vertices right of edge */
 #if( DEBUG > 1 )
     fprintf(_ulog, "Test against edge of P1\nU:" );
 #endif
@@ -111,7 +112,7 @@ IX PolygonOverlap( const POLY *p1, POLY *p2, const IX savePD, IX freeP2 )
     pv1 = pv1->next;
     for( j=0; j<nTempVrt; j++ )
       {
-      R8 dot = _tempVrt[j].x * a1 + _tempVrt[j].y * b1 + c1;
+      double dot = _tempVrt[j].x * a1 + _tempVrt[j].y * b1 + c1;
       if( dot > _epsArea )
         { _u[j] = 1; right = 0; }
       else if( dot < -_epsArea )
@@ -136,7 +137,7 @@ IX PolygonOverlap( const POLY *p1, POLY *p2, const IX savePD, IX freeP2 )
       {
       if( _u[jm1]*_u[j] < 0 )  /* vertices j-1 & j on opposite sides of edge */
         {                             /* compute intercept of edges */
-        R8 a, b, c, w; /* HC intersection components */
+        double a, b, c, w; /* HC intersection components */
         a = _tempVrt[jm1].y - _tempVrt[j].y;
         b = _tempVrt[j].x - _tempVrt[jm1].x;
         c = _tempVrt[j].y * _tempVrt[jm1].x - _tempVrt[jm1].y * _tempVrt[j].x;
@@ -248,7 +249,7 @@ p2_outside_p1:     /* no overlap between P1 and P2 */
       }
     else                 /* copy P2 to new stack */
       {
-      HCVE *pv, *pv2;
+      PolygonVertexEdge *pv, *pv2;
       pp = GetPolygonHC();      /* get cleared polygon data area */
       pp->area = p2->area;      /* copy P2 data */
       pp->trns = p2->trns;
@@ -258,7 +259,7 @@ p2_outside_p1:     /* no overlap between P1 and P2 */
           pv = pv->next = GetVrtEdgeHC();
         else
           pv = pp->firstVE = GetVrtEdgeHC();
-        memcpy( pv, pv2, sizeof(HCVE) );   /* copy vertex/edge data */
+        memcpy( pv, pv2, sizeof(PolygonVertexEdge) );   /* copy vertex/edge data */
         pv2 = pv2->next;
         } while( pv2 != p2->firstVE );
       pv->next = pp->firstVE;   /* complete circular list */
@@ -284,9 +285,8 @@ finish:
  *  duplicate vertices.  Closeness of vertices determined by _epsDist.  
  *  Return number of vertices in polygon toVrt.  */
 
-IX TransferVrt( VERTEX2D *toVrt, const VERTEX2D *fromVrt, IX nFromVrt )
-  {
-  IX j,  /* index to vertex in polygon fromVrt */
+int TransferVrt(Vec2 *toVrt, const Vec2 *fromVrt, int nFromVrt){
+  int j,  /* index to vertex in polygon fromVrt */
     jm1, /* = j - 1 */
      n;  /* index to vertex in polygon toVrt */
 
@@ -320,15 +320,15 @@ IX TransferVrt( VERTEX2D *toVrt, const VERTEX2D *fromVrt, IX nFromVrt )
  *  Return NULL if polygon area too small; otherwise return pointer to polygon.
  */
 
-POLY *SetPolygonHC( const IX nVrt, const VERTEX2D *polyVrt, const R8 trns )
+Polygon *SetPolygonHC( const int nVrt, const Vec2 *polyVrt, const double trns )
 /* nVrt    - number of vertices (vertices in clockwise sequence);
  * polyVrt - X,Y coordinates of vertices (1st vertex not repeated at end),
              index from 0 to nVrt-1. */
   {
-  POLY *pp;    /* pointer to polygon */
-  HCVE *pv;    /* pointer to HC vertices/edges */
-  R8 area=0.0; /* polygon area */
-  IX j, jm1;   /* vertex indices;  jm1 = j - 1 */
+  Polygon *pp;    /* pointer to polygon */
+  PolygonVertexEdge *pv;    /* pointer to HC vertices/edges */
+  double area=0.0; /* polygon area */
+  int j, jm1;   /* vertex indices;  jm1 = j - 1 */
 
   pp = GetPolygonHC();      /* get cleared polygon data area */
 #if( DEBUG > 1 )
@@ -380,18 +380,18 @@ POLY *SetPolygonHC( const IX nVrt, const VERTEX2D *polyVrt, const R8 trns )
  *  This is taken from the list of unused structures if possible.  
  *  Otherwise, a new structure will be allocated.  */
 
-POLY *GetPolygonHC( void )
+Polygon *GetPolygonHC( void )
   {
-  POLY *pp;  /* pointer to polygon structure */
+  Polygon *pp;  /* pointer to polygon structure */
 
   if( _nextFreePD )
     {
     pp = _nextFreePD;
     _nextFreePD = _nextFreePD->next;
-    memset( pp, 0, sizeof(POLY) );  /* clear pointers */
+    memset( pp, 0, sizeof(Polygon) );  /* clear pointers */
     }
   else
-    pp = Alc_EC( &_memPoly, sizeof(POLY), __FILE__, __LINE__ );
+    pp = Alc_EC( &_memPoly, sizeof(Polygon), __FILE__, __LINE__ );
 
   return pp;
 
@@ -403,9 +403,9 @@ POLY *GetPolygonHC( void )
  *  This is taken from the list of unused structures if possible.  
  *  Otherwise, a new structure will be allocated.  */
 
-HCVE *GetVrtEdgeHC( void )
+PolygonVertexEdge *GetVrtEdgeHC( void )
   {
-  HCVE *pv;  /* pointer to vertex/edge structure */
+  PolygonVertexEdge *pv;  /* pointer to vertex/edge structure */
 
   if( _nextFreeVE )
     {
@@ -413,7 +413,7 @@ HCVE *GetVrtEdgeHC( void )
     _nextFreeVE = _nextFreeVE->next;
     }
   else
-    pv = Alc_EC( &_memPoly, sizeof(HCVE), __FILE__, __LINE__ );
+    pv = Alc_EC( &_memPoly, sizeof(PolygonVertexEdge), __FILE__, __LINE__ );
 
   return pv;
 
@@ -423,12 +423,12 @@ HCVE *GetVrtEdgeHC( void )
 
 /*  Restore list of polygon descriptions to free space.  */
 
-void FreePolygons( POLY *first, POLY *last )
+void FreePolygons( Polygon *first, Polygon *last )
 /* first;  - pointer to first polygon in linked list (not NULL).
  * last;   - pointer to polygon AFTER last one freed (NULL = complete list). */
   {
-  POLY *pp; /* pointer to polygon */
-  HCVE *pv; /* pointer to edge/vertex */
+  Polygon *pp; /* pointer to polygon */
+  PolygonVertexEdge *pv; /* pointer to edge/vertex */
 
   for( pp=first; ; pp=pp->next )
     {
@@ -462,7 +462,7 @@ void NewPolygonStack( void )
 
 /*  Return pointer to top of active polygon stack.  */
 
-POLY *TopOfPolygonStack( void )
+Polygon *TopOfPolygonStack( void )
   {
   return _nextUsedPD;
 
@@ -473,10 +473,10 @@ POLY *TopOfPolygonStack( void )
 /*  Get polygon vertices.  Return number of vertices.
  *  Be sure polyVrt is sufficiently long.  */
 
-IX GetPolygonVrt2D( const POLY *pp, VERTEX2D *polyVrt )
+int GetPolygonVrt2D( const Polygon *pp, Vec2 *polyVrt )
   {
-  HCVE *pv;    /* pointer to HC vertices/edges */
-  IX j=0;      /* vertex counter */
+  PolygonVertexEdge *pv;    /* pointer to HC vertices/edges */
+  int j=0;      /* vertex counter */
 
   pv = pp->firstVE;
   do{
@@ -494,10 +494,10 @@ IX GetPolygonVrt2D( const POLY *pp, VERTEX2D *polyVrt )
 /*  Get polygon vertices.  Return number of vertices.
  *  Be sure polyVrt is sufficiently long.  */
 
-IX GetPolygonVrt3D( const POLY *pp, VERTEX3D *polyVrt )
+int GetPolygonVrt3D( const Polygon *pp, Vec3 *polyVrt )
   {
-  HCVE *pv;    /* pointer to HC vertices/edges */
-  IX j=0;      /* vertex counter */
+  PolygonVertexEdge *pv;    /* pointer to HC vertices/edges */
+  int j=0;      /* vertex counter */
 
   pv = pp->firstVE;
   do{
@@ -517,10 +517,10 @@ IX GetPolygonVrt3D( const POLY *pp, VERTEX3D *polyVrt )
 
 void FreeTmpVertMem( void )
   {
-  Fre_V( _u, 0, _maxNVT, sizeof(IX), __FILE__, __LINE__ );
-  Fre_V( _tempVrt, 0, _maxNVT, sizeof(VERTEX2D), __FILE__, __LINE__ );
-  Fre_V( _rightVrt, 0, _maxNVT, sizeof(VERTEX2D), __FILE__, __LINE__ );
-  Fre_V( _leftVrt, 0, _maxNVT, sizeof(VERTEX2D), __FILE__, __LINE__ );
+  Fre_V( _u, 0, _maxNVT, sizeof(int), __FILE__, __LINE__ );
+  Fre_V( _tempVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+  Fre_V( _rightVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+  Fre_V( _leftVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
 
   }  /*  end FreeTmpVertMem  */
 
@@ -532,10 +532,10 @@ void InitTmpVertMem( void )
   {
   if( _u ) error( 3, __FILE__, __LINE__,
     "Temporary vertices already allocated", "" );
-  _leftVrt = Alc_V( 0, _maxNVT, sizeof(VERTEX2D), __FILE__, __LINE__ );
-  _rightVrt = Alc_V( 0, _maxNVT, sizeof(VERTEX2D), __FILE__, __LINE__ );
-  _tempVrt = Alc_V( 0, _maxNVT, sizeof(VERTEX2D), __FILE__, __LINE__ );
-  _u = Alc_V( 0, _maxNVT, sizeof(IX), __FILE__, __LINE__ );
+  _leftVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+  _rightVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+  _tempVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+  _u = Alc_V( 0, _maxNVT, sizeof(int), __FILE__, __LINE__ );
 
   }  /*  end InitTmpVertMem  */
 
@@ -543,7 +543,7 @@ void InitTmpVertMem( void )
 
 /*  Initialize polygon processing memory and globals.  */
 
-void InitPolygonMem( const R8 epsdist, const R8 epsarea )
+void InitPolygonMem( const double epsdist, const double epsarea )
   {
   if( _memPoly )  /* clear existing polygon structures data */
     _memPoly = Clr_EC( _memPoly, __FILE__, __LINE__ );
@@ -569,7 +569,7 @@ void InitPolygonMem( const R8 epsdist, const R8 epsarea )
 void FreePolygonMem( void )
   {
   if( _memPoly )
-    _memPoly = (I1 *)Fre_EC( _memPoly, __FILE__, __LINE__ );
+    _memPoly = (char *)Fre_EC( _memPoly, __FILE__, __LINE__ );
 
   }  /* end FreePolygonMem */
 
@@ -584,11 +584,11 @@ void FreePolygonMem( void )
  *  and the clipped vertices in polyVrt.
  */
 
-IX LimitPolygon( IX nVrt, VERTEX2D polyVrt[],
-  const R8 maxX, const R8 minX, const R8 maxY, const R8 minY )
+int LimitPolygon( int nVrt, Vec2 polyVrt[],
+  const double maxX, const double minX, const double maxY, const double minY )
   {
-//  VERTEX2D tempVrt[MAXNV2];  /* temporary vertices */
-  IX n, m;  /* vertex index */
+//  Vec2 tempVrt[MAXNV2];  /* temporary vertices */
+  int n, m;  /* vertex index */
 
                          /* test vertices against maxX */
   polyVrt[nVrt].x = polyVrt[0].x;
@@ -735,12 +735,11 @@ IX LimitPolygon( IX nVrt, VERTEX2D polyVrt[],
 
 /*  Print the descriptions of sequential polygons.  */
 
-void DumpHC( I1 *title, const POLY *pfp, const POLY *plp )
+void DumpHC( char *title, const Polygon *pfp, const Polygon *plp ){
 /*  pfp, plp; pointers to first and last (NULL acceptable) polygons  */
-  {
-  const POLY *pp;
-  HCVE *pv;
-  IX i, j;
+  const Polygon *pp;
+  PolygonVertexEdge *pv;
+  int i, j;
 
   fprintf( _ulog, "%s\n", title );
   for( i=0,pp=pfp; pp; pp=pp->next )  /* polygon loop */
@@ -764,43 +763,36 @@ void DumpHC( I1 *title, const POLY *pfp, const POLY *plp )
     if( pp==plp ) break;
     }
   fflush( _ulog );
+}  /* end of DumpHC */
 
-  }  /* end of DumpHC */
 
-/*** DumpFreePolygons.c  *****************************************************/
-
-void DumpFreePolygons( void )
-  {
-  POLY *pp;
+void DumpFreePolygons( void ){
+  Polygon *pp;
 
   fprintf( _ulog, "FREE POLYGONS:" );
   for( pp=_nextFreePD; pp; pp=pp->next )
     fprintf( _ulog, " [%p]", pp );
   fprintf( _ulog, "\n" );
+}  /* end DumpFreePolygons */
 
-  }  /* end DumpFreePolygons */
 
-/*** DumpFreeVertices.c  *****************************************************/
-
-void DumpFreeVertices( void )
-  {
-  HCVE *pv;
+void DumpFreeVertices( void ){
+  PolygonVertexEdge *pv;
 
   fprintf( _ulog, "FREE VERTICES:" );
   for( pv=_nextFreeVE; pv; pv=pv->next )
     fprintf( _ulog, " [%p]", pv );
   fprintf( _ulog, "\n" );
-
-  }  /* end DumpFreeVertices */
+}  /* end DumpFreeVertices */
 #endif  /* end DEBUG > 0 */
 
 /***  DumpP3D.c  *************************************************************/
 
 /*  Dump 3-D polygon vertex data. */
 
-void DumpP3D( I1 *title, const IX nvs, VERTEX3D *vs )
+void DumpP3D( char *title, const int nvs, Vec3 *vs )
   {
-  IX n;
+  int n;
 
   fprintf( _ulog, "%s\n", title );
   fprintf( _ulog, " nvs: %d\tX\tY\tZ\n", nvs );
@@ -815,9 +807,9 @@ void DumpP3D( I1 *title, const IX nvs, VERTEX3D *vs )
 
 /*  Dump 2-D polygon vertex data.  */
 
-void DumpP2D( I1 *title, const IX nvs, VERTEX2D *vs )
+void DumpP2D( char *title, const int nvs, Vec2 *vs )
   {
-  IX n;
+  int n;
 
   fprintf( _ulog, "%s\n", title );
   fprintf( _ulog, " nvs: %d\tX\tY\n", nvs );

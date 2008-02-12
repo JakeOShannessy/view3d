@@ -2,22 +2,25 @@
 
 /*  Main program for batch processing of 3-D view factors.  */
 
+#define V3D_BUILD
+#include "savevf.h"
+
 #include <stdio.h>
 #include <string.h>
 #include "types.h"
 #include "view3d.h"
-#include "prtyp.h"
+#include "misc.h"
 
 /***  SaveF0.c  **************************************************************/
 
 /*  Save view factors as square array; + area + emit; text format.  */
 
-void SaveF0( I1 *fileName, I1 *header, IX nSrf,
-             R4 *area, R4 *emit, R8 **AF, R4 *F )
-  {
+static void SaveF0( char *fileName, char *header, int nSrf,
+             float *area, float *emit, double **AF, float *F 
+){
   FILE *vfout;
-  IX n;    /* row */
-  IX m;    /* column */
+  int n;    /* row */
+  int m;    /* column */
 
   vfout = fopen( fileName, "w" );
   fprintf( vfout, "%s", header );
@@ -28,13 +31,13 @@ void SaveF0( I1 *fileName, I1 *header, IX nSrf,
 
   for( n=1; n<=nSrf; n++ )      /* process AF values for row n */
     {
-    R8 Ainv = 1.0 / area[n];
+    double Ainv = 1.0 / area[n];
     for( m=1; m<=nSrf; m++ )      /* process column values */
       {
       if( m < n )
-        F[m] = (R4)(AF[n][m] * Ainv);
+        F[m] = (float)(AF[n][m] * Ainv);
       else
-        F[m] = (R4)(AF[m][n] * Ainv);
+        F[m] = (float)(AF[m][n] * Ainv);
       }
     fprintf( vfout, "%.6f", F[1] );   /* write row */
     for( m=2; m<=nSrf; m++ )
@@ -48,50 +51,50 @@ void SaveF0( I1 *fileName, I1 *header, IX nSrf,
   fprintf( vfout, "\n" );
   fclose( vfout );
 
-  }  /* end of SaveF0 */
+}  /* end of SaveF0 */
 
 /***  SaveF1.c  **************************************************************/
 
 /*  Save view factors as square array; binary format. */
 
-void SaveF1( I1 *fileName, I1 *header, IX nSrf,
-             R4 *area, R4 *emit, R8 **AF, R4 *F )
-  {
+static void SaveF1( char *fileName, char *header, int nSrf,
+             float *area, float *emit, double **AF, float *F 
+){
   FILE *vfout;
-  IX n;    /* row */
+  int n;    /* row */
 
   vfout = fopen( fileName, "wb" );
-  fwrite( header, sizeof(I1), 32, vfout );
-  fwrite( area+1, sizeof(R4), nSrf, vfout );
+  fwrite( header, sizeof(char), 32, vfout );
+  fwrite( area+1, sizeof(float), nSrf, vfout );
 
   for( n=1; n<=nSrf; n++ )      /* process AF values for row n */
     {
-    IX m;    /* column */
-    R8 Ainv = 1.0 / area[n];
+    int m;    /* column */
+    double Ainv = 1.0 / area[n];
     for( m=1; m<=nSrf; m++ )      /* process column values */
       {
       if( m < n )
-        F[m] = (R4)(AF[n][m] * Ainv);
+        F[m] = (float)(AF[n][m] * Ainv);
       else
-        F[m] = (R4)(AF[m][n] * Ainv);
+        F[m] = (float)(AF[m][n] * Ainv);
       }
-    fwrite( F+1, sizeof(R4), nSrf, vfout );   /* write row */
+    fwrite( F+1, sizeof(float), nSrf, vfout );   /* write row */
     }
 
-  fwrite( emit+1, sizeof(R4), nSrf, vfout );
+  fwrite( emit+1, sizeof(float), nSrf, vfout );
   fclose( vfout );
 
-  }  /* end of SaveF1 */
+}  /* end of SaveF1 */
 
 /***  SaveAF.c  **************************************************************/
 
 /*  Save view factors from 3D calculations.  */
 
-void SaveAF( I1 *fileName, I1 *header, IX nSrf, I1 *title, I1 **name, 
-             R4 *area, R4 *emit, R8 **AF )
-  {
+void SaveAF( char *fileName, char *header, int nSrf, char *title, char **name, 
+		float *area, float *emit, double **AF 
+){
   FILE *vfout;
-  IX n;    /* row */
+  int n;    /* row */
 
   vfout = fopen( fileName, "w" );
   fprintf( vfout, "%s", header );
@@ -100,7 +103,7 @@ void SaveAF( I1 *fileName, I1 *header, IX nSrf, I1 *title, I1 **name,
 
   for( n=1; n<=nSrf; n++ )      /* process AF values for row n */
     {
-    IX m;    /* column */
+    int m;    /* column */
     fprintf( vfout, "%4d %14.6e %7.3f   %s\n",
       n, area[n], emit[n], name[n] );
 
@@ -123,12 +126,12 @@ void SaveAF( I1 *fileName, I1 *header, IX nSrf, I1 *title, I1 **name,
 
 /*  Save computed view factors.  */
 
-void SaveVF( I1 *fileName, I1 *program, I1 *version,
-             IX format, IX encl, IX didemit, IX nSrf,
-             R4 *area, R4 *emit, R8 **AF, R4 *vtmp )
+void SaveVF( char *fileName, char *program, char *version,
+             int format, int encl, int didemit, int nSrf,
+             float *area, float *emit, double **AF, float *vtmp )
   {
-  I1 header[32];
-  IX j;
+  char header[32];
+  int j;
 
   /* fill output file header line */
   sprintf( header, "%s %s %d %d %d %d",

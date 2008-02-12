@@ -16,18 +16,20 @@
 # define DEBUG 0
 #endif
 
+#define V3D_BUILD
+#include "heap.h"
+
 #include <stdio.h>
 #include <string.h> // prototypes: memset, ...
 #include <stdlib.h> // prototype: malloc, free
 #include <limits.h> // define UINT_MAX
-#include "types.h"  // define U1, I2, etc.
-#include "prtyp.h"  // miscellaneous function prototypes
+#include "types.h"  // define unsigned char, short, etc.
+#include "misc.h"  // miscellaneous function prototypes
 
-extern FILE *_ulog;   // program log file
-I1 _heapmsg[256];     // buffer for heap messages
+char _heapmsg[256];     // buffer for heap messages
 
-I4 _bytesAllocated=0L;  // through Alc_E()
-I4 _bytesFreed=0L;      // through Fre_E()
+long _bytesAllocated=0L;  // through Alc_E()
+long _bytesFreed=0L;      // through Fre_E()
 
 #if( MEMTEST > 0 )
 #define MCHECK 0x7E7E7E7EL  // 5A='z'; 7E='~'
@@ -35,18 +37,20 @@ I4 _bytesFreed=0L;      // through Fre_E()
 typedef struct memlist    // record of memory allocation
   {
   struct memlist *next;   // pointer to next struct
-  U1 *pam;    // pointer to allocated memory
-  UX length;  // length of allocated variable
-  IX line;    // line in source file
-  I1 file[1]; // name of source file; allocate for exact length
+  unsigned char *pam;    // pointer to allocated memory
+  unsigned length;  // length of allocated variable
+  int line;    // line in source file
+  char file[1]; // name of source file; allocate for exact length
   } MEMLIST;
 MEMLIST *_memList=NULL;
 # endif
 #endif
 
-/***  Alc_E.c  ***************************************************************/
+/*------------------------------------------------------------------------------
+  ELEMENTS ('E')
+*/
 
-/*  Allocate memory for a single element, i.e. contiguous portion of the heap.
+/**  Allocate memory for a single element, i.e. contiguous portion of the heap.
  *  This may be a single structure or an array. All allocated bytes set to 0.
  *  All memory allocations and de-allocations should go through Alc_E() 
  *  and Fre_E() to allow some useful heap checking options.
@@ -69,19 +73,18 @@ MEMLIST *_memList=NULL;
  *  the LOG file, _ulog, which is created when the program starts.
  *  The old Turbo C++ compiler has some functions to directly test the
  *  heap integrity. They have been placed in MemRem(). Since it was
- *  a 16-bit compiler, tests exist to check for the element size.   */
-
-void *Alc_E( I4 length, I1 *file, IX line )
-/*  length; length of element (bytes).
- *  file;   name of file for originating call.
- *  line;   line in file. */
-  {
-  U1 *p;     // pointer to allocated memory
+ *  a 16-bit compiler, tests exist to check for the element size.
+ *  @param length length of element (bytes).
+ *  @param file   name of file for originating call.
+ *  @param line   line in file.
+*/
+void *Alc_E( long length, char *file, int line ){
+  unsigned char *p;     // pointer to allocated memory
 #if( MEMTEST > 0 )
-  U4 *pt;    // pointer to heap guard bytes
+  unsigned long *pt;    // pointer to heap guard bytes
 # if( MEMTEST > 1 )
   MEMLIST *pml;
-  I1 *fname;
+  char *fname;
 # endif
 #endif
 
@@ -99,10 +102,10 @@ void *Alc_E( I4 length, I1 *file, IX line )
     }
 
 #if( MEMTEST > 0 )
-  p = (U1 *)malloc( length+8 );
+  p = (unsigned char *)malloc( length+8 );
   _bytesAllocated += length+8;
 #else
-  p = (U1 *)malloc( length );
+  p = (unsigned char *)malloc( length );
   _bytesAllocated += length;
 #endif
 
@@ -131,44 +134,42 @@ void *Alc_E( I4 length, I1 *file, IX line )
     }
 
 #if( MEMTEST > 0 )      // set guard bytes
-  pt = (U4 *)p;
+  pt = (unsigned long *)p;
   *pt = MCHECK;
   p+= 4;
-  pt = (U4 *)(p+length);
+  pt = (unsigned long *)(p+length);
   *pt = MCHECK;
 #endif
 
   memset( p, 0, length );  // zero allocated memory
 
   return (void *)p;
-
-  }  /*  end of Alc_E  */
+}  /*  end of Alc_E  */
 
 /***  Chk_E.c  ***************************************************************/
 
-/*  Check guard bytes around memory allocated by Alc_E().
- *  Return non-zero if heap is in error.  */
-
-IX Chk_E( void *pm, UX length, I1 *file, IX line )
-/*  *pm;    pointer to allocated memory.
- *  length; length of element (bytes).
- *  file;   name of file for originating call.
- *  line;   line in file. */
-  {
-  IX status=0;
+/**  Check guard bytes around memory allocated by Alc_E().
+ *  @return non-zero if heap is in error.
+ *  @param  pm    pointer to allocated memory.
+ *  @param length length of element (bytes).
+ *  @param file   name of file for originating call.
+ *  @param line   line in file.
+*/
+int Chk_E( void *pm, unsigned length, char *file, int line ){
+  int status=0;
 #if( MEMTEST > 0 )   // test guard bytes
-  U1 *p;     // pointer to allocated memory
-  U4 *pt;    // pointer to guard bytes
+  unsigned char *p;     // pointer to allocated memory
+  unsigned long *pt;    // pointer to guard bytes
 
-  p = (U1 *)pm + length;
-  pt = (U4 *)p;
+  p = (unsigned char *)pm + length;
+  pt = (unsigned long *)p;
   if( *pt != MCHECK )
     {
     error( 2, file, line, "Overrun at end of allocated memory", "" );
     status = 1;
     }
-  p = (U1 *)pm - 4;
-  pt = (U4 *)p;
+  p = (unsigned char *)pm - 4;
+  pt = (unsigned long *)p;
   if( *pt != MCHECK )
     {
     error( 2, file, line, "Overrun at start of allocated memory", "" );
@@ -207,21 +208,18 @@ IX Chk_E( void *pm, UX length, I1 *file, IX line )
     }
 
   return status;
+}  /*  end of Chk_E  */
 
-  }  /*  end of Chk_E  */
-
-/***  Fre_E.c  ***************************************************************/
-
-/*  Free pointer to previously memory allocated by Alc_E().
- *  Includes a memory check.  */
-
-void *Fre_E( void *pm, UX length, I1 *file, IX line )
-/*  *pm;    pointer to allocated memory.
- *  length; length of element (bytes).
- *  file;   name of file for originating call.
- *  line;   line in file. */
-  {
-  U1 *p=pm;     // pointer to allocated memory
+/**
+	Free pointer to previously memory allocated by Alc_E().
+	Includes a memory check.
+	@param pm;    pointer to allocated memory.
+	@param length; length of element (bytes).
+	@param file;   name of file for originating call.
+	@param line;   line in file.  
+*/
+void *Fre_E( void *pm, unsigned length, char *file, int line ){
+  unsigned char *p=pm;     // pointer to allocated memory
 #if( MEMTEST > 1 )
   MEMLIST *pml, *pmlt=NULL;
 #endif
@@ -268,9 +266,9 @@ void *Fre_E( void *pm, UX length, I1 *file, IX line )
 
 /*  Report memory allocated and freed.  */
 
-I4 MemNet( I1 *msg )
+long MemNet( char *msg )
   {
-  I4 netBytes=_bytesAllocated-_bytesFreed;
+  long netBytes=_bytesAllocated-_bytesFreed;
 
   fprintf( _ulog, "%s: %ld bytes allocated, %ld freed, %ld net\n",
     msg, _bytesAllocated, _bytesFreed, netBytes );
@@ -317,12 +315,10 @@ void MemList( void )
  *  Freed lower blocks are not counted as available memory.
  *  heapwalk() shows the details.  */
 
-void MemRem( I1 *msg )
-  {
+void MemRem( char *msg ){
 #if( __TURBOC__ >= 0x295 )
-  {
   struct heapinfo hp;   // heap information
-  U4 bytes = coreleft();
+  unsigned long bytes = coreleft();
   fprintf( _ulog, "%s:\n", msg );
   fprintf( _ulog, "  Unallocated heap memory:  %ld bytes\n", bytes );
 
@@ -348,12 +344,11 @@ void MemRem( I1 *msg )
              hp.ptr, hp.size, hp.in_use ? "used" : "free" );
     }
 # endif
-  }
 #else
   MemNet( msg );  // for non-TurboC code
 #endif
 
-  }  /* end of MemRem */
+}  /* end of MemRem */
 
 /***  Alc_EC.c  **************************************************************/
 
@@ -369,25 +364,24 @@ typedef struct memblock   // block of memory for Alc_EC() allocation
   {
   struct memblock *prevBlock;  // pointer to previous block
   struct memblock *nextBlock;  // pointer to next block
-  I4 blockSize;   // number of bytes in block
-  I4 dataOffset;  // offset to free space
-  } MEMBLOCK;
+  long blockSize;   // number of bytes in block
+  long dataOffset;  // offset to free space
+} MEMBLOCK;
 
-void *Alc_EC( I1 **block, I4 size, I1 *file, IX line )
+void *Alc_EC( char **block, long size, char *file, int line ){
 /*  block;  pointer to current memory block.
  *  size;   size (bytes) of structure being allocated.
  *  file;   name of file for originating call.
  *  line;   line in file. */
-  {
-  I1 *p;  // pointer to the structure
+  
+  char *p;  // pointer to the structure
   MEMBLOCK *mb, // current memory block
            *nb; // next memory block
 
-  if( size < 1 )
-    {
+  if( size < 1 ){
     sprintf( _heapmsg, "Element too small to allocate: %ld bytes\n", size );
     error( 3, file, line, _heapmsg, "" );
-    }
+  }
 
   // Set memory alignment.
 #ifdef __TURBOC__
@@ -396,10 +390,10 @@ void *Alc_EC( I1 **block, I4 size, I1 *file, IX line )
   size = (size+7) & 0xFFFFFFF8;   // 32 bit; multiple of 8
 #endif
   mb = (void *)*block;
-  if( size > mb->blockSize - (I4)sizeof(MEMBLOCK) )
+  if( size > mb->blockSize - (long)sizeof(MEMBLOCK) )
     {
     sprintf( _heapmsg, "Requested size (%ld) larger than block (%ld)",
-      size, mb->blockSize - (I4)sizeof(MEMBLOCK) );
+      size, mb->blockSize - (long)sizeof(MEMBLOCK) );
     error( 3, file, line, _heapmsg, "" );
     }
   if( mb->dataOffset + size > mb->blockSize )
@@ -423,15 +417,15 @@ void *Alc_EC( I1 **block, I4 size, I1 *file, IX line )
 
   return (void *)p;
 
-  }  /*  end of Alc_EC  */
+}  /*  end of Alc_EC  */
 
 /***  Alc_ECI.c  *************************************************************/
 
 /*  Block initialization for Alc_EC.  Use:
- *    I1 *_ms;    // memory block for small structures
- *    _ms = (I1 *)alc_eci( 2000, "ms-block" );  */
+ *    char *_ms;    // memory block for small structures
+ *    _ms = (char *)alc_eci( 2000, "ms-block" );  */
 
-void *Alc_ECI( I4 size, I1 *file, IX line )
+void *Alc_ECI( long size, char *file, int line )
 /*  size;   size (bytes) of block being allocated.
  *  file;   name of file for originating call.
  *  line;   line in file. */
@@ -459,10 +453,10 @@ void *Alc_ECI( I4 size, I1 *file, IX line )
 
 /*  Check data blocks allocated by Alc_EC.  */
 
-void Chk_EC( void *block, I1 *file, IX line )
+void Chk_EC( void *block, char *file, int line )
 /*  block;  pointer to current (last in list) memory block. */
   {
-  IX status=0;
+  int status=0;
   MEMBLOCK *mb=block;
 
   for( ; mb->prevBlock; mb=mb->prevBlock )
@@ -470,8 +464,8 @@ void Chk_EC( void *block, I1 *file, IX line )
 
   for( ; mb; mb=mb->nextBlock )  // loop to end of list
     {
-    U1 *p = (void *)mb;
-    U4 *pt = (U4 *)(p + mb->blockSize);
+    unsigned char *p = (void *)mb;
+    unsigned long *pt = (unsigned long *)(p + mb->blockSize);
     if( *pt != MCHECK )
       {
       error( 2, file, line, "Overrun at end of data allocation", "" );
@@ -511,10 +505,10 @@ void Chk_EC( void *block, I1 *file, IX line )
 /*  Clear (but do not free) blocks allocated by Alc_EC.
  *  Return pointer to first block in linked list.  */
 
-void *Clr_EC( void *block, I1 *file, IX line )
+void *Clr_EC( void *block, char *file, int line )
 /*  block;  pointer to current (last in list) memory block. */
   {
-  U1 *p;      /* pointer to the block */
+  unsigned char *p;      /* pointer to the block */
   MEMBLOCK *mb=block;
 
 #if( MEMTEST > 0 )
@@ -539,7 +533,7 @@ void *Clr_EC( void *block, I1 *file, IX line )
 
 /*  Free blocks allocated by Alc_EC.  */
 
-void *Fre_EC( void *block, I1 *file, IX line )
+void *Fre_EC( void *block, char *file, int line )
 /*  block;  pointer to current memory block.
  *  file;   name of file for originating call.
  *  line;   line in file. */
@@ -578,15 +572,15 @@ void *Fre_EC( void *block, I1 *file, IX line )
  *  compliance for min_index = 1; a more general method is used here which
  *  is activated by #define ANSIOFFSET 1  (applies when min_index > 0)  */
 
-void *Alc_V( IX min_index, I4 max_index, IX size, I1 *file, IX line )
+void *Alc_V( int min_index, long max_index, int size, char *file, int line )
 /*  min_index;  minimum vector index:  vector[min_index] valid.
  *  max_index;  maximum vector index:  vector[max_index] valid.
  *  size;   size (bytes) of one data element.
  *  file;   name of file for originating call.
  *  line;   line in file. */
   {
-  I1 *p;      // pointer to the vector
-  I4 length = // length of vector (bytes)
+  char *p;      // pointer to the vector
+  long length = // length of vector (bytes)
     (max_index - min_index + 1) * size;
 
   if( length < 1 )
@@ -599,23 +593,23 @@ void *Alc_V( IX min_index, I4 max_index, IX size, I1 *file, IX line )
 #if( ANSIOFFSET > 0 )
   if( min_index > 0 )
     length += min_index * size;
-  p = (I1 *)Alc_E( length, file, line );
+  p = (char *)Alc_E( length, file, line );
   if( min_index < 0 )
     p -= min_index * size;
 #else
-  p = (I1 *)Alc_E( length, file, line );
+  p = (char *)Alc_E( length, file, line );
   p -= min_index * size;
 #endif
 
 #if( MEMTEST > 0 )
   {
 # ifdef XXX
-  I1 *p1=p+min_index*size-4;  // start of guard bytes
+  char *p1=p+min_index*size-4;  // start of guard bytes
 # endif
 # if( ANSIOFFSET > 0 )
   if( min_index > 0 )
     {
-    U4 *pt = (U4 *)p1;
+    unsigned long *pt = (unsigned long *)p1;
     *pt = MCHECK;  // add guard bytes before v[min_index];
     }
 # endif
@@ -641,7 +635,7 @@ void *Alc_V( IX min_index, I4 max_index, IX size, I1 *file, IX line )
 
 /*  Check a vector allocated by Alc_V().  */
 
-void Chk_V( void *v, IX min_index, IX max_index, IX size, I1 *file, IX line )
+void Chk_V( void *v, int min_index, int max_index, int size, char *file, int line )
 /*  v;      pointer to allocated vector.
  *  min_index;  minimum vector index.
  *  max_index;  maximum vector index.
@@ -650,9 +644,9 @@ void Chk_V( void *v, IX min_index, IX max_index, IX size, I1 *file, IX line )
  *  file;   name of file for originating call.
  *  line;   line in file. */
   {
-  I1 *p=(I1 *)v;  // pointer to the vector data
-  UX length =     // number of bytes in vector data
-    (UX)(max_index - min_index + 1) * size;
+  char *p=(char *)v;  // pointer to the vector data
+  unsigned length =     // number of bytes in vector data
+    (unsigned)(max_index - min_index + 1) * size;
 
 #if( ANSIOFFSET > 0 )
   if( min_index > 0 )
@@ -668,7 +662,7 @@ void Chk_V( void *v, IX min_index, IX max_index, IX size, I1 *file, IX line )
 #if( ANSIOFFSET > 0 )
   if( min_index > 0 )
     {
-    U4 *pt = (U4 *)(p + min_index* size) - 1;
+    unsigned long *pt = (unsigned long *)(p + min_index* size) - 1;
     if( *pt != MCHECK ) // check guard bytes before v[min_index];
       error( 2, file, line, "Overrun before start of vector", "" );
     }
@@ -681,15 +675,15 @@ void Chk_V( void *v, IX min_index, IX max_index, IX size, I1 *file, IX line )
 
 /*  Clear (zero all elements of) a vector created by Alc_V( ).  */
 
-void Clr_V( void *v, IX min_index, IX max_index, IX size, I1 *file, IX line )
+void Clr_V( void *v, int min_index, int max_index, int size, char *file, int line )
 /*  min_index;  minimum vector index:  vector[min_index] valid.
  *  max_index;  maximum vector index:  vector[max_index] valid.
  *  size;   size (bytes) of one data element.
  *  file;   name of file for originating call.
  *  line;   line in file. */
   {
-  I1 *pdata = (I1 *)v + min_index * size;
-  UX length = (UX)(max_index - min_index + 1) * size;
+  char *pdata = (char *)v + min_index * size;
+  unsigned length = (unsigned)(max_index - min_index + 1) * size;
   memset( pdata, 0, length );
 
 #if( MEMTEST > 0 )
@@ -702,7 +696,7 @@ void Clr_V( void *v, IX min_index, IX max_index, IX size, I1 *file, IX line )
 
 /*  Free pointer to a vector allocated by Alc_V().  */
 
-void *Fre_V( void *v, IX min_index, IX max_index, IX size, I1 *file, IX line )
+void *Fre_V( void *v, int min_index, int max_index, int size, char *file, int line )
 /*  v;      pointer to allocated vector.
  *  min_index;  minimum vector index.
  *  max_index;  maximum vector index.
@@ -710,9 +704,9 @@ void *Fre_V( void *v, IX min_index, IX max_index, IX size, I1 *file, IX line )
  *  file;   name of file for originating call.
  *  line;   line in file. */
   {
-  I1 *p=(I1 *)v;  // pointer to the vector data
-  UX length =     // number of bytes in vector data
-    (UX)(max_index - min_index + 1) * size;
+  char *p=(char *)v;  // pointer to the vector data
+  unsigned length =     // number of bytes in vector data
+    (unsigned)(max_index - min_index + 1) * size;
 
 #if( ANSIOFFSET > 0 )
   if( min_index > 0 )
@@ -729,86 +723,91 @@ void *Fre_V( void *v, IX min_index, IX max_index, IX size, I1 *file, IX line )
 
   }  /*  end of Fre_V  */
 
-/***  Alc_MC.c  **************************************************************/
 
-/*  Allocate (contiguously) a matrix, M[i][j].
- *  This matrix is accessed (and stored) in a rectangular form:
- *  +------------+------------+------------+------------+-------
- *  | [r  ][c  ] | [r  ][c+1] | [r  ][c+2] | [r  ][c+3] |   ...
- *  +------------+------------+------------+------------+-------
- *  | [r+1][c  ] | [r+1][c+1] | [r+1][c+2] | [r+1][c+3] |   ...
- *  +------------+------------+------------+------------+-------
- *  | [r+2][c  ] | [r+2][c+1] | [r+2][c+2] | [r+2][c+3] |   ...
- *  +------------+------------+------------+------------+-------
- *  | [r+3][c  ] | [r+3][c+1] | [r+3][c+2] | [r+3][c+3] |   ...
- *  +------------+------------+------------+------------+-------
- *  |    ...     |    ...     |    ...     |    ...     |   ...
- *  where r is the minimum row index and
- *  c is the minimum column index (both usually 0 or 1).  */
+/*------------------------------------------------------------------------------
+  CONTIGUOUS MATRICES
+*/
 
-void *Alc_MC( IX min_row_index, IX max_row_index, IX min_col_index,
-              IX max_col_index, IX size, I1 *file, IX line )
-/*  min_row_index;  minimum row index.
- *  max_row_index;  maximum row index.
- *  min_col_index;  minimum column index.
- *  max_col_index;  maximum column index.
- *  size;   size (bytes) of one data element.
- *  file;   name of file for originating call.
- *  line;   line in file. */
-  {  // prow - vector of pointers to rows of M
-  IX nrow = max_row_index - min_row_index + 1;    // number of rows [i]
-  I4 tot_row_index = min_row_index + nrow - 1;    // max prow index
-  I1 **prow = (I1 **)Alc_V( min_row_index, tot_row_index, sizeof(I1 *), file, line );
+/** Allocate (contiguously) a matrix, M[i][j].
+	This matrix is accessed (and stored) in a rectangular form:
+	+------------+------------+------------+------------+-------
+	| [r  ][c  ] | [r  ][c+1] | [r  ][c+2] | [r  ][c+3] |   ...
+	+------------+------------+------------+------------+-------
+	| [r+1][c  ] | [r+1][c+1] | [r+1][c+2] | [r+1][c+3] |   ...
+	+------------+------------+------------+------------+-------
+	| [r+2][c  ] | [r+2][c+1] | [r+2][c+2] | [r+2][c+3] |   ...
+	+------------+------------+------------+------------+-------
+	| [r+3][c  ] | [r+3][c+1] | [r+3][c+2] | [r+3][c+3] |   ...
+	+------------+------------+------------+------------+-------
+	|    ...     |    ...     |    ...     |    ...     |   ...
+	where r is the minimum row index and
+	c is the minimum column index (both usually 0 or 1).  
 
-     // pdata - vector of contiguous A[i][j] data values
-  IX ncol = max_col_index - min_col_index + 1;    // number of columns [j]
-  I4 tot_col_index = min_col_index + nrow*ncol - 1;  // max pdata index
-  I1 *pdata = (I1 *)Alc_V( min_col_index, tot_col_index, size, file, line );
-     // Note: must have nrow >= 1 and ncol >= 1.
-     // If nrow < 1, allocation of prow will fail with fatal error message. 
-     // If ncol < 1, allocation of pdata will fail since nrow*ncol <= 0.
+	@param min_row_index  minimum row index.
+	@param max_row_index  maximum row index.
+	@param min_col_index  minimum column index.
+	@param max_col_index  maximum column index.
+	@param size           size (bytes) of one data element.
+	@param file           name of file for originating call.
+	@param line           line in file.
+*/
+void *Alc_MC( int min_row_index, int max_row_index, int min_col_index,
+              int max_col_index, int size, char *file, int line
+){
+  // prow - vector of pointers to rows of M
+  int nrow = max_row_index - min_row_index + 1;    // number of rows [i]
+  long tot_row_index = min_row_index + nrow - 1;    // max prow index
+  char **prow = (char **)Alc_V( min_row_index, tot_row_index, sizeof(char *), file, line );
 
-  IX n, m;
-  for( m=0,n=min_row_index; n<=tot_row_index; n++ ) 
-    prow[n] = pdata + ncol*size*m++;  // set row pointers
+  // pdata - vector of contiguous A[i][j] data values
+  int ncol = max_col_index - min_col_index + 1;    // number of columns [j]
+  long tot_col_index = min_col_index + nrow*ncol - 1;  // max pdata index
+  char *pdata = (char *)Alc_V( min_col_index, tot_col_index, size, file, line );
+  // Note: must have nrow >= 1 and ncol >= 1.
+  // If nrow < 1, allocation of prow will fail with fatal error message. 
+  // If ncol < 1, allocation of pdata will fail since nrow*ncol <= 0.
+
+  int n, m;
+  for( m=0,n=min_row_index; n<=tot_row_index; n++){
+	// set row pointers
+    prow[n] = pdata + ncol*size*m++;  
+  }
 
   return ((void *)prow);
 
-  }  /*  end of Alc_MC  */
+}  /*  end of Alc_MC  */
+
 
 #if( MEMTEST > 0 )
-/***  Chk_MC.c  **************************************************************/
-
-/*  Check a matrix allocated by Alc_MC().  */
-
-void Chk_MC( void *m, IX min_row_index, IX max_row_index, IX min_col_index,
-             IX max_col_index, IX size, I1 *file, IX line )
-  {
-  IX nrow = max_row_index - min_row_index + 1;
-  IX tot_row_index = min_row_index + nrow - 1;
-  I1 **prow = (I1 **)m;
-  IX ncol = max_col_index - min_col_index + 1;
-  IX tot_col_index = min_col_index + nrow*ncol - 1;
-  I1 *pdata = prow[min_row_index];
+/** Check a matrix allocated by Alc_MC().  */
+void Chk_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
+             int max_col_index, int size, char *file, int line 
+){
+  int nrow = max_row_index - min_row_index + 1;
+  int tot_row_index = min_row_index + nrow - 1;
+  char **prow = (char **)m;
+  int ncol = max_col_index - min_col_index + 1;
+  int tot_col_index = min_col_index + nrow*ncol - 1;
+  char *pdata = prow[min_row_index];
 
   Chk_V( pdata, min_col_index, tot_col_index, size, file, line );
-  Chk_V( prow, min_row_index, tot_row_index, sizeof(I1 *), file, line );
+  Chk_V( prow, min_row_index, tot_row_index, sizeof(char *), file, line );
 
-  }  /*  end of Chk_MC  */
+}  /*  end of Chk_MC  */
 #endif
 
-/***  Clr_MC.c  **************************************************************/
 
-/*  Clear (zero all elements of) a matrix created by Alc_MC( ).  */
-
-void Clr_MC( void *m, IX min_row_index, IX max_row_index, IX min_col_index,
-             IX max_col_index, IX size, I1 *file, IX line )
-  {
-  IX nrow = max_row_index - min_row_index + 1;
-  IX ncol = max_col_index - min_col_index + 1;
-  IX tot_col_index = min_col_index + nrow*ncol - 1;
-  I1 **prow = (I1 **)m;
-  I1 *pdata = prow[min_row_index];
+/**
+	Clear (zero all elements of) a matrix created by Alc_MC( ).
+*/
+void Clr_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
+             int max_col_index, int size, char *file, int line 
+){
+  int nrow = max_row_index - min_row_index + 1;
+  int ncol = max_col_index - min_col_index + 1;
+  int tot_col_index = min_col_index + nrow*ncol - 1;
+  char **prow = (char **)m;
+  char *pdata = prow[min_row_index];
 
   Clr_V( pdata, min_col_index, tot_col_index, size, file, line );
 
@@ -817,32 +816,33 @@ void Clr_MC( void *m, IX min_row_index, IX max_row_index, IX min_col_index,
     min_col_index, max_col_index, size, file, line );
 #endif
 
-  }  /*  end of Clr_MC  */
-
-/***  Fre_MC.c  **************************************************************/
-
-/*  Free pointer to a matrix allocated by Alc_MC().  */
-
-void *Fre_MC( void *m, IX min_row_index, IX max_row_index, IX min_col_index,
-             IX max_col_index, IX size, I1 *file, IX line )
-  {
-  IX nrow = max_row_index - min_row_index + 1;
-  IX tot_row_index = min_row_index + nrow - 1;
-  I1 **prow = (I1 **)m;
-  IX ncol = max_col_index - min_col_index + 1;
-  IX tot_col_index = min_col_index + nrow*ncol - 1;
-  I1 *pdata = prow[min_row_index];
+}  /*  end of Clr_MC  */
+
+/**
+	Free pointer to a matrix allocated by Alc_MC().
+*/
+void *Fre_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
+             int max_col_index, int size, char *file, int line 
+){
+  int nrow = max_row_index - min_row_index + 1;
+  int tot_row_index = min_row_index + nrow - 1;
+  char **prow = (char **)m;
+  int ncol = max_col_index - min_col_index + 1;
+  int tot_col_index = min_col_index + nrow*ncol - 1;
+  char *pdata = prow[min_row_index];
 
   Fre_V( pdata, min_col_index, tot_col_index, size, file, line );
-  Fre_V( prow, min_row_index, tot_row_index, sizeof(I1 *), file, line );
+  Fre_V( prow, min_row_index, tot_row_index, sizeof(char *), file, line );
 
   return (NULL);
 
-  }  /*  end of Fre_MC  */
+}  /*  end of Fre_MC  */
 
-/***  Alc_MSC.c  *************************************************************/
+/*------------------------------------------------------------------------------
+  SYMMETRIC MATRICES ('MSC')
+*/
 
-/*  Allocate (contiguously) a symmertic matrix, M[i][j].
+/** Allocate (contiguously) a symmetric matrix, M[i][j].
  *  This matrix is accessed (and stored) in a triangular form:
  *  +------------+------------+------------+------------+-------
  *  | [i  ][i  ] |     -      |     -      |     -      |    - 
@@ -855,95 +855,89 @@ void *Fre_MC( void *m, IX min_row_index, IX max_row_index, IX min_col_index,
  *  +------------+------------+------------+------------+-------
  *  |    ...     |    ...     |    ...     |    ...     |   ...
  *  where i is the minimum array index (usually 0 or 1).
- *  NOTE!  M[i][j] is valid when j <= i.  */
-
-void *Alc_MSC( IX min_index, IX max_index, IX size, I1 *file, IX line )
-/*  min_index;  minimum matrix index.
- *  max_index;  maximum matrix index.
- *  size;   size (bytes) of one data element.
- *  file;   name of file for originating call.
- *  line;   line in file. */
-  {  // prow - vector of pointers to rows of M
-  I1 **prow = (I1 **)Alc_V( min_index, max_index, sizeof(I1 *), file, line );
+ *  NOTE!  M[i][j] is valid when j <= i.
+ *  @param min_index;  minimum matrix index.
+ *  @param max_index;  maximum matrix index.
+ *  @param size;   size (bytes) of one data element.
+ *  @param file;   name of file for originating call.
+ *  @param line;   line in file.
+*/
+void *Alc_MSC( int min_index, int max_index, int size, char *file, int line){
+  // prow - vector of pointers to rows of M
+  char **prow = (char **)Alc_V( min_index, max_index, sizeof(char *), file, line );
 
      // pdata - vector of contiguous M[i][j] data values
-  IX nrow = max_index - min_index + 1;    // number of rows
-  IX nval = nrow * (nrow + 1) / 2;        // number of values
-  IX tot_index = min_index + nval - 1;    // max pdata index
-  I1 *pdata = (I1 *)Alc_V( min_index, tot_index, size, file, line );
+  int nrow = max_index - min_index + 1;    // number of rows
+  int nval = nrow * (nrow + 1) / 2;        // number of values
+  int tot_index = min_index + nval - 1;    // max pdata index
+  char *pdata = (char *)Alc_V( min_index, tot_index, size, file, line );
      // If nrow < 1, allocation of prow will fail with fatal error message. 
 
-  IX n, m;
+  int n, m;
   prow[min_index] = pdata;
   for( m=1,n=min_index+1; n<=max_index; n++ ) 
     prow[n] = prow[n-1] + size*m++;  // set row pointers
   
   return ((void *)prow);
+}  /*  end of Alc_MSC  */
 
-  }  /*  end of Alc_MSC  */
 
 #if( MEMTEST > 0 )
-/***  Chk_MSC.c  *************************************************************/
-
-/*  Check a symmetric matrix allocated by Alc_MSC().  */
-
-void Chk_MSC( void *m, IX min_index, IX max_index, IX size, I1 *file, IX line )
-  {
-  IX nrow = max_index - min_index + 1;
-  IX nval = nrow * (nrow + 1) / 2;
-  IX tot_index = min_index + nval - 1;
-  I1 **prow = (I1 **)m;
-  I1 *pdata = prow[min_index];
+/**
+	Check a symmetric matrix allocated by Alc_MSC().
+*/
+void Chk_MSC( void *m, int min_index, int max_index, int size, char *file, int line )
+{
+  int nrow = max_index - min_index + 1;
+  int nval = nrow * (nrow + 1) / 2;
+  int tot_index = min_index + nval - 1;
+  char **prow = (char **)m;
+  char *pdata = prow[min_index];
 
   Chk_V( pdata, min_index, tot_index, size, file, line );
-  Chk_V( prow, min_index, max_index, sizeof(I1 *), file, line );
-
-  }  /*  end of Chk_MSC  */
+  Chk_V( prow, min_index, max_index, sizeof(char *), file, line );
+}  /*  end of Chk_MSC  */
 #endif
 
-/***  Clr_MSC.c  *************************************************************/
 
-/*  Clear (zero all elements of) a symmetric matrix created by Alc_MSC( ).  */
-
-void Clr_MSC( void *m, IX min_index, IX max_index, IX size, I1 *file, IX line )
-  {
-  IX nrow = max_index - min_index + 1;
-  IX nval = nrow * (nrow + 1) / 2;
-  IX tot_index = min_index + nval - 1;
-  I1 **prow = (I1 **)m;
-  I1 *pdata = prow[min_index];
+/**
+	Clear (zero all elements of) a symmetric matrix created by Alc_MSC( ).
+*/
+void Clr_MSC( void *m, int min_index, int max_index, int size, char *file, int line){
+  int nrow = max_index - min_index + 1;
+  int nval = nrow * (nrow + 1) / 2;
+  int tot_index = min_index + nval - 1;
+  char **prow = (char **)m;
+  char *pdata = prow[min_index];
 
   Clr_V( pdata, min_index, tot_index, size, file, line );
 
 #if( MEMTEST > 0 )
   Chk_V( pdata, min_index, tot_index, size, file, line );
-#endif
+#endif}  /*  end of Clr_MSC  */
 
-  }  /*  end of Clr_MSC  */
 
-/***  Fre_MSC.c  *************************************************************/
-
-/*  Free a symmertic matrix allocated by Alc_MSC.  */
-
-void *Fre_MSC( void *m, IX min_index, IX max_index, IX size, I1 *file, IX line )
-/*  v;      pointer to allocated vector. */
-  {
-  IX nrow = max_index - min_index + 1;
-  IX nval = nrow * (nrow + 1) / 2;
-  IX tot_index = min_index + nval - 1;
-  I1 **prow = (I1 **)m;
-  I1 *pdata = prow[min_index];
+/*
+	Free a symmetric matrix allocated by Alc_MSC.
+	param v      pointer to allocated vector. (???)
+*/
+void *Fre_MSC( void *m, int min_index, int max_index, int size, char *file, int line){
+  int nrow = max_index - min_index + 1;
+  int nval = nrow * (nrow + 1) / 2;
+  int tot_index = min_index + nval - 1;
+  char **prow = (char **)m;
+  char *pdata = prow[min_index];
 
   Fre_V( pdata, min_index, tot_index, size, file, line );
-  Fre_V( prow, min_index, max_index, sizeof(I1 *), file, line );
+  Fre_V( prow, min_index, max_index, sizeof(char *), file, line );
 
-  return (NULL);
+  return (NULL);}  /*  end of Fre_MSC  */
 
-  }  /*  end of Fre_MSC  */
+/*------------------------------------------------------------------------------
+  SYMMETRIC MATRICES ('MSR')
+*/
 
-/***  Alc_MSR.c  *************************************************************/
-
-/*  Allocate (by rows) a symmertic matrix.
+/**  Allocate (by rows) a symmertic matrix.
  *  This matrix is accessed (and stored) in a triangular form:
  *  +------------+------------+------------+------------+-------
  *  | [i  ][i  ] |     -      |     -      |     -      |    - 
@@ -955,92 +949,80 @@ void *Fre_MSC( void *m, IX min_index, IX max_index, IX size, I1 *file, IX line )
  *  | [i+3][i  ] | [i+3][i+1] | [i+3][i+2] | [i+3][i+3] |    - 
  *  +------------+------------+------------+------------+-------
  *  |    ...     |    ...     |    ...     |    ...     |   ...
+ *
  *  where i is the minimum array index (usually 0 or 1).
- */
-
-void *Alc_MSR( IX min_index, IX max_index, IX size, I1 *file, IX line )
-/*  min_index;  minimum vector index:  matrix[min_index][min_index] valid.
+ *  min_index;  minimum vector index:  matrix[min_index][min_index] valid.
  *  max_index;  maximum vector index:  matrix[max_index][max_index] valid.
  *  size;   size (bytes) of one data element.
- *  name;   name of variable being allocated.  */
-  {
-  I1 **p;  /*  pointer to the array of row pointers  */
-  IX i;     /* row number */
-  IX j;     /* column number */
+ *  name;   name of variable being allocated.
+ */
+void *Alc_MSR( int min_index, int max_index, int size, char *file, int line ){
+  char **p;  /*  pointer to the array of row pointers  */
+  int i;     /* row number */
+  int j;     /* column number */
 
   /* Allocate vector of row pointers; then allocate individual rows. */ 
 
-  p = (I1 **)Alc_V( min_index, max_index, sizeof(I1 *), file, line );
+  p = (char **)Alc_V( min_index, max_index, sizeof(char *), file, line );
   for( j=i=max_index; i>=min_index; i--,j-- )
-    p[i] = (I1 *)Alc_V( min_index, j, size, file, line );
+    p[i] = (char *)Alc_V( min_index, j, size, file, line );
 
   /* Vectors allocated from largest to smallest to allow
      maximum filling of holes in the heap. */
 
   return ((void *)p);
 
-  }  /*  end of Alc_MSR  */
+}  /*  end of Alc_MSR  */
+
 
 #if( MEMTEST > 0 )
-/***  Chk_MSR.c  *************************************************************/
-
 /*  Check a symmetric matrix allocated by Alc_MSR().  */
+void Chk_MSR(void *m, int min_index, int max_index, int size, char *file, int line){
+  char **p;  /*  pointer to the array of row pointers  */
+  int i;     /* row number */
+  int j;     /* column number */
 
-void Chk_MSR( void *m, IX min_index, IX max_index, IX size, I1 *file, IX line )
-  {
-  I1 **p;  /*  pointer to the array of row pointers  */
-  IX i;     /* row number */
-  IX j;     /* column number */
-
-  p = (I1 **)m;
+  p = (char **)m;
   for( j=i=min_index; i<=max_index; i++,j++ )
     Chk_V( p[i], min_index, j, size, file, line );
-  Chk_V( p, min_index, max_index, sizeof(I1 *), file, line );
+  Chk_V( p, min_index, max_index, sizeof(char *), file, line );
 
-  }  /*  end of Chk_MSR  */
+}  /*  end of Chk_MSR  */
 #endif
 
-/***  Clr_MSR.c  *************************************************************/
-
 /*  Clear (zero all elements of) a symmetric matrix created by Alc_MSR( ).  */
+void Clr_MSR(void *m, int min_index, int max_index, int size, char *file, int line){
+  char **p;  /*  pointer to the array of row pointers  */
+  int i;     /* row number */
+  int j;     /* column number */
 
-void Clr_MSR( void *m, IX min_index, IX max_index, IX size, I1 *file, IX line )
-  {
-  I1 **p;  /*  pointer to the array of row pointers  */
-  IX i;     /* row number */
-  IX j;     /* column number */
-
-  p = (I1 **)m;
+  p = (char **)m;
   for( j=i=min_index; i<=max_index; i++,j++ )
     Clr_V( p[i], min_index, j, size, file, line );
 
 #if( MEMTEST > 0 )
   Chk_MSR( m, min_index, max_index, size, file, line );
-#endif
+#endif}  /*  end of Clr_MSR  */
 
-  }  /*  end of Clr_MSR  */
 
-/***  Fre_MSR.c  *************************************************************/
+/**
+ *	Free a symmertic matrix allocated by Alc_MSR.
+ *  @param v         pointer to allocated vector.
+ *  @param min_index minimum vector index:  matrix[min_index][min_index] valid.
+ *  @param max_index maximum vector index:  matrix[max_index][max_index] valid.
+ *  @param size      size (bytes) of one data element.
+ *  @param name      name of variable being freed.
+*/
+void *Fre_MSR( void *v, int min_index, int max_index, int size, char *file, int line ){
+  char **p;  /*  pointer to the array of row pointers  */
+  int i;     /* row number */
+  int j;     /* column number */
 
-/*  Free a symmertic matrix allocated by Alc_MSR.  */
-
-void *Fre_MSR( void *v, IX min_index, IX max_index, IX size, I1 *file, IX line )
-/*  v;      pointer to allocated vector.
- *  min_index;  minimum vector index:  matrix[min_index][min_index] valid.
- *  max_index;  maximum vector index:  matrix[max_index][max_index] valid.
- *  size;   size (bytes) of one data element.
- *  name;   name of variable being freed.  */
-  {
-  I1 **p;  /*  pointer to the array of row pointers  */
-  IX i;     /* row number */
-  IX j;     /* column number */
-
-  p = (I1 **)v;
+  p = (char **)v;
   for( j=i=min_index; i<=max_index; i++,j++ )
     Fre_V( p[i], min_index, j, size, file, line );
-  Fre_V( p, min_index, max_index, sizeof(I1 *), file, line );
+  Fre_V( p, min_index, max_index, sizeof(char *), file, line );
 
   return (NULL);
-
-  }  /*  end of Fre_MSR  */
+}  /*  end of Fre_MSR  */
 

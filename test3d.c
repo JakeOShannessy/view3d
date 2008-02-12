@@ -6,12 +6,17 @@
 # define DEBUG 1
 #endif
 
+#define V3D_BUILD
+#include "test3d.h"
+
 #include <stdio.h>
 #include <string.h> /* prototype: memcpy */
 #include <math.h>   /* prototype: fabs */
 #include "types.h" 
 #include "view3d.h"
-#include "prtyp.h" 
+#include "misc.h"
+#include "viewobs.h"
+#include "polygn.h"
 
 /*  VSHIFT:  vector C = vector B minus scalar D times vector A.  */
 #define VSHIFT(b,d,a,c)  \
@@ -19,18 +24,14 @@
     c->y = b->y - d * a->y; \
     c->z = b->z - d * a->z; 
 
-extern IX _list;    /* output control, higher value = more output */
-extern I1 _string[LINELEN];  /* buffer for a character string */
-extern FILE *_ulog; /* log file */
-
 /***  AddMaskSrf.c  **********************************************************/
 
 /*  Add mask/null surfaces to list of possible obstructions.
  *  Allow for a mask on a subsurface which also masks the base surface. */
 
-IX AddMaskSrf( SRFDAT3D *srf, const SRFDATNM *srfN, const SRFDATNM *srfM,
-  const IX *maskSrf, const IX *baseSrf, VFCTRL *vfCtrl, IX *possibleObstr,
-  IX nPoss )
+int AddMaskSrf( SRFDAT3D *srf, const SRFDATNM *srfN, const SRFDATNM *srfM,
+  const int *maskSrf, const int *baseSrf, View3DControlData *vfCtrl, int *possibleObstr,
+  int nPoss )
 /* srfN - data for surface N.
  * srfM - data for surface M.
  * maskSrf - list of mask and null surfaces.
@@ -40,12 +41,12 @@ IX AddMaskSrf( SRFDAT3D *srf, const SRFDATNM *srfN, const SRFDATNM *srfM,
  * nPoss - number of possible obstructions.
  */
   {
-  IX j, k, n;
+  int j, k, n;
   SRFDAT3D *ps;
-  IX Ns=srfN->nr,
+  int Ns=srfN->nr,
      Ms=srfM->nr;  /* surface numbers */
-  R8 eps;  /* dot product test value */
-  IX nv;   /* number of vertices */
+  double eps;  /* dot product test value */
+  int nv;   /* number of vertices */
 
   if( srfN->rc < srfM->rc )
     eps = 1.0e-5f * srfN->rc;
@@ -91,8 +92,8 @@ IX AddMaskSrf( SRFDAT3D *srf, const SRFDATNM *srfN, const SRFDATNM *srfM,
 /*  Box test to reduce the list of possible obstructing surfaces:
  *  obstruction may not lie outside box containing surfaces N and M.  */
 
-IX BoxTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
-     VFCTRL *vfCtrl, IX *possibleObstr, IX nPossObstr )
+int BoxTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
+     View3DControlData *vfCtrl, int *possibleObstr, int nPossObstr )
 /* srf  - data for all surfaces.
  * srfN - data for surface N.
  * srfM - data for surface M.
@@ -100,11 +101,11 @@ IX BoxTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
  * nPossObsrt  - number of possible obstructing surfaces
  */
   {
-  R8 xmax, xmin, ymax, ymin, zmax, zmin;  /* limits of box enclosing N & M */
-  IX nv;     /* number of vertices */
-  IX n;      /* vertex number */
-  IX i, k;   /* surface number */
-  IX nPoss;  /* number of possible obstructing surfaces */
+  double xmax, xmin, ymax, ymin, zmax, zmin;  /* limits of box enclosing N & M */
+  int nv;     /* number of vertices */
+  int n;      /* vertex number */
+  int i, k;   /* surface number */
+  int nPoss;  /* number of possible obstructing surfaces */
 
 #if( DEBUG > 1 )
   fprintf( _ulog, "BoxTest: %d\n", nPossObstr );
@@ -172,8 +173,8 @@ IX BoxTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
 /*  Cone (or cylinder) radius test to reduce the list
  *  of possible obstructing surfacess  */
 
-IX ConeRadiusTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
-  VFCTRL *vfCtrl, IX *possibleObstr, IX nPossObstr, R8 distNM )
+int ConeRadiusTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
+  View3DControlData *vfCtrl, int *possibleObstr, int nPossObstr, double distNM )
 /* srf  - data for all surfaces.
  * srfN - data for surface N.
  * srfM - data for surface M.
@@ -182,20 +183,20 @@ IX ConeRadiusTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
  * nPossObstr  - number of possible obstructing surfaces
  */
   {
-  IX mode=0; /* test mode; 0 = cylinder; -1 = cone from srfM;
+  int mode=0; /* test mode; 0 = cylinder; -1 = cone from srfM;
                              +1 = cone from srfN  */
-  R8 radCylndr;  /* radius of cylinder */
-  R8 radSmall,   /* radius of smaller surface */
+  double radCylndr;  /* radius of cylinder */
+  double radSmall,   /* radius of smaller surface */
      radLarge;   /* radius of larger surface */
-  R8 distSmall,  /* distance from apex of cone to smaller surface */
+  double distSmall,  /* distance from apex of cone to smaller surface */
      distLarge,  /* distance from apex of cone to larger surface */
      distK;      /* distance from apex to surface K */
-  R8 d, e, f;
-  DIRCOS dcNM;    /* direction cosines of line between srfN and srfM */
-  VERTEX3D apex;  /* coordinates of apex of cone */
-  VECTOR3D a, b;  /* vectors */
-  IX i, k;   /* surface number */
-  IX nPoss=0;  /* number of possible obstructing surfaces */
+  double d, e, f;
+  DirCos dcNM;    /* direction cosines of line between srfN and srfM */
+  Vec3 apex;  /* coordinates of apex of cone */
+  Vec3 a, b;  /* vectors */
+  int i, k;   /* surface number */
+  int nPoss=0;  /* number of possible obstructing surfaces */
 
 #if( DEBUG > 1 )
   fprintf( _ulog, "ConeRadiusTest: %d\n", nPossObstr );
@@ -289,8 +290,8 @@ IX ConeRadiusTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
 
 /*  Orientation tests to reduce the list of possible obstructs  */
 
-IX OrientationTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM, 
-     VFCTRL *vfCtrl, IX *possibleObstr, IX nPossObstr )
+int OrientationTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM, 
+     View3DControlData *vfCtrl, int *possibleObstr, int nPossObstr )
 /* srf  - data for all surfaces.
  * srfN - data for surface N.
  * srfM - data for surface M.
@@ -298,13 +299,13 @@ IX OrientationTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
  * nPossObsrt  - number of possible obstructing surfaces
  */
   {
-  R8 dot, eps; /* dot product and test value */
-  IX infront;  /* true if a vertex of surface #2 is in front of surface 1 */
-  IX behind;   /* true if a vertex of surface #2 is behind surface 1 */
-  IX nv;      /* number of vertices */
-  IX n;       /* vertex number */
-  IX i, k;    /* surface number */
-  IX nPoss;   /* number of possible obstructing surfaces */
+  double dot, eps; /* dot product and test value */
+  int infront;  /* true if a vertex of surface #2 is in front of surface 1 */
+  int behind;   /* true if a vertex of surface #2 is behind surface 1 */
+  int nv;      /* number of vertices */
+  int n;       /* vertex number */
+  int i, k;    /* surface number */
+  int nPoss;   /* number of possible obstructing surfaces */
 
 #if( DEBUG > 1 )
   fprintf( _ulog, "OrientationTest: %d\n", nPossObstr );
@@ -372,18 +373,18 @@ IX OrientationTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
 
 /*  Remove possible obstructions behind N from list.  */
 
-IX OrientationTestN( SRFDAT3D *srf, IX N, VFCTRL *vfCtrl,
-     IX *possibleObstr, IX nPossObstr )
+int OrientationTestN( SRFDAT3D *srf, int N, View3DControlData *vfCtrl,
+     int *possibleObstr, int nPossObstr )
 /* srf  - data for all surfaces.
  * N - number of surface N.
  * possibleObstr  - list of possible obstructing surfaces (input/output).
  * nPossObsrt  - number of possible obstructing surfaces; return new value.
  */
   {
-  IX j;       /* vertex number */
-  IX i, k;    /* surface number */
-  IX nPoss;   /* number of possible obstructing surfaces */
-  R8 eps = 1.0e-5 * srf[N].rc;
+  int j;       /* vertex number */
+  int i, k;    /* surface number */
+  int nPoss;   /* number of possible obstructing surfaces */
+  double eps = 1.0e-5 * srf[N].rc;
 
 #if( DEBUG > 1 )
   fprintf( _ulog, "OrientationTestN: %d\n", nPossObstr );
@@ -412,8 +413,8 @@ IX OrientationTestN( SRFDAT3D *srf, IX N, VFCTRL *vfCtrl,
  *  Ordering of vertices is retained.
  *  Return number of vertices in clipped polygon.  */
 
-IX ClipPolygon( const IX flag, const IX nVu, VERTEX3D *vPoly, R8 *dist,
-  VERTEX3D *vClipPoly )
+int ClipPolygon( const int flag, const int nVu, Vec3 *vPoly, double *dist,
+  Vec3 *vClipPoly )
 /* flag   - save vertices above or below clipping plane
  *          for flag equal to 1 or -1, respectively.
  * nVu    - number of vertices of the unclipped polygon.
@@ -422,15 +423,15 @@ IX ClipPolygon( const IX flag, const IX nVu, VERTEX3D *vPoly, R8 *dist,
  *          product of vertex with clipping plane normal form coefficients.
  * vClipPoly - vertices of the clipped polygon. */
   {
-  IX j, jm1;   /* vertex indices;  jm1 = j - 1 */
-  IX nVc=0;    /* number of vertices of clipped polygon */
+  int j, jm1;   /* vertex indices;  jm1 = j - 1 */
+  int nVc=0;    /* number of vertices of clipped polygon */
 
   jm1 = nVu - 1;
   for( j=0; j<nVu; jm1=j++ )
     {
     if( dist[j] * dist[jm1] < 0.0 )   /* save intercept with plane */
       {              /* Sign test means vertices must be on opposite sides */
-      R8 h;          /* of clipping plane with neither vertex on the plane. */
+      double h;          /* of clipping plane with neither vertex on the plane. */
       h = dist[j] / (dist[j] - dist[jm1]);   /* no division by zero */
       vClipPoly[nVc].x = vPoly[j].x + h * (vPoly[jm1].x - vPoly[j].x);
       vClipPoly[nVc].y = vPoly[j].y + h * (vPoly[jm1].y - vPoly[j].y);
@@ -454,11 +455,11 @@ IX ClipPolygon( const IX flag, const IX nVu, VERTEX3D *vPoly, R8 *dist,
 
 void SelfObstructionClip( SRFDATNM *srfN )
   {
-  VERTEX3D v[MAXNV1];   /* vertices after clipping; DIST from SOTEST3 */
+  Vec3 v[MAXNV1];   /* vertices after clipping; DIST from SOTEST3 */
 
   srfN->nv = ClipPolygon( 1, srfN->nv, srfN->v, srfN->dist, v );
 
-  memcpy( (void *)&srfN->v, (void *)v, srfN->nv * sizeof(VERTEX3D) );
+  memcpy( (void *)&srfN->v, (void *)v, srfN->nv * sizeof(Vec3) );
 
   srfN->rc = SetCentroid( srfN->nv, v, &srfN->ctd );  /* centroid and radius */
 
@@ -470,11 +471,11 @@ void SelfObstructionClip( SRFDATNM *srfN )
 
 /*  Set shape number and area of convex polygon.  */
 
-IX SetShape( const IX nv, VERTEX3D *v, R8 *area )
+int SetShape( const int nv, Vec3 *v, double *area )
   {
-  VECTOR3D c;
-  const static R8 epsA=1.0e-5;
-  IX j, shape=0;
+  Vec3 c;
+  const static double epsA=1.0e-5;
+  int j, shape=0;
 
   if( nv == 3 )
     {
@@ -483,9 +484,9 @@ IX SetShape( const IX nv, VERTEX3D *v, R8 *area )
     }
   else if( nv == 4 )
     {
-    VECTOR3D vv[4];   /* vectors defining polygon edges */
-    R8 edge[4];       /* length^2 of edge vectors */
-    R8 area0, area2;
+    Vec3 vv[4];   /* vectors defining polygon edges */
+    double edge[4];       /* length^2 of edge vectors */
+    double area0, area2;
     VECTOR( (v+0), (v+1), (vv+0) );  /* vector from v[0] to v[1] */
     VECTOR( (v+2), (v+1), (vv+1) );  /* vector from v[2] to v[1] */
     VECTOR( (v+2), (v+3), (vv+2) );  /* vector from v[2] to v[3] */
@@ -523,13 +524,13 @@ IX SetShape( const IX nv, VERTEX3D *v, R8 *area )
  *  Return 0 if the SRF2 is entirely behind SRF1; return 1 if SRF2 is fully
  *  or partially in front.  If partially in front, srfN->area set to 0.  */
 
-IX SelfObstructionTest3D( SRFDAT3D *srf1, SRFDAT3D *srf2, SRFDATNM *srfN )
+int SelfObstructionTest3D( SRFDAT3D *srf1, SRFDAT3D *srf2, SRFDATNM *srfN )
   {
-  IX nv;     /* number of vertices of surface #2 */
-  IX n;      /* vertex number */
-  IX infront=0; /* true if a vertex of surface #2 is in front of surface 1 */
-  IX behind=0;  /* true if a vertex of surface #2 is behind surface 1 */
-  R8 dist;   /* distance in front of plane; save for clipping calc. */
+  int nv;     /* number of vertices of surface #2 */
+  int n;      /* vertex number */
+  int infront=0; /* true if a vertex of surface #2 is in front of surface 1 */
+  int behind=0;  /* true if a vertex of surface #2 is behind surface 1 */
+  double dist;   /* distance in front of plane; save for clipping calc. */
 
   nv = srf2->nv;
                  /* check centroid of srf2 against srf1;*/
@@ -539,7 +540,7 @@ IX SelfObstructionTest3D( SRFDAT3D *srf1, SRFDAT3D *srf2, SRFDATNM *srfN )
 
   if( !infront && !behind ) /* more detailed test: */
     {
-    R8 eps=1.0e-5*srf2->rc; /* test value for "close to plane of SRF1" */
+    double eps=1.0e-5*srf2->rc; /* test value for "close to plane of SRF1" */
     for( n=0; n<nv; n++ )   /* check all vertices of srf2 against srf1 */
       {
       dist = srfN->dist[n] = VDOTW( (srf2->v[n]), (&srf1->dc) );
@@ -554,10 +555,10 @@ IX SelfObstructionTest3D( SRFDAT3D *srf1, SRFDAT3D *srf2, SRFDATNM *srfN )
 
   if( infront )
     {    /* size assumes contiguous variables in the structs */
-    static const IX size=(4*sizeof(IX)+2*sizeof(R8)+sizeof(DIRCOS)+sizeof(VERTEX3D));
+    static const int size=(4*sizeof(int)+2*sizeof(double)+sizeof(DirCos)+sizeof(Vec3));
     memcpy( srfN, srf2, size );
     for( n=0; n<nv; n++ )
-      memcpy( srfN->v+n, srf2->v[n], sizeof(VERTEX3D) );
+      memcpy( srfN->v+n, srf2->v[n], sizeof(Vec3) );
     if( behind )
       srfN->area = 0.0;   /* flag for clipping calculation */
     return 1;
@@ -574,18 +575,18 @@ IX SelfObstructionTest3D( SRFDAT3D *srf1, SRFDAT3D *srf2, SRFDATNM *srfN )
 
 void IntersectionTest( SRFDATNM *srfN, SRFDATNM *srfM )
   {
-  VERTEX3D *p1, *p2, *p3;  /* vertices P1 and P2 on one polygon;
+  Vec3 *p1, *p2, *p3;  /* vertices P1 and P2 on one polygon;
                               vertex P3 on the other. */
-  VECTOR3D *pv12, v12;  /* vector from P1 to P2 */
-  VECTOR3D *pv13, v13;  /* vector from P1 to P3 */
-  VECTOR3D *pv23, v23;  /* vector from P2 to P3 */
-  R8 lV12, lV13, lV23;  /* lengths of vectors */
-  VERTEX3D intP[4];     /* intersection points */
-  R8 eps, eps1;  /* rounding factors */
-  IX nip=0; /* number of intersection points */
-  IX nVrtN; /* number of vertices - surface N */
-  IX nVrtM; /* number of vertices - surface M */
-  IX n, m;  /* vertex indices on surfaces N and M */
+  Vec3 *pv12, v12;  /* vector from P1 to P2 */
+  Vec3 *pv13, v13;  /* vector from P1 to P3 */
+  Vec3 *pv23, v23;  /* vector from P2 to P3 */
+  double lV12, lV13, lV23;  /* lengths of vectors */
+  Vec3 intP[4];     /* intersection points */
+  double eps, eps1;  /* rounding factors */
+  int nip=0; /* number of intersection points */
+  int nVrtN; /* number of vertices - surface N */
+  int nVrtM; /* number of vertices - surface M */
+  int n, m;  /* vertex indices on surfaces N and M */
 
   if( srfN->rc > srfM->rc )
     eps = 1.0e-6f * srfN->rc;
@@ -615,13 +616,13 @@ void IntersectionTest( SRFDATNM *srfN, SRFDATNM *srfM )
       lV23 = VLEN( pv23 );
       if( lV13 + lV23 < eps1 * lV12 )
         {
-        IX j;
+        int j;
         for( j=0; j<nip; j++ )
           if( fabs( intP[j].x - p3->x ) < eps &&
               fabs( intP[j].y - p3->y ) < eps &&
               fabs( intP[j].z - p3->z ) < eps ) break;
         if( j==nip )      /* P3 different from previous points */
-          memcpy( intP+nip++, p3, sizeof(VERTEX3D) );
+          memcpy( intP+nip++, p3, sizeof(Vec3) );
         }
       }
     p1 = p2;
@@ -642,13 +643,13 @@ void IntersectionTest( SRFDATNM *srfN, SRFDATNM *srfM )
       lV23 = VLEN( pv23 );
       if( lV13 + lV23 < eps1 * lV12 )
         {
-        IX j;
+        int j;
         for( j=0; j<nip; j++ )
           if( fabs( intP[j].x - p3->x ) < eps &&
               fabs( intP[j].y - p3->y ) < eps &&
               fabs( intP[j].z - p3->z ) < eps ) break;
         if( j==nip )
-          memcpy( intP+nip++, p3, sizeof(VERTEX3D) );
+          memcpy( intP+nip++, p3, sizeof(Vec3) );
         }        
       }
     p1 = p2;
@@ -675,11 +676,11 @@ void IntersectionTest( SRFDATNM *srfN, SRFDATNM *srfM )
 
 /*  Dump list of view obsrtucting surfaces  */
 
-void DumpOS( I1 *title, const IX nos, IX *listObstr )
+void DumpOS( char *title, const int nos, int *listObstr )
 /* nos;  number of surfaces
  * listObstr;  list of obstruction surface numbers */
   {
-  IX  n;
+  int  n;
 
   fprintf( _ulog, "%s", title );
   if( strlen(title) + 6*nos > 78 )
@@ -701,19 +702,19 @@ void DumpOS( I1 *title, const IX nos, IX *listObstr )
 /*  Set list of possible view obstructing surfaces.
  *  Return number of possible view obstructing surfaces.  */
 
-IX SetPosObstr3D( IX nSrf, SRFDAT3D *srf, IX *possibleObstr )
+int SetPosObstr3D( int nSrf, SRFDAT3D *srf, int *possibleObstr )
 /* nSrf;  total number of surfaces (RSRF and OBSO)
  * srf;   vector of surface data [1:nSrf]
  * possibleObstr;  vector of possible view obtructions [1:nSrf]
  */
   {
-  IX ns;       /* surface number */
-  IX n;        /* surface number */
-  IX j;        /* vertex number */
-  IX infront;  /* true if a vertex is in front of surface ns */
-  IX behind;   /* true if a vertex is behind surface ns */
-  R8 dot, eps; /* dot product and test value */
-  IX npos=0;   /* number of possible view obstructing surfaces */
+  int ns;       /* surface number */
+  int n;        /* surface number */
+  int j;        /* vertex number */
+  int infront;  /* true if a vertex is in front of surface ns */
+  int behind;   /* true if a vertex is behind surface ns */
+  double dot, eps; /* dot product and test value */
+  int npos=0;   /* number of possible view obstructing surfaces */
 
   for( ns=nSrf; ns; ns-- )  /* reverse order for obstruction surfaces first */
     {
@@ -755,8 +756,8 @@ IX SetPosObstr3D( IX nSrf, SRFDAT3D *srf, IX *possibleObstr )
 
 /*  Cylinder radius test to reduce the list of possible obstructing surfaces */
 
-IX CylinderRadiusTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
-  IX *possibleObstr, R8 distNM, IX nPossObstr )
+int CylinderRadiusTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
+  int *possibleObstr, double distNM, int nPossObstr )
 /* srf  - data for all surfaces.
  * srfN - data for surface N.
  * srfM - data for surface M.
@@ -765,12 +766,12 @@ IX CylinderRadiusTest( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
  * nPossObsrt  - number of possible obstructing surfaces
  */
   {
-  DIRCOS dcNM; /* direction cosines of line between srfN and srfM */
-  VECTOR3D a, b; /* vectors */
-  R8 radCylndr; /* radius of cylinder */
-  R8 d;
-  IX i, k;     /* surface number */
-  IX nPoss=0;  /* reduced number of possible obstructing surfaces */
+  DirCos dcNM; /* direction cosines of line between srfN and srfM */
+  Vec3 a, b; /* vectors */
+  double radCylndr; /* radius of cylinder */
+  double d;
+  int i, k;     /* surface number */
+  int nPoss=0;  /* reduced number of possible obstructing surfaces */
 
 #if( DEBUG > 1 )
   fprintf( _ulog, "CylinderRadiusTest: %d\n", nPossObstr );

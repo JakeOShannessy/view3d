@@ -6,36 +6,41 @@
 # define DEBUG 1
 #endif
 
+#define V3D_BUILD
+#include "getdat.h"
+
 #include <stdio.h>
 #include <string.h> /* prototype: memcpy, strcpy, strncpy */
 #include <stdlib.h> /* prototype: atoi, atof */
 #include <math.h>   /* prototype: sqrt */
 #include <ctype.h>  /* prototype: toupper */
 #include "types.h"
-#include "view3d.h"
-#include "prtyp.h"
+#include "misc.h"
+#include "test3d.h"
+#include "polygn.h"
+#include "viewobs.h"
+#include "ctrans.h"
 
 #define PI 3.141592653589793238
 #define deg2rad(x)  ((x)*PI/180.) /* angle: degrees -> radians */
 #define rad2deg(x)  ((x)*180./PI)  /* angle: radians -> degrees */
 
-extern FILE *_unxt; /* input file */
-extern FILE *_ulog; /* log file */
-extern IX _list;    /* output control */
-extern I1 _string[LINELEN];  /* buffer for a character string */
-extern IX _maxNVT;  /* maximum number of temporary vertices */
+/* forward decls */
 
-void TestSubSrf( SRFDAT3D *srf, const IX *baseSrf, VFCTRL *vfCtrl );
+double VolPrism( Vec3 *a, Vec3 *b, Vec3 *c );
+void SetPlane( SRFDAT3D *srf );
+
+static void TestSubSrf( SRFDAT3D *srf, const int *baseSrf, View3DControlData *vfCtrl );
 
 /***  GetCtrl.c  *************************************************************/
 
 /*  Process simulation control values.  */
 
-void GetCtrl( I1 *str, VFCTRL *vfCtrl )
+void GetCtrl( char *str, View3DControlData *vfCtrl )
   {
-  I1 *p;
-  IX i;
-  R4 r;
+  char *p;
+  int i;
+  float r;
 
   p = strtok( str, "= ," );
   while( p )
@@ -202,10 +207,10 @@ void GetCtrl( I1 *str, VFCTRL *vfCtrl )
 /*  Determine number of vertices, number of surfaces,
  *  control parameters, and format of the input file.  */
 
-void CountVS3D( char *title, VFCTRL *vfCtrl )
+void CountVS3D( char *title, View3DControlData *vfCtrl )
   {
-  IX c;     /* first character in line */
-  IX flag=0;  /* NxtWord flag: 0 for first word of first line */
+  int c;     /* first character in line */
+  int flag=0;  /* NxtWord flag: 0 for first word of first line */
 
   error( -2, __FILE__, __LINE__, "" );  /* clear error count */
   vfCtrl->nRadSrf = vfCtrl->nObstrSrf = 0;
@@ -267,10 +272,10 @@ finish:
 
 /*  Function to read common surface data */
 
-void GetSrfD( I1 **name, R4 *emit, IX *base, IX *cmbn,
-  SRFDAT3D *srf, VFCTRL *vfCtrl, IX ns )
+void GetSrfD( char **name, float *emit, int *base, int *cmbn,
+  SRFDAT3D *srf, View3DControlData *vfCtrl, int ns )
   {
-  IX n;
+  int n;
 
   n = ReadIX( 0 );              /* base surface number */
   base[ns] = n;
@@ -332,14 +337,14 @@ void GetSrfD( I1 **name, R4 *emit, IX *base, IX *cmbn,
 
 /*  Function to read the 3-D input file:  Vertex & Surface format */
 
-void GetVS3D( I1 **name, R4 *emit, IX *base, IX *cmbn,
-  SRFDAT3D *srf, VERTEX3D *xyz, VFCTRL *vfCtrl )
+void GetVS3D( char **name, float *emit, int *base, int *cmbn,
+  SRFDAT3D *srf, Vec3 *xyz, View3DControlData *vfCtrl )
   {
-  IX c;       /* first character in line */
-  IX nv=0;    /* number of vertices */
-  IX ns=0;    /* number of surfaces */
-  IX n;
-  IX flag=0;  /* NxtWord flag: 0 for first word of first line */
+  int c;       /* first character in line */
+  int nv=0;    /* number of vertices */
+  int ns=0;    /* number of surfaces */
+  int n;
+  int flag=0;  /* NxtWord flag: 0 for first word of first line */
 
   error( -2, __FILE__, __LINE__, "" );  /* clear error count */
   rewind( _unxt );
@@ -448,23 +453,23 @@ finish:
 
 /*  Function to read the 3-D input file:  BLAST Surface format */
 
-void GetVS3Da( I1 **name, R4 *emit, IX *base, IX *cmbn,
-  SRFDAT3D *srf, VERTEX3D *xyz, VFCTRL *vfCtrl )
+void GetVS3Da( char **name, float *emit, int *base, int *cmbn,
+  SRFDAT3D *srf, Vec3 *xyz, View3DControlData *vfCtrl )
 /*
  * stype;  surface type data:  1 = obstruction only surface,
  *         0 = normal surface, -1 = included surface,
  *        -2 = part of an obstruction surface
  */
   {
-  VERTEX3D xyzLLC;  /* coordinates of lower left corner of surface plane */
-  R8 azm, tilt;     /* azimuth and tilt angles of surface plane */
-  R8 sa, ca, st, ct;
-  VERTEX3D v[4];
-  IX s;       /* shape indicator: T=triangle, R=rectangle, Q=quadrilateral */
-  IX c;       /* first character in line */
-  IX nv=0;    /* number of vertices */
-  IX ns=0;    /* number of surfaces */
-  IX j, n;
+  Vec3 xyzLLC;  /* coordinates of lower left corner of surface plane */
+  double azm, tilt;     /* azimuth and tilt angles of surface plane */
+  double sa, ca, st, ct;
+  Vec3 v[4];
+  int s;       /* shape indicator: T=triangle, R=rectangle, Q=quadrilateral */
+  int c;       /* first character in line */
+  int nv=0;    /* number of vertices */
+  int ns=0;    /* number of surfaces */
+  int j, n;
 
   error( -2, __FILE__, __LINE__, "" );  /* clear error count */
   rewind( _unxt );
@@ -593,9 +598,9 @@ finish:
 
 void SetPlane( SRFDAT3D *srf )
   {
-  VECTOR3D v={0.0, 0.0, 0.0};
-  R8 r2, rr=0.0;
-  IX j;
+  Vec3 v={0.0, 0.0, 0.0};
+  double r2, rr=0.0;
+  int j;
 
   for( j=0; j<srf->nv; j++ )     /* approximate centroid */
     {
@@ -624,10 +629,10 @@ void SetPlane( SRFDAT3D *srf )
   srf->shape = 0;
   if( srf->nv==4 )               /* quadrilateral */
     {
-    IX err=0;
-    VERTEX3D p[4]; /* coordinates of polygoc vertices */
-    DIRCOS dct[4]; /* temporary direction cosines */
-    R8 a[5],z[4];  /* temporary values: areas, elevations */
+    int err=0;
+    Vec3 p[4]; /* coordinates of polygoc vertices */
+    DirCos dct[4]; /* temporary direction cosines */
+    double a[5],z[4];  /* temporary values: areas, elevations */
     for( j=0; j<4; j++ )
       VCOPY( (srf->v[j]), (p+j) );
     a[0] = Triangle( p+0, p+1, p+2, dct+0, srf->nr );
@@ -681,20 +686,20 @@ void SetPlane( SRFDAT3D *srf )
 
 /*  Test that subsurfaces lie in plane of their base surfaces.  */
 
-void TestSubSrf( SRFDAT3D *srf, const IX *baseSrf, VFCTRL *vfCtrl )
+void TestSubSrf( SRFDAT3D *srf, const int *baseSrf, View3DControlData *vfCtrl )
   {
-  IX size=(3*sizeof(IX)+2*sizeof(R8)+sizeof(DIRCOS)+sizeof(VERTEX3D));
-  IX n;        /* surface number */
-  IX m;        /* base surface number */
-  IX j;        /* vertex number */
-  IX infront;  /* true if a vertex is in front of surface n */
-  IX behind;   /* true if a vertex is behind surface n */
-  R8 dot, eps; /* dot product and test value */
+  int size=(3*sizeof(int)+2*sizeof(double)+sizeof(DirCos)+sizeof(Vec3));
+  int n;        /* surface number */
+  int m;        /* base surface number */
+  int j;        /* vertex number */
+  int infront;  /* true if a vertex is in front of surface n */
+  int behind;   /* true if a vertex is behind surface n */
+  double dot, eps; /* dot product and test value */
   SRFDATNM srfN, srfM;
   SRFDAT3X *srfT;  /* pointer to surface */
-  VERTEX2D vN[MAXNV1], vM[MAXNV1]; /* 2D vertices */
-  POLY *base;  /* pointer to base polygon */
-  POLY *subs;  /* pointer to subsurface polygon */
+  Vec2 vN[MAXNV1], vM[MAXNV1]; /* 2D vertices */
+  Polygon *base;  /* pointer to base polygon */
+  Polygon *subs;  /* pointer to subsurface polygon */
 
   for( n=1; n<=vfCtrl->nRadSrf; n++ )
     {
@@ -733,10 +738,10 @@ void TestSubSrf( SRFDAT3D *srf, const IX *baseSrf, VFCTRL *vfCtrl )
     vfCtrl->nProbObstr = 0;
     memcpy( &srfN, &srf[n], size );
     for( j=0; j<srf[n].nv; j++ )
-        memcpy( srfN.v+j, srf[n].v[j], sizeof(VERTEX3D) );
+        memcpy( srfN.v+j, srf[n].v[j], sizeof(Vec3) );
     memcpy( &srfM, &srf[m], size );
     for( j=0; j<srf[m].nv; j++ )
-        memcpy( srfM.v+j, srf[m].v[j], sizeof(VERTEX3D) );
+        memcpy( srfM.v+j, srf[m].v[j], sizeof(Vec3) );
     CoordTrans3D( srf, &srfN, &srfM, &j, vfCtrl );
     srfT = &vfCtrl->srf1T;
     if( dot < 0.0 )
