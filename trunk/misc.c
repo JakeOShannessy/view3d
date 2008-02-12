@@ -2,6 +2,9 @@
 
 /*    utility functions   */
 
+#define V3D_BUILD
+#include "misc.h"
+
 #ifdef _DEBUG
 #  define DEBUG 1
 #else
@@ -12,65 +15,113 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h> // variable argument list macro definitions
-#include "types.h"  // define U1, I2, etc.
-#include "prtyp.h"  // miscellaneous function prototypes
-
-extern FILE *_ulog;  // LOG output file
-extern I1 _string[LINELEN];  // buffer for ReadXX(); helps debugging
+#include "types.h"  // define unsigned char, short, etc.
 
 #define NMAX 4      // maximum number of calls to xxxStr at one time
 #define NXTBUF 1    // buffer size (if > 1023)
 #define ANSIC 1     // 1 to use only ANSI C code for Path functions
 
-IX _emode=1;   /* error message mode: 0=logFile, 1=DOS console, 2=Windows */
+int _emode=1;   /* error message mode: 0=logFile, 1=DOS console, 2=Windows */
+
+/* forward decsl */
+
+     /* functions in misc.c */
+void LogNote( char *file, int line, ... );
+
+void PathCWD( char *path, int szp );
+
+void PgmInit( char *program );
+char *NextArg( const int argc, char **argv );
+
+int LongCon( char *str, long *i );
+
+int HexCon( char *s, unsigned long *i );
+char *HexStr( unsigned long j );
+
+int DblCon( char *str, double *f );
+
+int TimeCon( char *string, long *time );
+char *TimeStr( long time );
+int DateCon( char *s, long *day_of_year );
+char *DateStr( int day_of_year );
+int DatXCon( char *s, long *day_of_year );
+char *DatXStr( int day_of_year );
+
+int GetKey( void );
+char *GetStr( char *prompt, char *str );
+int NoYes( char *question );
+void Pause( void );
+
+void NxtInit( char *file, int line );
+
+short ReadI2( int flag );
+long ReadI4( int flag );
+unsigned char ReadU1( int flag );
+unsigned short ReadU2( int flag );
+unsigned long ReadX4( int flag );
+long ReadHMS( int flag );
+int ReadMD( int flag );
+int ReadMDx( int flag );
+
+int FileCopy( char *from_file, char *to_file );
+void FileNameFix( char *filename );
+FILE *FileOpen( char *prompt, char *fileName, char *mode, int flag );
+FILE *NewFile( const char *filename, const char *mode );
+FILE *LogFile( char *filename );
+
+void Delay( float seconds );
+int max0( int n1, int n2 );
+int min0( int n1, int n2 );
+void PtrXchg( void **p1, void **p2 );
+char *strctr( char *s, int n );
+char *strcpys( char *s, const int mx, ...  );
+
 
 /***  errora.c  **************************************************************/
 
 /*  Minimal error message - written to .LOG file.  */
 
-void errora( const I1 *head, I1 *message, I1 *source )
-  {
-  if( _ulog )
-    {
+static void errora( const char *head, char *message, char *source ){
+  if( _ulog ){
     fputs( head, _ulog );
     fputs( source, _ulog );
     fputs( message, _ulog );
     fflush( _ulog );
-    }
+  }
 
-  }  /*  end of errora  */
+}  /*  end of errora  */
 
 /***  errorb.c  **************************************************************/
 
 /*  Standard error message for console version.  */
 
-void errorb( const I1 *head, I1 *message, I1 *source )
-  {
+static void errorb( const char *head, char *message, char *source ){
   fputs( head, stdout );
   fputs( message, stdout );
   errora( head, message, source );
 
-  }  /*  end of errorb  */
+}  /*  end of errorb  */
 
 /***  error.c  ***************************************************************/
 
 /*  Standard error message routine - select errora, errorb or errorw.
- *  _ulog MUST be defined.  */
 
-IX error( IX severity, I1 *file, IX line, ... )
-/* severity;  values 0 - 3 defined below
- * file;      file name: __FILE__
- * line;      line number: __LINE__
- * ...;       string variables (up to LINELEN characters total) */
-  {
-  I1 message[LINELEN]; /* merged message */
-  I1 source[64];       /* source code info. */
+	@NOTE global file pointer _ulog MUST be defined. @ENDNOTE
+
+	@param severity  values 0 - 3 defined below
+	@param file      file name: __FILE__
+	@param line      line number: __LINE__
+	@param ...       string variables (up to LINELEN characters total)
+*/
+int error( int severity, char *file, int line, ... ){
+  char message[LINELEN]; /* merged message */
+  char source[64];       /* source code info. */
   va_list argp;        /* variable argument list */
-  I1 start[]=" ";      /* leading blank in message */
-  I1 *msg, *s;
-  static IX count=0;   /* count of severe errors */
-  static const I1 *head[4] = { "NOTE", "WARNING", "ERROR", "FATAL" };
-  IX n=1;
+  char start[]=" ";      /* leading blank in message */
+  char *msg, *s;
+  static int count=0;   /* count of severe errors */
+  static const char *head[4] = { "NOTE", "WARNING", "ERROR", "FATAL" };
+  int n=1;
 
   if( severity >= 0 )
     {
@@ -83,7 +134,7 @@ IX error( IX severity, I1 *file, IX line, ... )
       {
       while( *msg && n++<LINELEN )
         *s++ = *msg++;
-      msg = (I1 *)va_arg( argp, I1 * );
+      msg = (char *)va_arg( argp, char * );
       }
     *s++ = '\n';
     *s = '\0';
@@ -113,15 +164,14 @@ IX error( IX severity, I1 *file, IX line, ... )
 
   return( count );
 
-  }  /*  end error  */
+}  /*  end error  */
 
 /***  sfname.c  ***************************************************************/
 
 /*  Return pointer to file name from the full path name.  */
 
-I1 *sfname( I1* fullpath )
-  {
-  I1 *name=fullpath, *c;  // allow for name == fullpath
+char *sfname( char* fullpath ){
+  char *name=fullpath, *c;  // allow for name == fullpath
 
   for( c=fullpath; *c; c++ )  // find last dir char before name
     {
@@ -132,19 +182,19 @@ I1 *sfname( I1* fullpath )
 
   return name;
 
-  }  /* end sfname */
+}  /* end sfname */
 
 #if( __GNUC__ )
 #include <unistd.h> // prototypes: getcwd
-I1 _dirchr='/';
+char _dirchr='/';
 #elif( _MSC_VER )
 #include <direct.h> // prototypes: _getcdw
-I1 _dirchr='\\';
+char _dirchr='\\';
 #elif( __TURBOC__ )
 #include <dir.h>    // prototypes: getcwd
-I1 _dirchr='\\';
+char _dirchr='\\';
 #else
-I1 _dirchr='\0';    // this will force a failure
+char _dirchr='\0';    // this will force a failure
 #endif
 
 /***  errorc.c  **************************************************************/
@@ -152,9 +202,8 @@ I1 _dirchr='\0';    // this will force a failure
 /*  Minimal error message - avoids recursive call to PathSplit.
  *  An error there will usually result a subsequent error.  */
 
-void errorc( IX severity, I1 *message )
-  {
-  static const I1 *head[4] = { "NOTE", "WARNING", "ERROR", "FATAL" };
+static void errorc( int severity, char *message ){
+  static const char *head[4] = { "NOTE", "WARNING", "ERROR", "FATAL" };
 
   if( severity>3 ) severity = 3;
   if( _emode < 2 )
@@ -167,17 +216,16 @@ void errorc( IX severity, I1 *message )
   if( severity > 2 )
     exit( 1 );
 
-  }  /*  end of errorc  */
+}  /*  end of errorc  */
 
 /***  PathMerge.c  ***********************************************************/
 
 /*  Merge full path from its component parts.  */
 
-void PathMerge( I1 *fullpath, IX szfp, I1 *drv, I1 *path, I1 *name, I1 *ext )
-  {
+void PathMerge( char *fullpath, int szfp, char *drv, char *path, char *name, char *ext ){
   // string indexing [ 0 | 1 | ... | sz-2 | sz-1 ] for size sz string
-  IX n=0; // index to fullpath string
-  I1 *c;  // pointer to source string
+  int n=0; // index to fullpath string
+  char *c;  // pointer to source string
 
 #if( DEBUG > 0 )
   if( !fullpath ) errorc( 3, "PathMerge: NULL fullpath" );
@@ -231,7 +279,7 @@ void PathMerge( I1 *fullpath, IX szfp, I1 *drv, I1 *path, I1 *name, I1 *ext )
 #endif
   return;
 
-  }  /* end PathMerge */
+}  /* end PathMerge */
 
 /***  PathSplit.c  ***********************************************************/
 
@@ -243,12 +291,12 @@ void PathMerge( I1 *fullpath, IX szfp, I1 *drv, I1 *path, I1 *name, I1 *ext )
  *  Use NULL pointers for any parts not wanted.
  *  A null drv will leave the drive as part of the path.  */
 
-void PathSplit( I1 *fullpath, I1 *drv, IX szd, I1 *path, IX szp,
-                I1 *name, IX szn, I1 *ext, IX sze )
-  {
-  I1 *c, // position in fullpath
+void PathSplit( char *fullpath, char *drv, int szd, char *path, int szp
+		,char *name, int szn, char *ext, int sze 
+){
+  char *c, // position in fullpath
      *p; // pointer to special charactor
-  IX n;  // character count
+  int n;  // character count
 
 #if( DEBUG > 0 )
   if( !fullpath ) errorc( 3, "PathSplit: NULL fullpath" );
@@ -325,7 +373,7 @@ void PathSplit( I1 *fullpath, I1 *drv, IX szd, I1 *path, IX szp,
     }
 #endif
 
-  }  /* end PathSplit */
+}  /* end PathSplit */
 
 /***  PathCWD.c  *************************************************************/
 
@@ -338,8 +386,7 @@ void PathSplit( I1 *fullpath, I1 *drv, IX szd, I1 *path, IX szp,
  *    This will not matter in a subsequent PathMerge( ).
  *  The getcwd functions allocate a vector at path.  */
 
-void PathCWD( I1 *path, IX szp )
-  {
+void PathCWD( char *path, int szp ){
 #if( DEBUG > 0 )
   if( !path ) errorc( 3, "PathCWD: NULL path" );
 #endif
@@ -357,21 +404,20 @@ void PathCWD( I1 *path, IX szp )
   errorc( 3, "PathCWD: Compiler not defined" );
 #endif
 
-  }  /* end PathCWD */
+}  /* end PathCWD */
 
 extern FILE *_unxt;   /* NXT input file */
-extern IX _echo;      /* if true, echo NXT input file */
-I1 *_nxtbuf;   /* large buffer for NXT input file */
+extern int _echo;      /* if true, echo NXT input file */
+char *_nxtbuf;   /* large buffer for NXT input file */
 
-/***  NxtOpen.c  *************************************************************/
+
 
 /*  Open file_name as UNXT file.  */
 
-IX NxtOpen( I1 *file_name, I1 *file, IX line )
+int NxtOpen( char *file_name, char *file, int line ){
 /* file;  source code file name: __FILE__
  * line;  line number: __LINE__ */
-  {
-  IX result=0;
+  int result=0;
 
   if( _unxt ) error( 3, file, line, "_UNXT already open", "" );
   _unxt = fopen( file_name, "r" );  /* = NULL if no file */
@@ -383,14 +429,13 @@ IX NxtOpen( I1 *file_name, I1 *file, IX line )
 
   return result;
 
-  }  /* end NxtOpen */
+}  /* end NxtOpen */
 
-/***  NxtClose.c  ************************************************************/
+
 
 /*  Close _unxt.  */
 
-void NxtClose( void )
-  {
+void NxtClose( void ){
   if( _unxt )
     {
     if( fclose( _unxt ) )
@@ -398,16 +443,15 @@ void NxtClose( void )
     _unxt = NULL;
     }
 
-  }  /* end NxtClose */
+}  /* end NxtClose */
 
-/***  NxtLine.c  *************************************************************/
+
 
 /*  Get characters to end of line (\n --> \0); used by NxtWord().  */
 
-I1 *NxtLine( I1 *str, IX maxlen )
-  {
-  IX c=0;       /* character read from _unxt */
-  IX i=0;       /* current position in str */
+char *NxtLine( char *str, int maxlen ){
+  int c=0;       /* character read from _unxt */
+  int i=0;       /* current position in str */
 
   while( c!='\n' )
     {
@@ -416,7 +460,7 @@ I1 *NxtLine( I1 *str, IX maxlen )
     if( _echo ) putc( c, _ulog );
     if( maxlen < 1 ) continue;   // do not fill buffer
     if( c == '\r' ) continue;    // 2007/10/07 Linux EOL = \n\r
-    str[i++] = (I1)c;
+    str[i++] = (char)c;
     if( i == maxlen )
       {
       str[i-1] = '\0';
@@ -430,9 +474,8 @@ I1 *NxtLine( I1 *str, IX maxlen )
 
   return str;
 
-  }  /* end NxtLine */
+}  /* end NxtLine */
 
-/***  NxtWord.c  *************************************************************/
 
 /*  Get the next word from file _unxt.  Return NULL at end-of-file.
  *  Assuming standard word separators (blank, comma, tab),
@@ -444,7 +487,7 @@ I1 *NxtLine( I1 *str, IX maxlen )
  *  which may also be end-of-line (EOL) character.
  *  Initialization with flag = -1 in now invalid - debug checked. */
 
-I1 *NxtWord( I1 *str, IX flag, IX maxlen )
+char *NxtWord( char *str, int flag, int maxlen )
 /* str;   buffer where word is stored; return pointer.
  * flag:  0:  get next word from current position in _unxt;
           1:  get 1st word from next line of _unxt;
@@ -453,9 +496,9 @@ I1 *NxtWord( I1 *str, IX flag, IX maxlen )
           4:  get next line (even if comment) (\n --> \0).
  * maxlen: length of buffer to test for overflow. */
   {
-  IX c;         // character read from _unxt
-  IX i=0;       // current position in str
-  IX done=0;    // true when start of word is found or word is complete
+  int c;         // character read from _unxt
+  int i=0;       // current position in str
+  int done=0;    // true when start of word is found or word is complete
 
 #ifdef _DEBUG
   if( !_unxt )
@@ -532,7 +575,7 @@ I1 *NxtWord( I1 *str, IX flag, IX maxlen )
         NxtClose();
         return NULL;
       default:           // first character of word found
-        str[i++] = (I1)c;
+        str[i++] = (char)c;
         done = 1;
         break;
       }
@@ -557,7 +600,7 @@ I1 *NxtWord( I1 *str, IX flag, IX maxlen )
       case '\0':
         break;
       default:     // accumulate word in buffer
-        str[i++] = (I1)c;
+        str[i++] = (char)c;
         if( i == maxlen )  // with overflow test
           {
           str[i-1] = '\0';
@@ -570,24 +613,24 @@ I1 *NxtWord( I1 *str, IX flag, IX maxlen )
 
   return str;
 
-  }  /* end NxtWord */
+}  /* end NxtWord */
 
 #include <float.h>  /* define: FLT_MAX, FLT_MIN */
 
-/***  DblCon.c  **************************************************************/
+
 
 /*  Use ANSI functions to convert a \0 terminated string to a double value.
  *  Return 1 if string is invalid, 0 if valid.
  *  Global errno will indicate overflow.
  *  Used in place of atof() because of error processing.  */
 
-IX DblCon( I1 *str, R8 *f )
+int DblCon( char *str, double *f )
   {
-  I1 *endptr;
-  R8 value;
-  IX eflag=0;
+  char *endptr;
+  double value;
+  int eflag=0;
 #if( !__GNUC__)
-  extern IX errno;
+  extern int errno;
   errno = 0;
 #endif
 
@@ -613,10 +656,10 @@ IX DblCon( I1 *str, R8 *f )
  *  Floats are in the range -3.4e38 to +3.4e38 (FLT_MIN to FLT_MAX).
  *  Used in place of atof() because of error processing.  */
 
-IX FltCon( I1 *str, R4 *f )
+int FltCon( char *str, float *f )
   {
-  R8 value;    /* compute result in high precision, then chop */
-  IX eflag=0;
+  double value;    /* compute result in high precision, then chop */
+  int eflag=0;
 
   if( DblCon( str, &value) ) eflag = 1;
   if( value > FLT_MAX ) eflag = 1;
@@ -625,7 +668,7 @@ IX FltCon( I1 *str, R4 *f )
   if( eflag )
     *f = 0.0;
   else
-    *f = (R4)value;
+    *f = (float)value;
   return eflag;
   
   }  /* end of FltCon */
@@ -638,11 +681,11 @@ IX FltCon( I1 *str, R4 *f )
  *  NMAX allows up to NMAX calls to IntStr() in one statement. 
  *  Replaces nonstandard GCVT function.  */
 
-I1 *FltStr( R8 f, IX n )
+char *FltStr( double f, int n )
   {
-  static I1 string[NMAX][32];  /* string long enough for any practical value */
-  I1 format[8];
-  static IX index=0;
+  static char string[NMAX][32];  /* string long enough for any practical value */
+  char format[8];
+  static int index=0;
 
   if( ++index == NMAX )
     index = 0;
@@ -656,9 +699,9 @@ I1 *FltStr( R8 f, IX n )
 
 /***  ReadR8.c  **************************************************************/
 
-R8 ReadR8( IX flag )
+double ReadR8( int flag )
   {
-  R8 value;
+  double value;
 
   NxtWord( _string, flag, sizeof(_string) );
   if( DblCon( _string, &value ) )
@@ -669,17 +712,17 @@ R8 ReadR8( IX flag )
 
 /***  ReadR4.c  **************************************************************/
 
-/*  Convert next word from file _unxt to R4 real. */
+/*  Convert next word from file _unxt to float real. */
 
-R4 ReadR4( IX flag )
+float ReadR4( int flag )
   {
-  R8 value;
+  double value;
 
   NxtWord( _string, flag, sizeof(_string) );
   if( DblCon( _string, &value ) || value > FLT_MAX || value < -FLT_MAX )
     error( 2, __FILE__, __LINE__, "Bad float value: ", _string, "" );
 
-  return (R4)value;
+  return (float)value;
 
   }  /* end ReadR4 */
 
@@ -692,13 +735,13 @@ R4 ReadR4( IX flag )
  *  Global errno will indicate overflow.
  *  Used in place of atol() because of error processing.  */
 
-IX LongCon( I1 *str, I4 *i )
+int LongCon( char *str, long *i )
   {
-  I1 *endptr;
-  I4 value;
-  IX eflag=0;
+  char *endptr;
+  long value;
+  int eflag=0;
 #if( !__GNUC__)
-  extern IX errno;
+  extern int errno;
   errno = 0;
 #endif
 
@@ -724,10 +767,10 @@ IX LongCon( I1 *str, I4 *i )
  *  Short integers are in the range -32767 to +32767 (INT_MIN to INT_MAX).
  *  Used in place of atoi() because of error processing.  */
 
-IX IntCon( I1 *str, IX *i )
+int IntCon( char *str, int *i )
   {
-  I4 value;    /* compute result in long integer, then chop */
-  IX eflag=0;
+  long value;    /* compute result in long integer, then chop */
+  int eflag=0;
 
   if( LongCon( str, &value ) ) eflag = 1;
   if( value > SHRT_MAX ) eflag = 1;
@@ -736,7 +779,7 @@ IX IntCon( I1 *str, IX *i )
   if( eflag )
     *i = 0;
   else
-    *i = (IX)value;
+    *i = (int)value;
   return eflag;
   
   }  /* end of IntCon */
@@ -749,10 +792,10 @@ IX IntCon( I1 *str, IX *i )
  *  NMAX allows up to NMAX calls to IntStr() in one statement. 
  *  Replaces nonstandard ITOA & LTOA functions for radix 10.  */
 
-I1 *IntStr( I4 i )
+char *IntStr( long i )
   {
-  static I1 string[NMAX][12];  // strings long enough for 32-bit integers
-  static IX index=0;
+  static char string[NMAX][12];  // strings long enough for 32-bit integers
+  static int index=0;
 
   if( ++index == NMAX )
     index = 0;
@@ -765,18 +808,18 @@ I1 *IntStr( I4 i )
 
 /***  ReadIX.c  **************************************************************/
 
-/*  Convert next word from file _unxt to IX integer. */
+/*  Convert next word from file _unxt to int integer. */
 
-IX ReadIX( IX flag )
+int ReadIX( int flag )
   {
-  I4 value;
+  long value;
 
   NxtWord( _string, flag, sizeof(_string) );
   if( LongCon( _string, &value ) ||
       value > INT_MAX || value < INT_MIN )  // max/min depends on compiler
     error( 2, __FILE__, __LINE__, "Bad integer: ", _string, "" );
 
-  return (IX)value;
+  return (int)value;
 
   }  /* end ReadIX */
 
@@ -788,16 +831,12 @@ IX ReadIX( IX flag )
 /*  Determine elapsed time.  Call once to determine t1;
     call later to get elapsed time. */
 
-R4 CPUtime( R4 t1 )
-  {
-  R4 t2;
-
-  t2 = (R4)clock() / (R4)CLOCKS_PER_SEC;
-  t2 = (R4)(fabs(t2-t1));  // clear -0.0
-
+float CPUtime(float t1){
+  float t2;
+  t2 = (float)clock() / (float)CLOCKS_PER_SEC;
+  t2 = (float)(fabs(t2-t1));  // clear -0.0
   return t2;
-
-  }  /* end CPUtime */
+}  /* end CPUtime */
 
 #include <ctype.h> /* prototype: toupper */
 
@@ -805,7 +844,7 @@ R4 CPUtime( R4 t1 )
 
 /*  Test for equality of two strings; return 1 if equal, 0 if not.  */
 
-IX streql( I1 *s1, I1 *s2 )
+int streql( char *s1, char *s2 )
   {
   for( ; *s1 && *s2 && *s1 == *s2; ++s1, ++s2 )
     ;
@@ -822,7 +861,7 @@ IX streql( I1 *s1, I1 *s2 )
 /*  Test for equality of two strings; ignore differences in case.
  *  Return 1 if equal, 0 if not.  */
 
-IX streqli( I1 *s1, I1 *s2 )
+int streqli( char *s1, char *s2 )
   {
   for( ; *s1 && *s2 && (toupper(*s1) == toupper(*s2)); ++s1, ++s2 )
     ;

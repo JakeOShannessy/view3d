@@ -6,6 +6,9 @@
 # define DEBUG 1
 #endif
 
+#define V3D_BUILD
+#include "view3d.h"
+
 #include <stdio.h>
 #include <stdarg.h> /* variable argument list macro definitions */
 #include <stdlib.h> /* prototype: exit */
@@ -13,23 +16,26 @@
 #include <math.h>   /* prototypes: fabs, sqrt */
 #include <float.h>  /* define: FLT_EPSILON */
 #include "types.h"
-#include "view3d.h"
-#include "prtyp.h"
-void ViewMethod( SRFDATNM *srfN, SRFDATNM *srfM, R8 distNM, VFCTRL *vfCtrl );
-void InitViewMethod( VFCTRL *vfCtrl );
+#include "misc.h"
+#include "heap.h"
+#include "viewunob.h"
+#include "viewobs.h"
+#include "test3d.h"
+#include "ctrans.h"
 
-extern IX _list;    /* output control, higher value = more output */
+void ViewMethod( SRFDATNM *srfN, SRFDATNM *srfM, double distNM, View3DControlData *vfCtrl );
+void InitViewMethod( View3DControlData *vfCtrl );
+
+extern int _list;    /* output control, higher value = more output */
 extern FILE *_ulog; /* log file */
-extern I1 _string[]; /* buffer for a character string */
-extern I1 *methods[]; /* method abbreviations */
 
-IX _row=0;  /* row number; save for errorf() */
-IX _col=0;  /* column number; " */
-R8 _sli4;   /* use SLI if rcRatio > 4 and relSep > _sli4 */
-R8 _sai4;   /* use SAI if rcRatio > 4 and relSep > _sai4 */
-R8 _sai10;  /* use SAI if rcRatio > 10 and relSep > _sai10 */
-R8 _dai1;   /* use DAI if relSep > _dai1 */
-R8 _sli1;   /* use SLI if relSep > _sli1 */
+int _row=0;  /* row number; save for errorf() */
+int _col=0;  /* column number; " */
+double _sli4;   /* use SLI if rcRatio > 4 and relSep > _sli4 */
+double _sai4;   /* use SAI if rcRatio > 4 and relSep > _sai4 */
+double _sai10;  /* use SAI if rcRatio > 10 and relSep > _sai10 */
+double _dai1;   /* use DAI if relSep > _dai1 */
+double _sli1;   /* use SLI if relSep > _sli1 */
 
 /***  View3D.c  **************************************************************/
 
@@ -48,8 +54,8 @@ R8 _sli1;   /* use SLI if relSep > _sli1 */
  *  |  ...   |  ...   |  ...   |  ...   | ...
  */
 
-void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
-             R8 **AF, VFCTRL *vfCtrl )
+void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
+             double **AF, View3DControlData *vfCtrl )
 /* srf    - surface / vertex data for all surfaces
  * base   - base surface numbers
  * possibleObstr - list of possible view obstructing surfaces
@@ -57,35 +63,35 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
  * vfCtrl - control values consolitated into structure
  */
   {
-  IX n;  /* row */
-  IX m;  /* column */
-  IX n1=1, nn;     /* first and last rows */
-  IX m1=1, mm;     /* first and last columns */
-  IX *maskSrf;     /* list of mask and null surfaces */
-  IX *possibleObstrN;  /* list of possible obstructions rel. to N */
-  IX *probableObstr;   /* list of probable obstructions */
-  IX nPossN;       /* number of possible obstructions rel. to N */
-  IX nProb;        /* number of probable obstructions */
-  IX mayView;      /* true if surfaces may view each other */
+  int n;  /* row */
+  int m;  /* column */
+  int n1=1, nn;     /* first and last rows */
+  int m1=1, mm;     /* first and last columns */
+  int *maskSrf;     /* list of mask and null surfaces */
+  int *possibleObstrN;  /* list of possible obstructions rel. to N */
+  int *probableObstr;   /* list of probable obstructions */
+  int nPossN;       /* number of possible obstructions rel. to N */
+  int nProb;        /* number of probable obstructions */
+  int mayView;      /* true if surfaces may view each other */
   SRFDATNM srfN,   /* row N surface */
            srfM,   /* column M surface */
           *srf1,   /* view from srf1 to srf2 -- */
           *srf2;   /*   one is srfN, the other is srfM. */
-  VECTOR3D vNM;    /* vector between centroids of srfN and srfM */
-  R8 distNM;       /* distance between centroids of srfN and srfM */
-  R8 minArea;      /* area of smaller surface */
-  U4 nAF0=0,       /* number of AF which must equal 0 */
+  Vec3 vNM;    /* vector between centroids of srfN and srfM */
+  double distNM;       /* distance between centroids of srfN and srfM */
+  double minArea;      /* area of smaller surface */
+  unsigned long nAF0=0,       /* number of AF which must equal 0 */
      nAFnO=0,      /* number of AF without obstructing surfaces */
      nAFwO=0,      /* number of AF with obstructing surfaces */
      nObstr=0;     /* total number of obstructions considered */
-  UX **bins;       /* for statistical summary */
-  R8 nAFtot=1;     /* total number of view factors to compute */
-  IX maxSrfT=4;    /* max number of participating (transformed) surfaces */
+  unsigned **bins;       /* for statistical summary */
+  double nAFtot=1;     /* total number of view factors to compute */
+  int maxSrfT=4;    /* max number of participating (transformed) surfaces */
 
   maxSrfT = vfCtrl->nPossObstr + 1;
   nn = vfCtrl->nRadSrf;
   if( nn>1 )
-    nAFtot = (R8)((nn-1)*nn);
+    nAFtot = (double)((nn-1)*nn);
   if( vfCtrl->row > 0 )
     {
     n1 = nn = vfCtrl->row;   /* can process a single row of view factors, */
@@ -96,16 +102,16 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
   ViewsInit( 4, 1 );  /* initialize Gaussian integration coefficients */ 
   InitViewMethod( vfCtrl );
 
-  possibleObstrN = Alc_V( 1, vfCtrl->nAllSrf, sizeof(IX), __FILE__, __LINE__ );
-  probableObstr = Alc_V( 1, vfCtrl->nAllSrf, sizeof(IX), __FILE__, __LINE__ );
+  possibleObstrN = Alc_V( 1, vfCtrl->nAllSrf, sizeof(int), __FILE__, __LINE__ );
+  probableObstr = Alc_V( 1, vfCtrl->nAllSrf, sizeof(int), __FILE__, __LINE__ );
 
   vfCtrl->srfOT = Alc_V( 0, maxSrfT, sizeof(SRFDAT3X), __FILE__, __LINE__ );
-  bins = Alc_MC( 0, 4, 1, 5, sizeof(UX), __FILE__, __LINE__ );
+  bins = Alc_MC( 0, 4, 1, 5, sizeof(unsigned), __FILE__, __LINE__ );
   vfCtrl->failConverge = 0;
   
   if( vfCtrl->nMaskSrf ) /* pre-process view masking surfaces */
     {
-    maskSrf = Alc_V( 1, vfCtrl->nMaskSrf, sizeof(IX), __FILE__, __LINE__ );
+    maskSrf = Alc_V( 1, vfCtrl->nMaskSrf, sizeof(int), __FILE__, __LINE__ );
     for( m=1,n=vfCtrl->nRadSrf; n; n-- )   /* set mask list */
       if( srf[n].type == MASK || srf[n].type == NULS )
         maskSrf[m++] = n;
@@ -135,12 +141,12 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
     _row = n;
     if( vfCtrl->row == 0 )  /* progress display - all surfaces */
       {
-      R8 pctDone = 100 * (R8)((n-1)*n) / nAFtot;
+      double pctDone = 100 * (double)((n-1)*n) / nAFtot;
       fprintf( stderr, "\rSurface: %d; ~ %.1f %% complete", _row, pctDone );
       }
     AF[n][n] = 0.0;
     nPossN = vfCtrl->nPossObstr;  /* remove obstructions behind N */
-    memcpy( possibleObstrN+1, possibleObstr+1, nPossN*sizeof(IX) );
+    memcpy( possibleObstrN+1, possibleObstr+1, nPossN*sizeof(int) );
     nPossN = OrientationTestN( srf, n, vfCtrl, possibleObstrN, nPossN );
     if( vfCtrl->col )  /* set column limits */
       mm = m1 + 1;
@@ -198,7 +204,7 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
           errorf( 3, __FILE__, __LINE__, "Surfaces have same centroids", "" );
 
         nProb = nPossN;
-        memcpy( probableObstr+1, possibleObstrN+1, nProb*sizeof(IX) );
+        memcpy( probableObstr+1, possibleObstrN+1, nProb*sizeof(int) );
 
         /* special test for extreme clipping; clipped surface amost
            in the plane of the other surface.  */
@@ -230,7 +236,7 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
         vfCtrl->nProbObstr = nProb;
 
         {
-        IX j, k=0;
+        int j, k=0;
         for( j=1; j<=nProb; j++ )
           if( probableObstr[j] != _row && probableObstr[j] != _col )
             probableObstr[++k] = probableObstr[j];
@@ -241,8 +247,8 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
         if( vfCtrl->nProbObstr )    /*** obstructed view factors ***/
           {
           SRFDAT3X subs[5];    /* subsurfaces of surface 1  */
-          IX j, nSubSrf;       /* count / number of subsurfaces */
-          R8 calcAF = 0.0;
+          int j, nSubSrf;       /* count / number of subsurfaces */
+          double calcAF = 0.0;
                                /* set direction of projection */
           if( ProjectionDirection( srf, &srfN, &srfM,
               probableObstr, vfCtrl ) > 0 )
@@ -369,7 +375,7 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
   if( nAFwO > 0 )
     {
     fprintf( _ulog, "Average number of obstructions per pair:   %6.2f\n",
-      (R8)nObstr / (R8)nAFwO );
+      (double)nObstr / (double)nAFwO );
     fprintf( _ulog, "Adaptive viewpoint evaluations used:   %10lu\n",
       vfCtrl->usedVObs );
     fprintf( _ulog, "Adaptive viewpoint evaluations lost:   %10lu\n",
@@ -379,7 +385,7 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
 /***fprintf( _ulog, "Number of 1AI point-polygon evaluations: %8u\n",
       vfCtrl->totPoly );***/
     fprintf( _ulog, "Average number of polygons per viewpoint:  %6.2f\n\n",
-      (R8)vfCtrl->totPoly / (R8)vfCtrl->totVpt );
+      (double)vfCtrl->totPoly / (double)vfCtrl->totVpt );
     }
 
   if( vfCtrl->failConverge ) error( 1, __FILE__, __LINE__,
@@ -389,11 +395,11 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
   MemRem( "After View3D() calculations" );
 #endif
   if( vfCtrl->nMaskSrf )
-    Fre_V( maskSrf, 1, vfCtrl->nMaskSrf, sizeof(IX), __FILE__, __LINE__ );
-  Fre_MC( bins, 0, 4, 1, 5, sizeof(IX), __FILE__, __LINE__ );
+    Fre_V( maskSrf, 1, vfCtrl->nMaskSrf, sizeof(int), __FILE__, __LINE__ );
+  Fre_MC( bins, 0, 4, 1, 5, sizeof(int), __FILE__, __LINE__ );
   Fre_V( vfCtrl->srfOT, 0, maxSrfT, sizeof(SRFDAT3X), __FILE__, __LINE__ );
-  Fre_V( probableObstr, 1, vfCtrl->nAllSrf, sizeof(IX), __FILE__, __LINE__ );
-  Fre_V( possibleObstrN, 1, vfCtrl->nAllSrf, sizeof(IX), __FILE__, __LINE__ );
+  Fre_V( probableObstr, 1, vfCtrl->nAllSrf, sizeof(int), __FILE__, __LINE__ );
+  Fre_V( possibleObstrN, 1, vfCtrl->nAllSrf, sizeof(int), __FILE__, __LINE__ );
 
   }  /* end of View3D */
 
@@ -406,8 +412,8 @@ void View3D( SRFDAT3D *srf, const IX *base, IX *possibleObstr,
  *  Return direction indicator: 1 = N to M, -1 = M to N.
  */
 
-IX ProjectionDirection( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM, 
-  IX *probableObstr, VFCTRL *vfCtrl )
+int ProjectionDirection( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM, 
+  int *probableObstr, View3DControlData *vfCtrl )
 /* srf  - data for all surfaces.
  * srfN - data for surface N.
  * srfM - data for surface M.
@@ -415,10 +421,10 @@ IX ProjectionDirection( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
  * vfCtrl - computation controls.
  */
   {
-  IX j, k;   /* surface number */
-  VECTOR3D v;
-  R8 sdtoN, sdtoM; /* minimum distances from obstruction to N and M */
-  IX direction=0;  /* 1 = N is surface 1; -1 = M is surface 1 */
+  int j, k;   /* surface number */
+  Vec3 v;
+  double sdtoN, sdtoM; /* minimum distances from obstruction to N and M */
+  int direction=0;  /* 1 = N is surface 1; -1 = M is surface 1 */
 
 #if( DEBUG > 1 )
   fprintf( _ulog, "ProjectionDirection:\n");
@@ -445,7 +451,7 @@ IX ProjectionDirection( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
     sdtoM = sdtoN = 1.0e9;
     for( j=1; j<=vfCtrl->nProbObstr; j++ )
       {
-      R8 dist;
+      double dist;
       k = probableObstr[j];
       if( srf[k].NrelS >= 0 )
         {
@@ -482,7 +488,7 @@ IX ProjectionDirection( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
 
   if( !direction )   /* direction based on number of obstructions */
     {
-    IX nosN=0, nosM=0;   /* number of surfaces facing N or M */
+    int nosN=0, nosM=0;   /* number of surfaces facing N or M */
     for( j=1; j<=vfCtrl->nProbObstr; j++ )
       {
       k = probableObstr[j];
@@ -522,7 +528,7 @@ IX ProjectionDirection( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
 
 /*  Determine method to compute unobstructed view factor.  */
 
-void ViewMethod( SRFDATNM *srfN, SRFDATNM *srfM, R8 distNM, VFCTRL *vfCtrl )
+void ViewMethod( SRFDATNM *srfN, SRFDATNM *srfM, double distNM, View3DControlData *vfCtrl )
   {
   SRFDATNM *srf1;  /* pointer to surface 1 (smaller surface) */
   SRFDATNM *srf2;  /* pointer to surface 2 */
@@ -542,7 +548,7 @@ void ViewMethod( SRFDATNM *srfN, SRFDATNM *srfM, R8 distNM, VFCTRL *vfCtrl )
     {
     if( srf1->shape )
       {
-      R8 relDot = VDOTW( (&srf1->ctd), (&srf2->dc) );
+      double relDot = VDOTW( (&srf1->ctd), (&srf2->dc) );
       if( vfCtrl->rcRatio > 10.0f &&
         (vfCtrl->relSep > _sai10 || relDot > 2.0*srf1->rc ) )
         vfCtrl->method = SAI;
@@ -573,7 +579,7 @@ void ViewMethod( SRFDATNM *srfN, SRFDATNM *srfM, R8 distNM, VFCTRL *vfCtrl )
 
 /*  Initialize ViewMethod() coefficients.  */
 
-void InitViewMethod( VFCTRL *vfCtrl )
+void InitViewMethod( View3DControlData *vfCtrl )
   {
   if( vfCtrl->epsAdap < 0.99e-7 )
     {
@@ -622,21 +628,21 @@ void InitViewMethod( VFCTRL *vfCtrl )
 
 /*  error messages for view factor calculations  */
 
-IX errorf( IX severity, I1 *file, IX line, ... )
+int errorf( int severity, char *file, int line, ... ){
 /* severity;  values 0 - 3 defined below
  * file;      file name: __FILE__
  * line;      line number: __LINE__
  * ...;       string variables (up to 80 char total) */
-  {
+  
   va_list argp;     /* variable argument list */
-  I1 start[]=" ";
-  I1 *msg, *s;
-  static I1 *head[4] = { "  *** note *** ",
+  char start[]=" ";
+  char *msg, *s;
+  static char *head[4] = { "  *** note *** ",
                          "*** warning ***",
                          " *** error *** ",
                          " *** fatal *** " };
-//  I1 name[16];
-  IX n=1;
+//  char name[16];
+  int n=1;
 
   if( severity >= 0 )
     {
@@ -661,7 +667,7 @@ IX errorf( IX severity, I1 *file, IX line, ... )
       {
       while( *msg && n++<80 )
         *s++ = *msg++;
-      msg = (I1 *)va_arg( argp, I1 * );
+      msg = (char *)va_arg( argp, char * );
       }
     *s++ = '\n';
     *s = '\0';

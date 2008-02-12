@@ -8,15 +8,15 @@
 # define DEBUG 0
 #endif
 
+#include "viewunob.h"
+
 #include <stdio.h>
 #include <math.h>  /* prototypes: atan, cos, fabs, log, sqrt */
 #include "types.h"
 #include "view3d.h"
-#include "prtyp.h"
-
-extern FILE *_ulog; /* log file */
-extern I1 *methods[]; /* method abbreviations */
-extern IX _maxNVT;  /* maximum number of temporary vertices */
+#include "misc.h"
+#include "heap.h"
+#include "viewobs.h"
 
 #define PId2     1.570796326794896619   /* pi / 2 */
 #define PIinv    0.318309886183790672   /* 1 / pi */
@@ -24,26 +24,59 @@ extern IX _maxNVT;  /* maximum number of temporary vertices */
 
 /* The following variables are "global" to this file.  
  * They are allocated and freed in ViewsInit(). */
-EDGEDCS *_rc1; /* edge DirCos of surface 1 */
-EDGEDCS *_rc2; /* edge DirCos of surface 2 */
-EDGEDIV **_dv1;  /* edge divisions of surface 1 */
-EDGEDIV **_dv2;  /* edge divisions of surface 2 */
-I4 _usedV1LIpart=0L;  /* number of calls to V1LIpart() */
+EdgeDir *_rc1; /* edge DirCos of surface 1 */
+EdgeDir *_rc2; /* edge DirCos of surface 2 */
+EdgeDivision **_dv1;  /* edge divisions of surface 1 */
+EdgeDivision **_dv2;  /* edge divisions of surface 2 */
+long _usedV1LIpart=0L;  /* number of calls to V1LIpart() */
+
+/* forward decls */
+
+static double View2AI( const int nss1, const DirCos *dc1, const Vec3 *pt1
+	, const double *area1, const int nss2, const DirCos *dc2, const Vec3 *pt2, const double *area2
+);
+
+static double View2LI( const int nd1, const int nv1, const EdgeDir *rc1
+	, EdgeDivision **dv1,const int nd2, const int nv2, const EdgeDir *rc2
+	, EdgeDivision **dv2
+);
+
+static double View1LI( const int nd1, const int nv1, const EdgeDir *rc1
+	, EdgeDivision **dv1, const Vec3 *v1, const int nv2, const Vec3 *v2
+);
+static double V1LIpart( const Vec3 *pp, const Vec3 *b0, const Vec3 *b1
+	, const Vec3 *B, const double b2, int *flag
+);
+
+static double V1LIxact( const Vec3 *a0, const Vec3 *a1, const double a
+	, const Vec3 *b0, const Vec3 *b1, const double b
+);
+static double V1LIadapt( Vec3 Pold[3], double dFold[3], double h
+	, const Vec3 *b0, const Vec3 *b1, const Vec3 *B, const double b2
+	, int level, View3DControlData *vfCtrl
+);
+static double ViewALI( const int nv1
+	, const Vec3 *v1, const int nv2, const Vec3 *v2
+	, View3DControlData *vfCtrl
+);
+static int DivideEdges( int nd, int nv, Vec3 *vs, EdgeDir *rc, EdgeDivision **dv );
+static int GQParallelogram( const int nDiv, const Vec3 *vp, Vec3 *p, double *w );
+static int GQTriangle( const int nDiv, const Vec3 *vt, Vec3 *p, double *w );
 
 /***  ViewUnobstructed.c  ****************************************************/
 
 /*  Compute view factor (AF) -- no view obstructions.  */
 
-R8 ViewUnobstructed( VFCTRL *vfCtrl, IX row, IX col )
+double ViewUnobstructed( View3DControlData *vfCtrl, int row, int col )
   {
-  VERTEX3D pt1[16], pt2[16];
-  R8 area1[16], area2[16];
+  Vec3 pt1[16], pt2[16];
+  double area1[16], area2[16];
   SRFDAT3X *srf1;  /* pointer to surface 1 */
   SRFDAT3X *srf2;  /* pointer to surface 2 */
-  R8 AF0,  /* estimate of AF */
+  double AF0,  /* estimate of AF */
      AF1;  /* improved estimate; one more edge division */
-  IX nmax, mmax;
-  IX nDiv;
+  int nmax, mmax;
+  int nDiv;
 
 #if( DEBUG > 1 )
   fprintf( _ulog, " VU %.2e", vfCtrl->epsAF );
@@ -161,12 +194,12 @@ done:
  *  Surfaces described by their direction cosines and NSS1|2 vertices 
  *  and associated areas for numberical integration.  */
 
-R8 View2AI( const IX nss1, const DIRCOS *dc1, const VERTEX3D *pt1, const R8 *area1,
-            const IX nss2, const DIRCOS *dc2, const VERTEX3D *pt2, const R8 *area2 )
+double View2AI( const int nss1, const DirCos *dc1, const Vec3 *pt1, const double *area1,
+            const int nss2, const DirCos *dc2, const Vec3 *pt2, const double *area2 )
   {
-  VECTOR3D V;
-  R8 r2, sumt, sum=0.0;
-  IX i, j;
+  Vec3 V;
+  double r2, sumt, sum=0.0;
+  int i, j;
 
   for( i=0; i<nss1; i++ )
     {
@@ -194,8 +227,8 @@ R8 View2AI( const IX nss1, const DIRCOS *dc1, const VERTEX3D *pt1, const R8 *are
  *  Both surfaces described by directions cosines of edges and 
  *  subdivisions of those edges for numerical integration.  */
 
-R8 View2LI( const IX nd1, const IX nv1, const EDGEDCS *rc1, EDGEDIV **dv1,
-            const IX nd2, const IX nv2, const EDGEDCS *rc2, EDGEDIV **dv2 )
+double View2LI( const int nd1, const int nv1, const EdgeDir *rc1, EdgeDivision **dv1,
+            const int nd2, const int nv2, const EdgeDir *rc2, EdgeDivision **dv2 )
 /* nd1 - number of edge divisions of polygon 1.
  * nv1 - number of vertices/edges of polygon 1.
  * rc1 - vector of direction cosines of edges of polygon 1.
@@ -206,11 +239,11 @@ R8 View2LI( const IX nd1, const IX nv1, const EDGEDCS *rc1, EDGEDIV **dv1,
  * dv2 - array of edge divisions of polygon 2.
  */
   {
-  VECTOR3D R;    /* vector between edge elements */
-  R8 r2;         /* square of distance between edge elements */
-  R8 dot;        /* dot product of edge direction cosines */
-  R8 sum, sumt;  /* R8 because of large +/- operations */
-  IX i,   /* surface 1 edge index */
+  Vec3 R;    /* vector between edge elements */
+  double r2;         /* square of distance between edge elements */
+  double dot;        /* dot product of edge direction cosines */
+  double sum, sumt;  /* double because of large +/- operations */
+  int i,   /* surface 1 edge index */
      j,   /* surface 2 edge index */
      n,   /* surface 1 edge element index */
      m;   /* surface 2 edge element index */
@@ -249,8 +282,8 @@ R8 View2LI( const IX nd1, const IX nv1, const EDGEDCS *rc1, EDGEDIV **dv1,
  *  subdivisions of those edges for numerical integration. 
  *  Surface 2 described by its vertices.  */
 
-R8 View1LI( const IX nd1, const IX nv1, const EDGEDCS *rc1,
-  EDGEDIV **dv1, const VERTEX3D *v1, const IX nv2, const VERTEX3D *v2 )
+double View1LI( const int nd1, const int nv1, const EdgeDir *rc1,
+  EdgeDivision **dv1, const Vec3 *v1, const int nv2, const Vec3 *v2 )
 /* nd1 - number of edge divisions of polygon 1.
  * nv1 - number of vertices/edges of polygon 1.
  * rc1 - vector of direction cosines of edges of polygon 1.
@@ -260,8 +293,8 @@ R8 View1LI( const IX nd1, const IX nv1, const EDGEDCS *rc1,
  * v2  - vector of vertices of polygon 2.
  */
   {
-  R8 sum, sumt;  /* double because of large +/- operations */
-  IX i, im1,  /* surface 1 edge index */
+  double sum, sumt;  /* double because of large +/- operations */
+  int i, im1,  /* surface 1 edge index */
      j, jm1,  /* surface 2 edge index */
      n;       /* surface 1 edge element index */
 
@@ -269,9 +302,9 @@ R8 View1LI( const IX nd1, const IX nv1, const EDGEDCS *rc1,
   jm1 = nv2 - 1;
   for( sum=0.0,j=0; j<nv2; jm1=j++ )
     {
-    VECTOR3D B;   /* edge of polygon 2 */
-    R8 b2;        /* length of edge squared */
-    R8 b, binv;   /* length of edge and its inverse */
+    Vec3 B;   /* edge of polygon 2 */
+    double b2;        /* length of edge squared */
+    double b, binv;   /* length of edge and its inverse */
 
     VECTOR( (v2+jm1), (v2+j), (&B) );
     b2 = VDOT( (&B), (&B) );
@@ -285,14 +318,14 @@ R8 View1LI( const IX nd1, const IX nv1, const EDGEDCS *rc1,
     im1 = nv1 - 1;
     for( i=0; i<nv1; im1=i++ )
       {
-      IX parallel=1;  /* true if edges i and j are parallel */
-      R8 dot = VDOT( (&B), (rc1+i) ) * binv;
+      int parallel=1;  /* true if edges i and j are parallel */
+      double dot = VDOT( (&B), (rc1+i) ) * binv;
       if( fabs(dot) <= EPS * b ) continue;
       if( fabs(dot) < 1.0-EPS )
         parallel = 0;
       for( sumt=0.0,n=0; n<nd1; n++ )    /* numeric integration */
         {
-        IX close;
+        int close;
         sumt += V1LIpart( (void*)(dv1[i]+n), v2+jm1, v2+j, &B, b2, &close )
               * dv1[i][n].s;
         if( parallel && close ) break;   /* colinear edges */
@@ -321,8 +354,8 @@ R8 View1LI( const IX nd1, const IX nv1, const EDGEDCS *rc1,
 /*  Compute Mitalas & Stephenson dF value for a single point, PP,
  *  to an edge from B0 to B1.  Part of single line integral method.  */
 
-R8 V1LIpart( const VERTEX3D *pp, const VERTEX3D *b0, const VERTEX3D *b1,
-             const VECTOR3D *B, const R8 b2, IX *flag )
+double V1LIpart( const Vec3 *pp, const Vec3 *b0, const Vec3 *b1,
+             const Vec3 *B, const double b2, int *flag )
 /* pp     pointer to vertex on polygon 1;
  * b0     pointer to start of edge on polygon 2;
  * b1     pointer to end of edge on polygon 2;
@@ -330,9 +363,9 @@ R8 V1LIpart( const VERTEX3D *pp, const VERTEX3D *b0, const VERTEX3D *b1,
  * b2     length^2 of vector B;
  * *flag; return 1 if g=0; else return 0. */
   {
-  VECTOR3D S, T, SxB;
-  R8 s2, t2, sxb2;
-  R8 sum=0.0;
+  Vec3 S, T, SxB;
+  double s2, t2, sxb2;
+  double sum=0.0;
 
   _usedV1LIpart += 1;  /* number of calls to V1LIpart() */
   VECTOR( b0, pp, (&S) );
@@ -349,11 +382,11 @@ R8 V1LIpart( const VERTEX3D *pp, const VERTEX3D *b0, const VERTEX3D *b1,
   sxb2 = VDOT( (&SxB), (&SxB) );
   if( sxb2 > EPS2*b2 )
     {
-    R8 h = s2 + t2 - b2;
-    R8 g = sqrt( sxb2 );
+    double h = s2 + t2 - b2;
+    double g = sqrt( sxb2 );
     if( g > EPS2 )
       {
-      R8 omega = PId2 - atan( 0.5 * h / g );
+      double omega = PId2 - atan( 0.5 * h / g );
       sum += 2.0 * ( g * omega - b2 );
       }
     else
@@ -375,8 +408,8 @@ R8 V1LIpart( const VERTEX3D *pp, const VERTEX3D *b0, const VERTEX3D *b1,
 /*  Compute line integral by adaptive Simpson integration.
  *  This is a recursive calculation!  */
 
-R8 V1LIadapt( VERTEX3D Pold[3], R8 dFold[3], R8 h, const VERTEX3D *b0,
-  const VERTEX3D *b1, const VECTOR3D *B, const R8 b2, IX level, VFCTRL *vfCtrl )
+double V1LIadapt( Vec3 Pold[3], double dFold[3], double h, const Vec3 *b0,
+  const Vec3 *b1, const Vec3 *B, const double b2, int level, View3DControlData *vfCtrl )
 /* Pold   3 vertices on edge of polygon 1;
  * dFold  corresponding dF values;
  * h      |Pold[2] - Pold[0]| / 6.0;
@@ -386,11 +419,11 @@ R8 V1LIadapt( VERTEX3D Pold[3], R8 dFold[3], R8 h, const VERTEX3D *b0,
  * b2     length^2 of vector B;
  * *flag; return 1 if g=0; else return 0. */
   {
-  VERTEX3D P[5];
-  R8 dF[5];
-  R8 F3,  /* F using 3-point Simpson integration */
+  Vec3 P[5];
+  double dF[5];
+  double F3,  /* F using 3-point Simpson integration */
      F5;  /* F using 5-point Simpson integration */
-  IX flag, j;
+  int flag, j;
 
   for( j=0; j<3; j++ )
     {
@@ -425,8 +458,8 @@ R8 V1LIadapt( VERTEX3D Pold[3], R8 dFold[3], R8 h, const VERTEX3D *b0,
 
 /*  Analytic integration of colinear edges. */
 
-R8 V1LIxact( const VERTEX3D *a0, const VERTEX3D *a1, const R8 a, 
-             const VERTEX3D *b0, const VERTEX3D *b1, const R8 b )
+double V1LIxact( const Vec3 *a0, const Vec3 *a1, const double a, 
+             const Vec3 *b0, const Vec3 *b1, const double b )
 /* a0 - point for start of edge of polygon 1.
  * a1 - point for end of edge of polygon 1.
  * a  - length of edge of polygon 1.
@@ -435,9 +468,9 @@ R8 V1LIxact( const VERTEX3D *a0, const VERTEX3D *a1, const R8 a,
  * b -  length of edge of polygon 2.
  */
   {
-  VECTOR3D V;   /* temporary vector */
-  R8 e2, d2;
-  R8 sum=0.0;
+  Vec3 V;   /* temporary vector */
+  double e2, d2;
+  double sum=0.0;
 
   VECTOR( b0, a1, (&V) );
   e2 = VDOT( (&V), (&V) );
@@ -451,7 +484,7 @@ R8 V1LIxact( const VERTEX3D *a0, const VERTEX3D *a1, const R8 a,
     }
   else
     {                          /* non-identical edges */
-    R8 c2, f2;
+    double c2, f2;
     if( e2 > EPS2 )
       sum += e2 - e2 * log( e2 );
     if( d2 > EPS2 )
@@ -478,18 +511,18 @@ R8 V1LIxact( const VERTEX3D *a0, const VERTEX3D *a1, const R8 a,
 /*  Compute direct interchange area by adaptive single line integral 
  *  (Mitalas-Stephensen) method */
 
-R8 ViewALI( const IX nv1, const VERTEX3D *v1,
-            const IX nv2, const VERTEX3D *v2, VFCTRL *vfCtrl )
+double ViewALI( const int nv1, const Vec3 *v1,
+            const int nv2, const Vec3 *v2, View3DControlData *vfCtrl )
 /* nv1 - number of vertices/edges of polygon 1.
  * v1  - vector of vertices of polygon 1.
  * nv2 - number of vertices/edges of polygon 2.
  * v2  - vector of vertices of polygon 2.
  */
   {
-  VECTOR3D A[MAXNV1]; /* edges of polygon 1 */
-  R8 a[MAXNV1]; /* lengths of polygon 1 edges */
-  R8 sum, sumt; /* double because of large +/- operations */
-  IX i, im1,    /* surface 1 edge index */
+  Vec3 A[MAXNV1]; /* edges of polygon 1 */
+  double a[MAXNV1]; /* lengths of polygon 1 edges */
+  double sum, sumt; /* double because of large +/- operations */
+  int i, im1,    /* surface 1 edge index */
      j, jm1;    /* surface 2 edge index */
 
 #if( DEBUG > 0 )
@@ -513,9 +546,9 @@ R8 ViewALI( const IX nv1, const VERTEX3D *v1,
   jm1 = nv2 - 1;
   for( sum=0.0,j=0; j<nv2; jm1=j++ )   /* for all edges of polygon 2 */
     {
-    VECTOR3D B;  /* edge of polygon 2 */
-    R8 b, b2;    /* length  and length^2 of edge */
-    R8 dot;      /* dot product of edges i and j */
+    Vec3 B;  /* edge of polygon 2 */
+    double b, b2;    /* length  and length^2 of edge */
+    double dot;      /* dot product of edges i and j */
 
     VECTOR( (v2+jm1), (v2+j), (&B) );
     b2 = VDOT( (&B), (&B) );
@@ -528,9 +561,9 @@ R8 ViewALI( const IX nv1, const VERTEX3D *v1,
     im1 = nv1 - 1;
     for( i=0; i<nv1; im1=i++ )     /* for all edges of polygon 1 */
       {
-      VERTEX3D V[3];  /* vertices of edge i */
-      R8 dF[3];
-      IX flag1, flag2;
+      Vec3 V[3];  /* vertices of edge i */
+      double dF[3];
+      int flag1, flag2;
 
 #if( DEBUG > 2 )
       fprintf( _ulog, "Srf1 %d-%d (%f %f %f) to (%f %f %f)\n", i, ip1,
@@ -586,50 +619,50 @@ R8 ViewALI( const IX nv1, const VERTEX3D *v1,
  *  Initialize Gaussian integration coefficients.  
  *  Store G coefficients in vectors emulating triangular arrays.  */
 
-void ViewsInit( IX maxDiv, IX init )
+void ViewsInit( int maxDiv, int init )
   {
-  static IX maxRC1;    /* max number of values in RC1 */
-  static IX maxRC2;    /* max number of values in RC2 */
-  static IX maxDV1;    /* max number of values in DV1 */
-  static IX maxDV2;    /* max number of values in DV2 */
+  static int maxRC1;    /* max number of values in RC1 */
+  static int maxRC2;    /* max number of values in RC2 */
+  static int maxDV1;    /* max number of values in DV1 */
+  static int maxDV2;    /* max number of values in DV2 */
 
   if( init )
     {
     maxRC1 = MAXNV1;
-    _rc1 = Alc_V( 0, maxRC1, sizeof(EDGEDCS), __FILE__, __LINE__ );
+    _rc1 = Alc_V( 0, maxRC1, sizeof(EdgeDir), __FILE__, __LINE__ );
     maxDV1 = maxDiv - 1;
-    _dv1 = Alc_MC( 0, maxRC1, 0, maxDV1, sizeof(EDGEDIV), __FILE__, __LINE__ );
+    _dv1 = Alc_MC( 0, maxRC1, 0, maxDV1, sizeof(EdgeDivision), __FILE__, __LINE__ );
     maxRC2 = _maxNVT;  // MAXNVT @@@ needs work; 2005/11/02;
-    _rc2 = Alc_V( 0, maxRC2, sizeof(EDGEDCS), __FILE__, __LINE__ );
+    _rc2 = Alc_V( 0, maxRC2, sizeof(EdgeDir), __FILE__, __LINE__ );
     maxDV2 = maxDiv - 1;
-    _dv2 = Alc_MC( 0, maxRC2, 0, maxDV2, sizeof(EDGEDIV), __FILE__, __LINE__ );
+    _dv2 = Alc_MC( 0, maxRC2, 0, maxDV2, sizeof(EdgeDivision), __FILE__, __LINE__ );
     }
 
   else
     {
-    Fre_MC( _dv2, 0, maxRC2, 0, maxDV2, sizeof(EDGEDIV), __FILE__, __LINE__ );
-    Fre_V( _rc2, 0, maxRC2, sizeof(EDGEDCS), __FILE__, __LINE__ );
-    Fre_MC( _dv1, 0, maxRC1, 0, maxDV1, sizeof(EDGEDIV), __FILE__, __LINE__ );
-    Fre_V( _rc1, 0, maxRC1, sizeof(EDGEDCS), __FILE__, __LINE__ );
+    Fre_MC( _dv2, 0, maxRC2, 0, maxDV2, sizeof(EdgeDivision), __FILE__, __LINE__ );
+    Fre_V( _rc2, 0, maxRC2, sizeof(EdgeDir), __FILE__, __LINE__ );
+    Fre_MC( _dv1, 0, maxRC1, 0, maxDV1, sizeof(EdgeDivision), __FILE__, __LINE__ );
+    Fre_V( _rc1, 0, maxRC1, sizeof(EdgeDir), __FILE__, __LINE__ );
     fprintf( _ulog, "Total line integral points evaluated:    %8lu\n",
       _usedV1LIpart );
     }
 
   }  /* end ViewsInit */
 
-  const R8 _gqx[10] = {    /* Gaussian ordinates */
+  const double _gqx[10] = {    /* Gaussian ordinates */
      0.500000000, 0.211324865, 0.788675135, 0.112701665, 0.500000000, 
      0.887298335, 0.069431844, 0.330009478, 0.669990522, 0.930568156 };
-  const R8 _gqw[10] = {    /* Gaussian weights */
+  const double _gqw[10] = {    /* Gaussian weights */
      1.000000000, 0.500000000, 0.500000000, 0.277777778, 0.444444444,
      0.277777778, 0.173927423, 0.326072577, 0.326072577, 0.173927423 };
-  const IX _offset[4] = { 0, 1, 3, 6 };
+  const int _offset[4] = { 0, 1, 3, 6 };
 
 /***  DivideEdges.c  *********************************************************/
 
 /*  Divide edges of a polygon for Gaussian quadrature, 1 <= nDiv <= 4.  */
 
-IX DivideEdges( IX nDiv, IX nVrt, VERTEX3D *Vrt, EDGEDCS *rc, EDGEDIV **dv )
+int DivideEdges( int nDiv, int nVrt, Vec3 *Vrt, EdgeDir *rc, EdgeDivision **dv )
 /* nDiv  - number of divisions per edge.
  * nVrt  - number of vertices/edges.
  * Vrt  - coordinates of vertices.
@@ -637,9 +670,9 @@ IX DivideEdges( IX nDiv, IX nVrt, VERTEX3D *Vrt, EDGEDCS *rc, EDGEDIV **dv )
  * dv  - edge divisions for Gaussian quadrature.
  */
   {
-  VECTOR3D V; /* vector betweeen successive vertices */
-  R8 s;    /* distance between vertices */
-  IX i, im1, j, n;
+  Vec3 V; /* vector betweeen successive vertices */
+  double s;    /* distance between vertices */
+  int i, im1, j, n;
 
 #if( DEBUG > 1 )
   fprintf( _ulog, "DIVEDGE:  nd=%d\n", nDiv );
@@ -703,19 +736,19 @@ IX DivideEdges( IX nDiv, IX nVrt, VERTEX3D *Vrt, EDGEDCS *rc, EDGEDIV **dv )
  *   v[0] *----------*----------*-----*----------* v[1]
  */
 
-IX GQParallelogram( const IX nDiv, const VERTEX3D *vp, VERTEX3D *p, R8 *w )
+int GQParallelogram( const int nDiv, const Vec3 *vp, Vec3 *p, double *w )
 /* nDiv - division factor
  * vp   - vertices of parallelogram
  * p    - coordinates of Gaussian points
  * w    - Gaussian weights */
   {
-  VECTOR3D v0,  /* vector from v[0] to v[3] */
+  Vec3 v0,  /* vector from v[0] to v[3] */
            v1,  /* vector from v[1] to v[2] */
            v2;  /* vector from pt0 to pt1 */
-  VERTEX3D pt0, pt1; /* Gaussian points on v0 and v1 */
-  static const IX nss[4] = { 1, 4, 9, 16 };
-  IX nSubSrf;   /* number of subsurfaces */
-  IX i, j, n;
+  Vec3 pt0, pt1; /* Gaussian points on v0 and v1 */
+  static const int nss[4] = { 1, 4, 9, 16 };
+  int nSubSrf;   /* number of subsurfaces */
+  int i, j, n;
 
   n = _offset[nDiv-1];
   nSubSrf = nss[nDiv-1];
@@ -748,8 +781,8 @@ IX GQParallelogram( const IX nDiv, const VERTEX3D *vp, VERTEX3D *p, R8 *w )
 
 /*  Set Gaussian integration values for triangle or rectangle.  */
 
-IX SubSrf( const IX nDiv, const IX nv, const VERTEX3D *Sv, const R8 area,
-  VERTEX3D *Gpt, R8 *wt )
+int SubSrf( const int nDiv, const int nv, const Vec3 *Sv, const double area,
+  Vec3 *Gpt, double *wt )
 /* nDiv - division factor
  * nv   - number of vertices, 3 or 4
  * Sv   - coordinates of vertices
@@ -757,8 +790,8 @@ IX SubSrf( const IX nDiv, const IX nv, const VERTEX3D *Sv, const R8 area,
  * Gpt  - coordinates of Gaussian points
  * wt   - Gaussian weights */
   {
-  IX nSubSrf;       /* number of subsurfaces */
-  IX n;
+  int nSubSrf;       /* number of subsurfaces */
+  int n;
 
   if( nv == 3 )
     nSubSrf = GQTriangle( nDiv, Sv, Gpt, wt );
@@ -791,14 +824,14 @@ IX SubSrf( const IX nDiv, const IX nv, const VERTEX3D *Sv, const R8 area,
 /*  Gaussian integration values for a triangle, 1 <= nDiv <= 4.
  *  Return the coordinates of Point N and its associated weighting.  */
 
-IX GQTriangle( const IX nDiv, const VERTEX3D *vt, VERTEX3D *p, R8 *w )
+int GQTriangle( const int nDiv, const Vec3 *vt, Vec3 *p, double *w )
   {
 /* nDiv - division factor
  * vt   - vertices of triangle
  * p    - coordinates of Gaussian points
  * w    - Gaussian weights */
-  static const IX offset[4] = { 0, 1, 5, 12 };
-  static const R8 gx[25][4] = {  /* Gaussian ordinates & weights */
+  static const int offset[4] = { 0, 1, 5, 12 };
+  static const double gx[25][4] = {  /* Gaussian ordinates & weights */
      {0.33333333, 0.33333333, 0.33333333, 1.00000000 },  /* 1-point */
 
      {0.33333333, 0.33333333, 0.33333333, -0.5625000 },  /* 4-point */
@@ -828,9 +861,9 @@ IX GQTriangle( const IX nDiv, const VERTEX3D *vt, VERTEX3D *p, R8 *w )
      {0.04869031, 0.63844419, 0.31286550, 0.07711376 },
      {0.04869031, 0.31286550, 0.63844419, 0.07711376 }
                              };  /* Gaussian ordinates & weights */
-  static const IX nss[4] = { 1, 4, 7, 13 };  /* number of subsurfaces */
-  IX nSubSrf;       /* number of subsurfaces */
-  IX j, n;
+  static const int nss[4] = { 1, 4, 7, 13 };  /* number of subsurfaces */
+  int nSubSrf;       /* number of subsurfaces */
+  int j, n;
 
   n = offset[nDiv-1];
   nSubSrf = nss[nDiv-1];

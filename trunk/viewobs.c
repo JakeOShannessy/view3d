@@ -8,55 +8,65 @@
 # define DEBUG 1
 #endif
 
+#include "viewobs.h"
+
 #include <stdio.h>
 #include <string.h> /* prototype: memcpy */
 #include <math.h>   /* prototype: fabs */
 #include "types.h"
 #include "view3d.h"
-#include "prtyp.h"
+#include "misc.h"
+#include "polygn.h"
+#include "test3d.h"
 
      /* local functions */
-void SubsrfRS( IX n, VERTEX3D v[], VERTEX3D s[] );
-void SubsrfTS( IX n, VERTEX3D v[], VERTEX3D s[] );
+void SubsrfRS( int n, Vec3 v[], Vec3 s[] );
+void SubsrfTS( int n, Vec3 v[], Vec3 s[] );
 
 extern FILE *_ulog; /* written output file */
 
 #define PId2     1.570796326794896619   /* pi / 2 */
 #define PIt2inv  0.159154943091895346   /* 1 / (2 * pi) */
 
+/* forward decls */
+static double V1AIpart( const int nv, const Vec3 p2[],
+            const Vec3 *p1, const DirCos *u1 );
+
+/* NOT DEFINED: static void substs( int n, Vec3 v[], Vec3 s[] ); */
+
 /***  ViewObstructed.c  ******************************************************/
 
 /*  Compute view factor (AF), with view obstructions
  *  by computing views to unshaded polygons.  */
 
-R8 ViewObstructed( VFCTRL *vfCtrl, IX nv1, VERTEX3D v1[], R8 area, IX nDiv )
+double ViewObstructed( View3DControlData *vfCtrl, int nv1, Vec3 v1[], double area, int nDiv )
 /* nv1  - number of vertices of surface 1.
  * v1   - vertices of surface 1.
  * area - area of surface 1.
  * nDiv - division factor, 3 or 4. */
   {
-  POLY *pp;     /* pointer to a polygon */
-  POLY *shade;  /* pointer to the obstruction shadow polygon */
-  POLY *stack;  /* pointer to stack of unobstructed polygons */
-  POLY *next;   /* pointer to next unobstructed polygons */
-  R8 dF,   /* F from a view point to an unshaded area */
+  Polygon *pp;     /* pointer to a polygon */
+  Polygon *shade;  /* pointer to the obstruction shadow polygon */
+  Polygon *stack;  /* pointer to stack of unobstructed polygons */
+  Polygon *next;   /* pointer to next unobstructed polygons */
+  double dF,   /* F from a view point to an unshaded area */
     dFv,   /* F from a view point to all unshaded areas */
     AFu;   /* AF from all view points to all unshaded areas */
-  VERTEX3D v2[MAXNV2]; /* 3D vertices: obstruction */
-  VERTEX3D *pv2; /* clipped obstruction */
-  VERTEX2D vs[MAXNV2], vb[MAXNV1]; /* 2D vertices: shadow and base surface (2) */
+  Vec3 v2[MAXNV2]; /* 3D vertices: obstruction */
+  Vec3 *pv2; /* clipped obstruction */
+  Vec2 vs[MAXNV2], vb[MAXNV1]; /* 2D vertices: shadow and base surface (2) */
   SRFDAT3X *srfT;  /* pointer to surface */
-  DIRCOS *dc1;  /* pointer to direction cosines of surface 1 */
-  R8 xmin, xmax, ymin, ymax; /* clipping limits */
-  IX clip; /* if true, clip to prevent upward projection */
-  R8 epsDist, epsArea;
-  R8 hc, zc[MAXNV1];  /* surface clipping test values */
-  VERTEX3D vpt[16];  /* vertices of view points */
-  R8 weight[16];     /* integration weighting factors */
-  IX nvpt; /* number of view points */
-  IX np;   /* view point number */
-  IX nv2, nvs, nvb;
-  IX j, k, n;
+  DirCos *dc1;  /* pointer to direction cosines of surface 1 */
+  double xmin, xmax, ymin, ymax; /* clipping limits */
+  int clip; /* if true, clip to prevent upward projection */
+  double epsDist, epsArea;
+  double hc, zc[MAXNV1];  /* surface clipping test values */
+  Vec3 vpt[16];  /* vertices of view points */
+  double weight[16];     /* integration weighting factors */
+  int nvpt; /* number of view points */
+  int np;   /* view point number */
+  int nv2, nvs, nvb;
+  int j, k, n;
 
 #if( DEBUG > 1 )
   fprintf( _ulog, "ViewObstructed:\n" );
@@ -113,7 +123,7 @@ R8 ViewObstructed( VFCTRL *vfCtrl, IX nv1, VERTEX3D v1[], R8 area, IX nDiv )
     srfT = vfCtrl->srfOT;
     for( dFv=0.0,j=0; j<vfCtrl->nProbObstr; j++,srfT++ )
       {                        /* CTD must be behind surface */
-      R8 dot = VDOTW ( (vpt+np), (&srfT->dc) );
+      double dot = VDOTW ( (vpt+np), (&srfT->dc) );
 #if( DEBUG > 1 )
       fprintf( _ulog, "Surface %d;  dot %f\n", srfT->nr, dot );
       fflush( _ulog );
@@ -131,7 +141,7 @@ R8 ViewObstructed( VFCTRL *vfCtrl, IX nv1, VERTEX3D v1[], R8 area, IX nDiv )
         fprintf( _ulog, "Clip M;  zc: %g %g %g %g\n",
           zc[0], zc[1], zc[2], zc[3] );
 #endif
-        nvs = ClipPolygon( -1, nvs, (VERTEX3D *)&srfT->v, zc, v2 );
+        nvs = ClipPolygon( -1, nvs, (Vec3 *)&srfT->v, zc, v2 );
 #if( DEBUG > 0 )
         if( nvs >= MAXNV2 || nvs < 0 ) errorf( 3, __FILE__, __LINE__,
           "Invalid number of vertices: ", IntStr(nvs), "" );
@@ -148,7 +158,7 @@ R8 ViewObstructed( VFCTRL *vfCtrl, IX nv1, VERTEX3D v1[], R8 area, IX nDiv )
               /* project obstruction from centroid to z=0 plane */
       for( n=0; n<nvs; n++,pv2++ )
         {
-        R8 temp = vpt[np].z / (vpt[np].z - pv2->z);  /* projection factor */
+        double temp = vpt[np].z / (vpt[np].z - pv2->z);  /* projection factor */
         vs[n].x = vpt[np].x - temp * (vpt[np].x - pv2->x);
         vs[n].y = vpt[np].y - temp * (vpt[np].y - pv2->y);
         }
@@ -162,7 +172,7 @@ R8 ViewObstructed( VFCTRL *vfCtrl, IX nv1, VERTEX3D v1[], R8 area, IX nDiv )
 #if( DEBUG > 0 )
              /* bounds check on projected surface */
       {
-      R8 temp = 0.0;
+      double temp = 0.0;
       for( n=0; n<nvs; n++ )
         {
         if( fabs(vs[n].x) > temp ) temp = fabs(vs[n].x);
@@ -276,19 +286,19 @@ R8 ViewObstructed( VFCTRL *vfCtrl, IX nv1, VERTEX3D v1[], R8 area, IX nDiv )
  *  are not handled; good input geometry is assumed.
  */
 
-R8 V1AIpart( const IX nv, const VERTEX3D p2[],
-           const VERTEX3D *p1, const DIRCOS *u1 )
+double V1AIpart( const int nv, const Vec3 p2[],
+           const Vec3 *p1, const DirCos *u1 )
 /*  nv   number of vertices/edges of surface (polygon) P2
  *  p2   coordinates of vertices of surface (polygon) P2
  *  p1   coordinates of surface (point) P1
  *  u1   components of unit vector normal to surface P1 */
   {
-  IX n;  /* edge number */
-  VECTOR3D A,  /* A = vector from P1 to P2[n-1]; |A| > 0 */
+  int n;  /* edge number */
+  Vec3 A,  /* A = vector from P1 to P2[n-1]; |A| > 0 */
            B,  /* B = vector from P1 to P2[n]; |B| > 0 */
            C;  /* C = vector cross product of A and B */
-  R8 UdotC; /* dot product of U and C; always >= 0 */
-  R8 sum=0; /* sum of line integrals */
+  double UdotC; /* dot product of U and C; always >= 0 */
+  double sum=0; /* sum of line integrals */
 
                             /* Initialization */
   n = nv - 1;
@@ -302,10 +312,10 @@ R8 V1AIpart( const IX nv, const VERTEX3D p2[],
     UdotC = VDOT( u1, (&C) );           /* U dot C */
     if( fabs(UdotC) > EPS2 )
       {
-      R8 Clen = VLEN( (&C) );           /* | C | */
+      double Clen = VLEN( (&C) );           /* | C | */
       if( Clen > EPS2 )
         {   /* gamma = angle between A and B; 0 < gamma < 180 */
-        R8 gamma = PId2 - atan( VDOT( (&A), (&B) ) / Clen );
+        double gamma = PId2 - atan( VDOT( (&A), (&B) ) / Clen );
         sum += UdotC * gamma / Clen;
         }
       else
@@ -325,10 +335,10 @@ R8 V1AIpart( const IX nv, const VERTEX3D p2[],
  *  Surface 1 described by its direction cosines and NSS vertices 
  *  and associated areas for numerical (Gaussian) integration.  */
 
-R8 View1AI( IX nss, VERTEX3D *p1, R8 *area1, DIRCOS *dc1, SRFDAT3X *srf2 )
+double View1AI( int nss, Vec3 *p1, double *area1, DirCos *dc1, SRFDAT3X *srf2 )
   {
-  IX j;
-  R8 sum=0.0;
+  int j;
+  double sum=0.0;
 
   for( j=0; j<nss; j++ )
     sum += area1[j] * V1AIpart( srf2->nv, srf2->v, p1+j, dc1 );
@@ -342,15 +352,15 @@ R8 View1AI( IX nss, VERTEX3D *p1, R8 *area1, DIRCOS *dc1, SRFDAT3X *srf2 )
 /*  Divide convex polygon SRF into elemental subsurfaces SUB.  */
 /*  See program TEST99B for verification tests. GNW  */
 
-IX Subsurface( SRFDAT3X *srf, SRFDAT3X sub[] )
+int Subsurface( SRFDAT3X *srf, SRFDAT3X sub[] )
   {
-  IX nSubSrf;       /* number of subsurfaces */
-  VERTEX3D tmpVrt;  /* temporary vertex */
-  VECTOR3D edge[4]; /* quadrilateral edge vectors */
-  R8 edgeLength[4]; /* lengths of edges */
-  R8 cosAngle[4];   /* cosines of angles */
-  IX obtuse=0;      /* identifies obtuse angles */
-  IX i, j, k;
+  int nSubSrf;       /* number of subsurfaces */
+  Vec3 tmpVrt;  /* temporary vertex */
+  Vec3 edge[4]; /* quadrilateral edge vectors */
+  double edgeLength[4]; /* lengths of edges */
+  double cosAngle[4];   /* cosines of angles */
+  int obtuse=0;      /* identifies obtuse angles */
+  int i, j, k;
 
   if( srf->shape > 0 )     /* triangle or parallelogram */
     {
@@ -490,7 +500,7 @@ IX Subsurface( SRFDAT3X *srf, SRFDAT3X sub[] )
         sub[j].nv = 3;
         SetCentroid( 3, sub[j].v, &sub[j].ctd );
         sub[j].area = Triangle( sub[j].v+0, sub[j].v+1, sub[j].v+2, &tmpVrt, 0 );
-        memcpy( &sub[j].dc, &srf->dc, sizeof(DIRCOS) );
+        memcpy( &sub[j].dc, &srf->dc, sizeof(DirCos) );
         }
     }
   else if( srf->nv==5 )
@@ -505,7 +515,7 @@ IX Subsurface( SRFDAT3X *srf, SRFDAT3X sub[] )
       sub[j].nv = 3;
       SetCentroid( 3, sub[j].v, &sub[j].ctd );
       sub[j].area = Triangle( sub[j].v+0, sub[j].v+1, sub[j].v+2, &tmpVrt, 0 );
-      memcpy( &sub[j].dc, &srf->dc, sizeof(DIRCOS) );
+      memcpy( &sub[j].dc, &srf->dc, sizeof(DirCos) );
       }
     nSubSrf = 5;
     }
@@ -521,15 +531,15 @@ IX Subsurface( SRFDAT3X *srf, SRFDAT3X sub[] )
 
 /*  Compute approximate centroid and enclosing radius.  */
 
-R8 SetCentroid( const IX nv, VERTEX3D *vs, VERTEX3D *ctd )
+double SetCentroid( const int nv, Vec3 *vs, Vec3 *ctd )
 /* nv  - number of vertices of surface.
  * vs  - coordinates of vertices.
  * ctd - coordinates of centroid.
  */
   {
-  VECTOR3D v;
-  R8 r2, rr=0.0;
-  IX j;
+  Vec3 v;
+  double r2, rr=0.0;
+  int j;
 
   ctd->x = ctd->y = ctd->z = 0.0;
   for( j=0; j<nv; j++ )
@@ -538,9 +548,9 @@ R8 SetCentroid( const IX nv, VERTEX3D *vs, VERTEX3D *ctd )
     ctd->y += vs[j].y;
     ctd->z += vs[j].z;
     }
-  ctd->x /= (R8)nv;
-  ctd->y /= (R8)nv;
-  ctd->z /= (R8)nv;
+  ctd->x /= (double)nv;
+  ctd->y /= (double)nv;
+  ctd->z /= (double)nv;
 
   for( j=0; j<nv; j++ )
     {
@@ -560,15 +570,15 @@ R8 SetCentroid( const IX nv, VERTEX3D *vs, VERTEX3D *ctd )
  *  where   A = vector from point P2 to point P3,
  *    and   B = vector from P2 to P1.  */
 
-R8 Triangle( VERTEX3D *p1, VERTEX3D *p2, VERTEX3D *p3, void *dc, IX dcflag )
+double Triangle( Vec3 *p1, Vec3 *p2, Vec3 *p3, void *dc, int dcflag )
 /* p1  - X, Y, & Z coordinates of point P1.
  * p2  - X, Y, & Z coordinates of point P2.
  * p3  - X, Y, & Z coordinates of point P3.
  *  c  - X, Y, & Z components of direction cosines vector "C".
  */
   {
-  VECTOR3D a, b, *c=(void *)dc;
-  R8 r;  /* length of "C" (= twice the area of triangle P1-P2-P3) */
+  Vec3 a, b, *c=(void *)dc;
+  double r;  /* length of "C" (= twice the area of triangle P1-P2-P3) */
 
   VECTOR( p2, p3, (&a) );
   VECTOR( p2, p1, (&b) );
@@ -603,9 +613,9 @@ R8 Triangle( VERTEX3D *p1, VERTEX3D *p2, VERTEX3D *p3, void *dc, IX dcflag )
 /*  Compute vertices S of subsurface N of triangular surface V. 
  *  The triangle is divided into 4 congruent subsurfaces.  */
 
-void SubsrfTS( IX n, VERTEX3D v[], VERTEX3D s[] )
+void SubsrfTS( int n, Vec3 v[], Vec3 s[] )
   {
-  IX j;
+  int j;
 
   if( n==3 )
     {
@@ -634,18 +644,18 @@ void SubsrfTS( IX n, VERTEX3D v[], VERTEX3D s[] )
 /*  Compute view from triangle to polygon.  Recursive calculation!  */
 /*  See program TEST99A for verification tests.  */
 
-R8 ViewTP( VERTEX3D v1[], R8 area, IX level, VFCTRL *vfCtrl )
+double ViewTP( Vec3 v1[], double area, int level, View3DControlData *vfCtrl )
 /* v1   - vertices of surface 1;
  * area - area of surface 1;
  * vfCtrl->maxRecursion - recursion limit. */
   {
-  R8 AF;      /* AF values computed for triangle */
-  R8 AF7,     /* AF values for 7-  */
+  double AF;      /* AF values computed for triangle */
+  double AF7,     /* AF values for 7-  */
     AF13;     /* and 13-point integration */
-  R8 dF;      /* differential view factor */
-  IX cnvg;    /* true if both AF.. sufficiently close */
-  VERTEX3D vt[3]; /* vertices of subsurfaces */
-  IX n;       /* subsurface number */
+  double dF;      /* differential view factor */
+  int cnvg;    /* true if both AF.. sufficiently close */
+  Vec3 vt[3]; /* vertices of subsurfaces */
+  int n;       /* subsurface number */
 
   if( level >= vfCtrl->minRecursion )
     {
@@ -698,9 +708,9 @@ R8 ViewTP( VERTEX3D v1[], R8 area, IX level, VFCTRL *vfCtrl )
 /*  Compute vertices S of subsurface N of rectangular surface V.
  *  The rectangle is divided into 4 identical subsurfaces.  */
 
-void SubsrfRS( IX n, VERTEX3D v[], VERTEX3D s[] )
+void SubsrfRS( int n, Vec3 v[], Vec3 s[] )
   {
-  IX j;
+  int j;
 
   for( j=0; j<4; j++ )
     {
@@ -716,15 +726,15 @@ void SubsrfRS( IX n, VERTEX3D v[], VERTEX3D s[] )
 /*  Compute view from rectangle to polygon.  Recursive calculation!  */
 /*  See program TEST99A for verification tests.  */
 
-R8 ViewRP( VERTEX3D v1[], R8 area, IX level, VFCTRL *vfCtrl )
+double ViewRP( Vec3 v1[], double area, int level, View3DControlData *vfCtrl )
   {
-  R8 AF;      /* AF values computed for rectangle */
-  R8 AF9,     /* AF values for 9-  */
+  double AF;      /* AF values computed for rectangle */
+  double AF9,     /* AF values for 9-  */
     AF16;     /* and 16-point integration */
-  R8 dF;      /* differential view factor */
-  IX cnvg;    /* true if both AF.. sufficiently close */
-  VERTEX3D vt[4]; /* vertices of subsurfaces */
-  IX n;       /* subsurface number */
+  double dF;      /* differential view factor */
+  int cnvg;    /* true if both AF.. sufficiently close */
+  Vec3 vt[4]; /* vertices of subsurfaces */
+  int n;       /* subsurface number */
 
   if( level >= vfCtrl->minRecursion )
     {
