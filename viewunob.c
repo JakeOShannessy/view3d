@@ -8,6 +8,7 @@
 # define DEBUG 0
 #endif
 
+#define V3D_BUILD
 #include "viewunob.h"
 
 #include <stdio.h>
@@ -17,12 +18,13 @@
 #include "misc.h"
 #include "heap.h"
 #include "viewobs.h"
+#include "heap.h"
 
 #define PId2     1.570796326794896619   /* pi / 2 */
 #define PIinv    0.318309886183790672   /* 1 / pi */
 #define PIt4inv  0.079577471545947673   /* 1 / (4 * pi) */
 
-/* The following variables are "global" to this file.  
+/* The following variables are "global" to this file.
  * They are allocated and freed in ViewsInit(). */
 EdgeDir *_rc1; /* edge DirCos of surface 1 */
 EdgeDir *_rc2; /* edge DirCos of surface 2 */
@@ -152,7 +154,7 @@ double ViewUnobstructed( View3DControlData *vfCtrl, int row, int col )
       if( fabs(AF1 - AF0) < vfCtrl->epsAF ) goto done;
       }
     }
-    
+
   /* adaptive single line integration - method==ALI or simpler methods fail */
 #if( DEBUG > 1 )
   if( vfCtrl->method < ALI )
@@ -191,7 +193,7 @@ done:
 /***  View2AI.c  *************************************************************/
 
 /*  Compute direct interchange area by double area integration.
- *  Surfaces described by their direction cosines and NSS1|2 vertices 
+ *  Surfaces described by their direction cosines and NSS1|2 vertices
  *  and associated areas for numberical integration.  */
 
 double View2AI( const int nss1, const DirCos *dc1, const Vec3 *pt1, const double *area1,
@@ -223,8 +225,8 @@ double View2AI( const int nss1, const DirCos *dc1, const Vec3 *pt1, const double
 
 /***  View2LI.c  *************************************************************/
 
-/*  Compute direct interchange area by double line integration. 
- *  Both surfaces described by directions cosines of edges and 
+/*  Compute direct interchange area by double line integration.
+ *  Both surfaces described by directions cosines of edges and
  *  subdivisions of those edges for numerical integration.  */
 
 double View2LI( const int nd1, const int nv1, const EdgeDir *rc1, EdgeDivision **dv1,
@@ -278,8 +280,8 @@ double View2LI( const int nd1, const int nv1, const EdgeDir *rc1, EdgeDivision *
 /***  View1LI.c  *************************************************************/
 
 /*  Compute direct interchange area by single line integral method.
- *  Surface 1 described by directions cosines of edges and 
- *  subdivisions of those edges for numerical integration. 
+ *  Surface 1 described by directions cosines of edges and
+ *  subdivisions of those edges for numerical integration.
  *  Surface 2 described by its vertices.  */
 
 double View1LI( const int nd1, const int nv1, const EdgeDir *rc1,
@@ -458,7 +460,7 @@ double V1LIadapt( Vec3 Pold[3], double dFold[3], double h, const Vec3 *b0,
 
 /*  Analytic integration of colinear edges. */
 
-double V1LIxact( const Vec3 *a0, const Vec3 *a1, const double a, 
+double V1LIxact( const Vec3 *a0, const Vec3 *a1, const double a,
              const Vec3 *b0, const Vec3 *b1, const double b )
 /* a0 - point for start of edge of polygon 1.
  * a1 - point for end of edge of polygon 1.
@@ -489,12 +491,12 @@ double V1LIxact( const Vec3 *a0, const Vec3 *a1, const double a,
       sum += e2 - e2 * log( e2 );
     if( d2 > EPS2 )
       sum += d2 - d2 * log( d2 );
-    
+
     VECTOR( b0, a0, (&V) );
     c2 = VDOT( (&V), (&V) );
     if( c2 > EPS2 )
       sum += c2 * log( c2 ) - c2;
-    
+
     VECTOR( b1, a1, (&V) );
     f2 = VDOT( (&V), (&V) );
     if( f2 > EPS2 )
@@ -508,7 +510,7 @@ double V1LIxact( const Vec3 *a0, const Vec3 *a1, const double a,
 
 /***  ViewALI.c  *************************************************************/
 
-/*  Compute direct interchange area by adaptive single line integral 
+/*  Compute direct interchange area by adaptive single line integral
  *  (Mitalas-Stephensen) method */
 
 double ViewALI( const int nv1, const Vec3 *v1,
@@ -616,7 +618,7 @@ double ViewALI( const int nv1, const Vec3 *v1,
 /***  ViewsInit.c  ***********************************************************/
 
 /*  Allocate / free arrays local to this file based on INIT.
- *  Initialize Gaussian integration coefficients.  
+ *  Initialize Gaussian integration coefficients.
  *  Store G coefficients in vectors emulating triangular arrays.  */
 
 void ViewsInit( int maxDiv, int init )
@@ -651,7 +653,7 @@ void ViewsInit( int maxDiv, int init )
   }  /* end ViewsInit */
 
   const double _gqx[10] = {    /* Gaussian ordinates */
-     0.500000000, 0.211324865, 0.788675135, 0.112701665, 0.500000000, 
+     0.500000000, 0.211324865, 0.788675135, 0.112701665, 0.500000000,
      0.887298335, 0.069431844, 0.330009478, 0.669990522, 0.930568156 };
   const double _gqw[10] = {    /* Gaussian weights */
      1.000000000, 0.500000000, 0.500000000, 0.277777778, 0.444444444,
@@ -723,7 +725,7 @@ int DivideEdges( int nDiv, int nVrt, Vec3 *Vrt, EdgeDir *rc, EdgeDivision **dv )
 
 /***  GQParallelogram.c  *****************************************************/
 
-/*  Compute Gaussian integration values for a parallelogram.  
+/*  Compute Gaussian integration values for a parallelogram.
  *
  *           v[3] *----------*----------*-----*----------* v[2]
  *               /   ...    /   ...    / ... /  p[nn-1] /
@@ -846,7 +848,7 @@ int GQTriangle( const int nDiv, const Vec3 *vt, Vec3 *p, double *w )
      {0.79742699, 0.10128651, 0.10128651, 0.12593918 },
      {0.10128651, 0.79742699, 0.10128651, 0.12593918 },
      {0.10128651, 0.10128651, 0.79742699, 0.12593918 },
-     
+
      {0.33333333, 0.33333333, 0.33333333, -0.14957004 }, /* 13-point */
      {0.47930807, 0.26034597, 0.26034597, 0.17561526 },
      {0.26034597, 0.47930807, 0.26034597, 0.17561526 },

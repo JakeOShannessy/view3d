@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "types.h"
 
+#define V3D_BUILD
 #include "readvf.h"
 #include "misc.h"
 

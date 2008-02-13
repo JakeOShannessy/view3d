@@ -3,12 +3,12 @@
 
 #include "common.h"
 
-int error(int severity, char *file, int line,...);
+V3D_API int error(int severity, char *file, int line,...);
 
 void PathMerge(char *fullpath, int szfp, char *drv, char *path, char *name, char *ext);
 
 void PathSplit(char *fullpath, char *drv, int szd, char *path, int szp
-		, char *name, int szn, char *ext, int sze 
+		, char *name, int szn, char *ext, int sze
 );
 
 char *IntStr( long i );
