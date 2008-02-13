@@ -1,5 +1,5 @@
 
-version = '0.20080122'
+version = '0.20080213'
 
 import os
 if os.environ.get('TERM')=="msys":
@@ -109,8 +109,7 @@ srcs = Split("""
 """)
 
 env.Append(
-	CPPFLAGS=['-Wall']
-	,CPPDEFINES=['ANSI']
+	CPPDEFINES=['ANSI']
 	,LIBS=['m']
 )
 
@@ -121,7 +120,18 @@ lib = env.SharedLibrary('view3d',srcs)
 
 prog = env.Program('view3d', ['v3main.c'], LIBS=['view3d'], LIBPATH=['#'])
 
-#viewer = env.Prog
+#------------
+# viewer program
+
+soqt_env = env.Copy()
+soqt_env.Append(
+	CPPPATH = env.get('SOQT_CPPPATH')
+	, LIBS = ['view3d'] + env.get('SOQT_LIBS')
+	, LIBPATH = ['#'] + env.get('SOQT_LIBPATH')
+	, CPPDEFINES = env.get('SOQT_CPPDEFINES')
+)
+
+viewer = soqt_env.Program('viewer',['viewer.cpp'])
 
 #------------
 # create distribution tarball

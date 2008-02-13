@@ -113,7 +113,7 @@ static void errorb( const char *head, char *message, char *source ){
 	@param line      line number: __LINE__
 	@param ...       string variables (up to LINELEN characters total)
 */
-int error( int severity, char *file, int line, ... ){
+int error( int severity, const char *file, const int line, ... ){
   char message[LINELEN]; /* merged message */
   char source[64];       /* source code info. */
   va_list argp;        /* variable argument list */
@@ -123,8 +123,7 @@ int error( int severity, char *file, int line, ... ){
   static const char *head[4] = { "NOTE", "WARNING", "ERROR", "FATAL" };
   int n=1;
 
-  if( severity >= 0 )
-    {
+  if( severity >= 0 ){
     if( severity>3 ) severity = 3;
     if( severity==2 ) count += 1;
     msg = start;   /* merge message strings */
@@ -158,12 +157,12 @@ int error( int severity, char *file, int line, ... ){
         fclose( _ulog );  // exit() closes files
       exit( 1 );
       }
-    }
-  else if( severity < -1 )   /* clear error count */
+  }else if( severity < -1 ){
+	/* clear error count */
     count = 0;
+  }
 
   return( count );
-
 }  /*  end error  */
 
 /***  sfname.c  ***************************************************************/
@@ -208,11 +207,10 @@ static void errorc( int severity, char *message ){
   if( severity>3 ) severity = 3;
   if( _emode < 2 )
     fprintf( stdout, "%s %s\n", head[severity], message );
-  if( _ulog )
-    {
+  if( _ulog ){
     fprintf( _ulog, "%s %s\n", head[severity], message );
     fflush( _ulog );
-    }
+  }
   if( severity > 2 )
     exit( 1 );
 
@@ -414,7 +412,7 @@ char *_nxtbuf;   /* large buffer for NXT input file */
 
 /*  Open file_name as UNXT file.  */
 
-int NxtOpen( char *file_name, char *file, int line ){
+int NxtOpen(const char *file_name, const char *file, int line ){
 /* file;  source code file name: __FILE__
  * line;  line number: __LINE__ */
   int result=0;

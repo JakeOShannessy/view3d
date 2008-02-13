@@ -19,6 +19,7 @@
 #include "misc.h"
 #include "polygn.h"
 #include "test3d.h"
+#include "viewunob.h"
 
      /* local functions */
 void SubsrfRS( int n, Vec3 v[], Vec3 s[] );
