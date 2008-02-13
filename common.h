@@ -26,12 +26,12 @@
 
 #include <stdio.h>
 V3D_API const char *methods[7]; /* method abbreviations */
-char _string[LINELEN]; /* buffer for a character string */
+V3D_API char _string[LINELEN]; /* buffer for a character string */
 V3D_API int _maxNVT;   /* maximum number of temporary polygon overlap vertices */
-FILE *_unxt; /* input file */
-FILE *_ulog; /* log file */
-int _echo;  /* true = echo input file */
-int _list;  /* output control, higher value = more output:
+extern FILE *_unxt; /* input file */
+V3D_API FILE *_ulog; /* log file */
+V3D_API int _echo;  /* true = echo input file */
+V3D_API int _list;  /* output control, higher value = more output:
                 0 = summary;
                 1 = list view factors;
                 2 = echo input, note calculations;

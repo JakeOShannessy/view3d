@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-V3D_API int error(int severity, char *file, int line,...);
+V3D_API int error(int severity, const char *file, const int line,...);
 
 void PathMerge(char *fullpath, int szfp, char *drv, char *path, char *name, char *ext);
 
@@ -26,7 +26,7 @@ int ReadIX( int flag );
 
 int IntCon( char *str, int *i );
 
-V3D_API int NxtOpen( char *file_name, char *file, int line );
+V3D_API int NxtOpen(const char *file_name, const char *file, int line);
 V3D_API void NxtClose( void );
 char *NxtWord( char *str, int flag, int maxlen );
 

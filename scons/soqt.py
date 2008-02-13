@@ -18,7 +18,7 @@ def generate(env):
 			env['SOQT_LIBPATH'] = [LIB]
 			env['SOQT_LIBS'] = ['SoQt']
 		else:
-			cmd = ['soqt-config','--libs','--cppflags']
+			cmd = ['soqt-config','--cppflags','--ldflags','--libs']
 			env1 = env.Copy()
 			env1.ParseConfig(cmd)
 			env['SOQT_CPPPATH'] = env1.get('CPPPATH')
@@ -26,6 +26,8 @@ def generate(env):
 			env['SOQT_LIBS'] = env1.get('LIBS')
 
 		print "SOQT_LIBS =",env.get('SOQT_LIBS')
+		print "SOQT_LIBPATH =",env.get('SOQT_LIBPATH')
+		print "SOQT_CPPPATH =",env.get('SOQT_CPPPATH')
 
 	except:
 		print "FAILED TO SET UP SOQT"
