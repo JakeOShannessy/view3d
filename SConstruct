@@ -8,7 +8,7 @@ else:
 	deftool = ['default']
 
 env = Environment(
-	tools=deftool + ['disttar']
+	tools=deftool + ['disttar','soqt']
 	,toolpath=['scons']
 )
 
