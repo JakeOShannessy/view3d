@@ -8,6 +8,7 @@
 # define DEBUG 1
 #endif
 
+#define V3D_BUILD
 #include "viewobs.h"
 
 #include <stdio.h>
@@ -245,7 +246,7 @@ double ViewObstructed( View3DControlData *vfCtrl, int nv1, Vec3 v1[], double are
         dF = 0.0;
         }
 #endif
-      dFv += dF; 
+      dFv += dF;
       }
 
 #if( DEBUG > 1 )
@@ -282,7 +283,7 @@ double ViewObstructed( View3DControlData *vfCtrl, int nv1, Vec3 v1[], double are
  *  Result is positive if vertices of P2 are defined in clockwise order;
  *  otherwise, the result is negative.
  *  This algorithm uses only vector operations plus one SQRT and one
- *  ATAN function call per edge of surface P2.  Degenerate cases 
+ *  ATAN function call per edge of surface P2.  Degenerate cases
  *  are not handled; good input geometry is assumed.
  */
 
@@ -332,7 +333,7 @@ double V1AIpart( const int nv, const Vec3 p2[],
 /***  View1AI.c  *************************************************************/
 
 /*  Estimate direct interchange area by single area integration.
- *  Surface 1 described by its direction cosines and NSS vertices 
+ *  Surface 1 described by its direction cosines and NSS vertices
  *  and associated areas for numerical (Gaussian) integration.  */
 
 double View1AI( int nss, Vec3 *p1, double *area1, DirCos *dc1, SRFDAT3X *srf2 )
@@ -610,7 +611,7 @@ double Triangle( Vec3 *p1, Vec3 *p2, Vec3 *p3, void *dc, int dcflag )
 
 /***  SubsrfTS.c  ************************************************************/
 
-/*  Compute vertices S of subsurface N of triangular surface V. 
+/*  Compute vertices S of subsurface N of triangular surface V.
  *  The triangle is divided into 4 congruent subsurfaces.  */
 
 void SubsrfTS( int n, Vec3 v[], Vec3 s[] )
