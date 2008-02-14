@@ -1,5 +1,5 @@
 
-version = '0.20080214'
+version = '0.20080215'
 
 import os
 if os.environ.get('TERM')=="msys":
