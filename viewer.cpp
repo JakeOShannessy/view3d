@@ -1,6 +1,7 @@
 /**@FILE
 	Load and parse View3D data file, then render the 3D geometry using OpenGL 
 	in the COIN3D Examiner-Viewer.
+	See http://www.coin3d.org/ as well as http://vSoIndexediew3d.sf.net (this project)
 */
 
 #include <Inventor/Qt/SoQt.h>
@@ -11,6 +12,10 @@
 #include <Inventor/actions/SoWriteAction.h>
 #include <Inventor/nodes/SoMaterial.h>
 #include <Inventor/actions/SoGLRenderAction.h>
+#include <Inventor/nodes/SoCoordinate3.h>
+#include <Inventor/nodes/SoNormal.h>
+#include <Inventor/nodes/SoNormalBinding.h>
+#include <Inventor/nodes/SoIndexedFaceSet.h>
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -27,21 +32,26 @@ extern "C"{
 #include "heap.h"
 #include "misc.h"
 #include "getdat.h"
+#include "polygn.h"
 };
 
 #include <sstream>
 #include <stdexcept>
+#include <vector>
 using namespace std;
 
 const char *defaultsceneoutfile = "view3d.iv";
 
 void usage(const char *progname){
-	fprintf(stderr,"Usage: %s [-o [OUTFILE]] [-h] [-t] INFILE\n",progname);
-	fprintf(stderr,"Load and parse a View3D file and render using Coin3D/OpenGL\n");
-	fprintf(stderr,"  -h      Render using higher quality graphics (slower).\n");
-	fprintf(stderr,"  INFILE  View3D .vs3 file to render (eg 'sample.vs3')\n");
-	fprintf(stderr,"  -t      Include text in the rendered output.\n");
-	fprintf(stderr,"  OUTFILE Open Inventor file to output (defaults to '%s')\n\n",defaultsceneoutfile);	
+	fprintf(stderr,
+			"Usage: %s [-o [OUTFILE]] [-h] [-t] INFILE\n"
+			"Load and parse a View3D file and render using Coin3D/OpenGL\n"
+			"  -h      Render using higher quality graphics (slower).\n"
+			"  INFILE  View3D .vs3 file to render (eg 'sample.vs3')\n"
+			"  -t      Include text in the rendered output.\n"
+			"  OUTFILE Open Inventor file to output (defaults to '%s')\n\n"
+		, progname, defaultsceneoutfile
+	);	
 }
 
 int main(int argc, char **argv){
@@ -77,105 +87,92 @@ int main(int argc, char **argv){
 
 	/* read Vertex/Surface data file */
 	fprintf(stderr,"Reading View3D file '%s'...\n",filename);
-	View3DControlData vfCtrl; /* VF calculation control parameters - avoid globals */
+	View3DControlData CD; /* VF calculation control parameters - avoid globals */
 	char title[LINELEN]; /* project title */
-	vfCtrl.epsAdap = 1.0e-4f; // convergence for adaptive integration
-	vfCtrl.maxRecursALI = 12; // maximum number of recursion levels
-	vfCtrl.maxRecursion = 8;  // maximum number of recursion levels
+	memset(&CD, 0, sizeof(View3DControlData));
+	CD.epsAdap = 1.0e-4f; // convergence for adaptive integration
+	CD.maxRecursALI = 12; // maximum number of recursion levels
+	CD.maxRecursion = 8;  // maximum number of recursion levels
 	NxtOpen(filename, __FILE__, __LINE__ );
-	CountVS3D(title, &vfCtrl );
+	CountVS3D(title, &CD );
 
 	fprintf(stderr, "\nTitle: %s\n", title );
-	fprintf(stderr, "Control values for 3-D view factor calculations:\n" );
-	if(vfCtrl.enclosure)fprintf( stderr, "  Surfaces form enclosure.\n" );
-	if(vfCtrl.emittances)fprintf( stderr, "  Will process emittances.\n" );
+	fprintf(stderr, "Control values for 3-D view factor calculations:\n");
+	if(CD.enclosure)fprintf(stderr, "  Surfaces form enclosure.\n");
+	if(CD.emittances)fprintf(stderr, "  Will process emittances.\n");
 
-	if(vfCtrl.prjReverse)fprintf(stderr, "\n      Reverse projections. **" );
+	if(CD.prjReverse)fprintf(stderr, "\n      Reverse projections. **");
 
-	fprintf(stderr, " Total number of surfaces: %d \n", vfCtrl.nAllSrf );
-	fprintf(stderr, "   Heat transfer surfaces: %d \n", vfCtrl.nRadSrf );
+	fprintf(stderr, " Total number of surfaces: %d \n", CD.nAllSrf );
+	fprintf(stderr, "   Heat transfer surfaces: %d \n", CD.nRadSrf );
 
-#if 0
-  char inFile[_MAX_PATH]=""; /* input file name */
-  char outFile[_MAX_PATH]="";/* output file name */
-  char **name;         /* surface names [1:nSrf][0:NAMELEN] */
-  char *types[]={"rsrf","subs","mask","nuls","obso"};
-  Vec3 *xyz;           /* vector of vertces [1:nVrt] - for ease in
-                          converting V3MAIN to a subroutine */
-  SRFDAT3D *srf;       /* vector of surface data structures [1:nSrf] */
-  double **AF;         /* triangular array of area*view factor values [1:nSrf][] */
-  float *area;         /* vector of surface areas [1:nSrf] */
-  float *emit;         /* vector of surface emittances [1:nSrf] */
-  int *base;           /* vector of base surface numbers [1:nSrf] */
-  int *cmbn;           /* vector of combine surface numbers [1:nSrf] */
-  float *vtmp;         /* temporary vector [1:nSrf] */
-  int *possibleObstr;  /* list of possible view obstructing surfaces */
-  struct tm *curtime;  /* time structure */
-  time_t bintime;      /* seconds since 00:00:00 GMT, 1/1/70 */
-  float time0, time1;  /* elapsed time values */
-  int nSrf;            /* current number of surfaces */
-  int nSrf0;           /* initial number of surfaces */
-  int encl;            /* 1 = surfaces form enclosure */
-  int n, flag;
+	int nSrf, nSrf0;
+	nSrf = CD.nRadSrf;
+	nSrf0 = CD.nRadSrf;
+	int encl = CD.enclosure;
 
+  	if(CD.format == 4)CD.nVertices = 4 * CD.nAllSrf;
 
-  nSrf = nSrf0 = vfCtrl.nRadSrf;
-  encl = vfCtrl.enclosure;
+	const char *types[]={"rsrf","subs","mask","nuls","obso"};
 
-  if(vfCtrl.format == 4)vfCtrl.nVertices = 4 * vfCtrl.nAllSrf;
+	/* surface names [1:nSrf][0:NAMELEN] */
+	char **name = (char **)Alc_MC(1, nSrf0, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
 
-  name = Alc_MC(1, nSrf0, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
-  area = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
-  emit = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
-  vtmp = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+	/* vector of surface areas [1:nSrf] */
+	float *area = (float *)Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
 
-  for(n=nSrf0; n; n--)vtmp[n] = 1.0;
+	/* vector of surface emittances [1:nSrf] */
+	float *emitt = (float *)Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
 
-  base = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
-  cmbn = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
-  xyz = Alc_V( 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
-  srf = Alc_V( 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
-  InitTmpVertMem();  /* polygon operations in GetDat() and View3D() */
-  InitPolygonMem(0, 0);
+	/* temporary vector [1:nSrf] */
+	float *vtmp = (float *)Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
 
-  /* read v/s data file */
-  if(_list>2)_echo = 1;
-  if(vfCtrl.format == 4)
-    GetVS3Da(name, emit, base, cmbn, srf, xyz, &vfCtrl );
-  else
-    GetVS3D(name, emit, base, cmbn, srf, xyz, &vfCtrl );
-  for(n=nSrf; n; n--)area[n] = (float)srf[n].area;
-  NxtClose();
+	for(int n=nSrf0; n; n--)vtmp[n] = 1.0;
 
-  if( _list>2 ){
-    fprintf( _ulog, "Surfaces:\n" );
-    fprintf( _ulog, "   #        name     area   emit  type bsn csn (dir cos) (centroid)\n" );
-    for( n=1; n<=nSrf; n++ )
-      fprintf( _ulog, "%4d %12s %9.2e %5.3f %4s %3d %3d (%g %g %g %g) (%g %g %g)\n",
-        n, name[n], area[n], emit[n], types[srf[n].type], base[n], cmbn[n],
+	int *base = (int *)Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
+	int *cmbn = (int *)Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
+	Vec3 *xyz = (Vec3 *)Alc_V( 1, CD.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
+	SRFDAT3D *srf = (SRFDAT3D *)Alc_V( 1, CD.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
+	InitTmpVertMem();  /* polygon operations in GetDat() and View3D() */
+	InitPolygonMem(0, 0);
+
+	/* read v/s data file */
+	if(_list>2)_echo = 1;
+	if(CD.format == 4){
+		GetVS3Da(name, emitt, base, cmbn, srf, xyz, &CD);
+	}else{
+		GetVS3D(name, emitt, base, cmbn, srf, xyz, &CD);
+	}
+	for(int n=nSrf; n; n--)area[n] = (float)srf[n].area;
+	NxtClose();
+
+    fprintf(stderr, "Surfaces:\n" );
+    fprintf( stderr, "   #        name     area   emit  type bsn csn (dir cos) (centroid)\n" );
+	int n;
+    for(n=1; n<=nSrf; n++ )
+      fprintf( stderr, "%4d %12s %9.2e %5.3f %4s %3d %3d (%g %g %g %g) (%g %g %g)\n",
+        n, name[n], area[n], emitt[n], types[srf[n].type], base[n], cmbn[n],
         srf[n].dc.x, srf[n].dc.y, srf[n].dc.z, srf[n].dc.w,
         srf[n].ctd.x, srf[n].ctd.y, srf[n].ctd.z );
-    for( ; n<=vfCtrl.nAllSrf; n++ )
-      fprintf( _ulog, "%4d %12s %9.2e       %4s         (%g %g %g %g) (%g %g %g)\n",
+    for(; n<=CD.nAllSrf; n++ )
+      fprintf( stderr, "%4d %12s %9.2e       %4s         (%g %g %g %g) (%g %g %g)\n",
         n, " ", area[n], types[srf[n].type],
         srf[n].dc.x, srf[n].dc.y, srf[n].dc.z, srf[n].dc.w,
         srf[n].ctd.x, srf[n].ctd.y, srf[n].ctd.z );
 
-    fprintf( _ulog, "Vertices:\n" );
-    for( n=1; n<=vfCtrl.nAllSrf; n++ ){
+    fprintf( stderr, "Vertices:\n" );
+    for( n=1; n<=CD.nAllSrf; n++ ){
       int j;
-      fprintf( _ulog, "%4d ", n );
+      fprintf( stderr, "%4d ", n );
       for( j=0; j<srf[n].nv; j++ )
-        fprintf( _ulog, " (%g %g %g)",
+        fprintf( stderr, " (%g %g %g)",
           srf[n].v[j]->x, srf[n].v[j]->y, srf[n].v[j]->z );
-      fprintf( _ulog, "\n" );
+      fprintf( stderr, "\n" );
     }
-  }
 
-#endif
-#define FAILED_TO_READ_MODEL 1
-
-	if(!FAILED_TO_READ_MODEL){
+#define FAILED_TO_READ_MODEL 0
+	/* FIXME how to determine if there was a problem reading the input file? */
+	if(FAILED_TO_READ_MODEL){
 		fprintf(stderr,"Failed to read View3D model file!\n");
 		exit(3);
 	}
@@ -187,63 +184,58 @@ int main(int argc, char **argv){
 		 mainwin = SoQt::init(argc, argv, argv[0]);
 	}
 
-
 	SoSeparator *root = new SoSeparator;
-	
-	// render axes?
+	root->ref();
 
+	// FIXME: add materials info
+	SoMaterial *mat = new SoMaterial;
+	mat->diffuseColor.setValue(1,1,0);
+	root->addChild(mat);	
+
+	// vertices 
+	SoCoordinate3 *coo = new SoCoordinate3;
+	SbVec3f *vcoo = new SbVec3f[CD.nVertices];
+	for(int i=0; i<CD.nVertices; ++i){
+		SbVec3f P(xyz[i].x, xyz[i].y, xyz[i].z);
+		vcoo[i] = P;
+	}
+	coo->point.setValues(0, CD.nVertices, vcoo);
+	root->addChild(coo);
+
+	fprintf(stderr, "Added %d vertices to face set\n",CD.nVertices);
 #if 0
-	// render all the nodes in the model
-	Vector labeloffset(0.1,0.1,0.1);
-	if(infotext){
-		for(unsigned i=0; i<M->num_nodes; ++i){
-			node_stmt *n;
-			n = &(M->node[i]);
-			stringstream ss;
-			ss << n->id;
-			Vector p = labeloffset + Vector(n->x,n->y,n->z);
-			//fprintf(stderr,"Label = %s\n",ss.str().c_str());
-			//cerr << "pos = " << p << endl;
-			root->addChild(text(p,ss.str().c_str(),RED));
-		}
+	// surface normals
+	SoNormal *nrm = new SoNormal;
+	SbVec3f *vnrm = new SbVec3f[CD.nRadSrf];
+	for(int i=0; i<CD.nRadSrf; ++i){
+		SbVec3f N(srf[i].dc.x, srf[i].dc.y, srf[i].dc.z);
+		vnrm[i] = N;
 	}
+	nrm->vector.setValues(0,CD.nRadSrf,vnrm);
 
-	// render all the members in the model
-	for(unsigned i=0; i<M->num_membs; ++i){
-		memb_stmt *m;
-		m = &(M->memb[i]);
-		node_stmt *A = &(M->node[m->fromnode]);
-		node_stmt *B = &(M->node[m->tonode]);
-		prop_stmt *p = model_find_prop(M, m->prop);
-
-		Vector vA(A->x, A->y, A->z);
-		Vector vB(B->x, B->y, B->z);
-
-		stringstream ss;
-		SbColor c;
-		ss << m->id;
-		if(p){
-			const section *s = section_find(l, p->name);
-			if(s){
-				if(section_is_chs(s)){
-					c = RED;
-					double d = section_chs_outside_diameter(s) / 1000.; /* convert to metres */
-					root->addChild(cylinder(vA,vB,d/2.,c));
-				}
-			}else{
-				fprintf(stderr,"Warning: unknown section name '%s'\n",p->name);
-				c = WHITE;
-				root->addChild(cylinder(vA,vB,0.01,c));
-			}
-			ss << " (" << p->name << ")" << endl;
-		}
-		if(infotext){
-			root->addChild(text(0.5*(vA+vB)+labeloffset, ss.str().c_str(), c));
-		}
-	}
+	root->addChild(nrm);
+	SoNormalBinding *nbi = new SoNormalBinding;
+	nbi->value = SoNormalBinding::PER_FACE;
+	root->addChild(nbi);
 #endif
 
-	root->ref();
+	// indices of the vertices for each face
+	vector<int32_t> ids;
+	long nvals = 0;
+    for(int i=1; i<=CD.nAllSrf; i++){
+		for(int j=0; j<srf[i].nv; j++){
+			long id = (long)(srf[i].v[j] - xyz);
+			ids.push_back(id);
+			fprintf(stderr,"srf %d: vert %d = %f, %f, %f\n",i,id,xyz[id].x, xyz[id].y, xyz[id].z);
+		}
+		ids.push_back(SO_END_FACE_INDEX);
+		nvals += srf[i].nv + 1;
+    }
+	fprintf(stderr,"Added %d faces (nvals = %d) to face set (using %d space)\n",CD.nAllSrf,nvals,ids.size());
+	
+	SoIndexedFaceSet *fset = new SoIndexedFaceSet;
+	fset->coordIndex.setValues(0, nvals, &(ids[0]));
+	root->addChild(fset);	
 
 	if(sceneoutfile){
 		// output the scene to a file that can be viewed later
