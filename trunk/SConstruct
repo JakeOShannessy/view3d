@@ -115,6 +115,7 @@ env.Append(
 
 if env.get('DEBUG'):
 	env.Append(CPPDEFINES=['_DEBUG'])
+	env.Append(CPPFLAGS=['-g'])
 
 lib = env.SharedLibrary('view3d',srcs)
 
@@ -131,7 +132,7 @@ soqt_env.Append(
 	, CPPDEFINES = env.get('SOQT_CPPDEFINES')
 )
 
-viewer = soqt_env.Program('viewer',['viewer.cpp'])
+viewer = soqt_env.Program('viewer',['viewer.cpp','render.cpp'])
 
 #------------
 # create distribution tarball
