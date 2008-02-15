@@ -8,6 +8,8 @@
 # define DEBUG 0
 #endif
 
+#include "view2d.h"
+
 #include <stdio.h>
 #include <string.h> /* prototype: strcpy */
 #include <stdlib.h> /* prototype: exit */
@@ -15,49 +17,55 @@
 #include <time.h>   /* prototypes: time, localtime, asctime;
                        define: tm, time_t */
 #include "types.h" 
-#include "view2d.h"
-#include "prtyp.h" 
+#include "misc.h"
+#include "heap.h"
+#include "test2d.h"
+#include "viewpp.h"
 
 /*  Main program for batch processing of 2-D view factors.  */
 
-FILE *_unxt; /* input file */
 FILE *_uout; /* output file */
-FILE *_ulog; /* log file */
-IX _echo=0;  /* true = echo input file */
-IX _list;    /* output control, higher value = more output;
-                0 = summary;
-                1 = symmetric view factors + unconverged iterations;
-                2 = view factor iterations;
-                3 = echo input, etc.  */
-I1 _string[LINELEN];  /* buffer for a character string */
 
-void FindFile( I1 *msg, I1 *name, I1 *type );
+/* forward decls */
 
-main( IX argc, I1 **argv )
-  {
-  I1 program[]="View2D";   /* program name */
-  I1 version[]="3.3";      /* program version */
-  I1 inFile[_MAX_PATH]=""; /* input file name */
-  I1 outFile[_MAX_PATH]="";/* output file name */
-  I1 title[LINELEN];  /* project title */
-  I1 **name;       /* surface names [1:nSrf][0:NAMELEN] */
+void FindFile( char *msg, char *name, char *type );
+
+static float ReportAF(const int nSrf, const int encl, const char *title, const char **name,
+  const float *area, const float *emit, const int *base, double **AF, float *eMax
+);
+
+float ReportAF( const int nSrf, const int encl, const char *title, const char **name,
+  const float *area, const float *emit, const int *base, double **AF, float *eMax );
+
+
+/*------------------------------------------------------------------------------
+  VIEW2D driver
+*/
+
+int main( int argc, char **argv ){
+  char program[]="View2D";   /* program name */
+  char version[]="3.3";      /* program version */
+  char inFile[_MAX_PATH]=""; /* input file name */
+  char outFile[_MAX_PATH]="";/* output file name */
+  char title[LINELEN];  /* project title */
+  char **name;       /* surface names [1:nSrf][0:NAMELEN] */
   SRFDAT2D *srf;   /* vector of surface data structures [1:nSrf] */
-  VFCTRL vfCtrl;   /* VF calculation control parameters */
-  R8 **AF;         /* triangular array of area*view factor values [1:nSrf][] */
-  R4 *area;        /* vector of surface areas [1:nSrf0] */
-  R4 *emit;        /* vector of surface emittances [1:nSrf0] */
-  IX *base;        /* vector of base surface numbers [1:nSrf0] */
-  IX *cmbn;        /* vector of combine surface numbers [1:nSrf0] */
-  R4 *vtmp;        /* temporary vector [1:nSrf0] */
+  View2DControlData vfCtrl;   /* VF calculation control parameters */
+  double **AF;         /* triangular array of area*view factor values [1:nSrf][] */
+  float *area;        /* vector of surface areas [1:nSrf0] */
+  float *emit;        /* vector of surface emittances [1:nSrf0] */
+  int *base;        /* vector of base surface numbers [1:nSrf0] */
+  int *cmbn;        /* vector of combine surface numbers [1:nSrf0] */
+  float *vtmp;        /* temporary vector [1:nSrf0] */
   struct tm *curtime; /* time structure */
   time_t bintime;  /* seconds since 00:00:00 GMT, 1/1/70 */
-  R4 time0, time1; /* elapsed time values */
-  IX nSrf;         /* current number of surfaces */
-  IX nSrf0;        /* initial number of surfaces */
-  IX encl;         /* 1 = surfaces form enclosure */
-  R4 eMax=0.0;     /* maximum row error, if enclosure */
-  R4 eRMS=0.0;     /* RMS row error, if enclosure */
-  IX n, flag;
+  float time0, time1; /* elapsed time values */
+  int nSrf;         /* current number of surfaces */
+  int nSrf0;        /* initial number of surfaces */
+  int encl;         /* 1 = surfaces form enclosure */
+  float eMax=0.0;     /* maximum row error, if enclosure */
+  float eRMS=0.0;     /* RMS row error, if enclosure */
+  int n, flag;
 
   if( argv[1][0] == '?' )
     {
@@ -105,7 +113,7 @@ main( IX argc, I1 **argv )
   time0 = CPUtime( 0.0 );
 
                  /* initialize control data */
-  memset( &vfCtrl, 0, sizeof(VFCTRL) );
+  memset( &vfCtrl, 0, sizeof(View2DControlData) );
 
                  /* read Vertex/Surface data file */
   NxtOpen( inFile, __FILE__, __LINE__ );
@@ -125,13 +133,13 @@ main( IX argc, I1 **argv )
 
   nSrf = nSrf0 = vfCtrl.nRadSrf;
   encl = vfCtrl.enclosure;
-  name = Alc_MC( 1, nSrf0, 0, NAMELEN, sizeof(I1), __FILE__, __LINE__ );
-  AF = Alc_MSC( 1, nSrf0, sizeof(R8), __FILE__, __LINE__ );
-  area = Alc_V( 1, nSrf0, sizeof(R4), __FILE__, __LINE__ );
-  emit = Alc_V( 1, nSrf0, sizeof(R4), __FILE__, __LINE__ );
-  vtmp = Alc_V( 1, nSrf0, sizeof(R4), __FILE__, __LINE__ );
-  base = Alc_V( 1, nSrf0, sizeof(IX), __FILE__, __LINE__ );
-  cmbn = Alc_V( 1, nSrf0, sizeof(IX), __FILE__, __LINE__ );
+  name = Alc_MC( 1, nSrf0, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
+  AF = Alc_MSC( 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
+  area = Alc_V( 1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  emit = Alc_V( 1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  vtmp = Alc_V( 1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  base = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
+  cmbn = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
   srf = Alc_V( 1, vfCtrl.nAllSrf, sizeof(SRFDAT2D), __FILE__, __LINE__ );
 
                /* read v/s data file */
@@ -141,12 +149,12 @@ main( IX argc, I1 **argv )
     _echo = 1;
   GetVS2D( name, emit, base, cmbn, srf, &vfCtrl );
   for( n=1; n<=nSrf; n++ )
-    area[n] = (R4)srf[n].area;
+    area[n] = (float)srf[n].area;
   NxtClose();
 
   if( encl )    /* determine volume of enclosure */
     {
-    R8 volume=0.0;
+    double volume=0.0;
     for( n=vfCtrl.nAllSrf; n; n-- )
       if( srf[n].type == 0 )
         volume += srf[n].v1.x * srf[n].v2.y - srf[n].v2.x * srf[n].v1.y;
@@ -268,13 +276,13 @@ main( IX argc, I1 **argv )
   fputs( _string, _ulog );
 
 
-  Fre_V( cmbn, 1, nSrf0, sizeof(IX), __FILE__, __LINE__ );
-  Fre_V( base, 1, nSrf0, sizeof(IX), __FILE__, __LINE__ );
-  Fre_V( vtmp, 1, nSrf0, sizeof(R4), __FILE__, __LINE__ );
-  Fre_V( emit, 1, nSrf0, sizeof(R4), __FILE__, __LINE__ );
-  Fre_V( area, 1, nSrf0, sizeof(R4), __FILE__, __LINE__ );
-  Fre_MSC( (void **)AF, 1, nSrf0, sizeof(R8), __FILE__, __LINE__ );
-  Fre_MC( (void **)name, 1, nSrf0, 0, NAMELEN, sizeof(I1), __FILE__, __LINE__ );
+  Fre_V( cmbn, 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
+  Fre_V( base, 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
+  Fre_V( vtmp, 1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  Fre_V( emit, 1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  Fre_V( area, 1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  Fre_MSC( (void **)AF, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
+  Fre_MC( (void **)name, 1, nSrf0, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
 
   fprintf( _ulog, "%7.2f seconds for all calculations.\n\n", CPUtime(time0) );
   fclose( _ulog );
@@ -292,11 +300,11 @@ main( IX argc, I1 **argv )
 /*  Determine number of vertices, number of surfaces,
  *  control parameters, and format of the input file.  */
 
-void CountVS2D( char *title, VFCTRL *vfCtrl )
+void CountVS2D( char *title, View2DControlData *vfCtrl )
   {
-  IX c;     /* first character in line */
-  IX ctrl=0;
-  IX flag=0;  /* NxtWord flag: 0 for first word of first line */
+  int c;     /* first character in line */
+  int ctrl=0;
+  int flag=0;  /* NxtWord flag: 0 for first word of first line */
 
   vfCtrl->nRadSrf = vfCtrl->nObstrSrf = 0;
 
@@ -377,19 +385,19 @@ finish:
 
 /*  Read the 2-D surface data file */
 
-void GetVS2D( I1 **name, R4 *emit, IX *base, IX *cmbn,
-  SRFDAT2D *srf, VFCTRL *vfCtrl )
+void GetVS2D( char **name, float *emit, int *base, int *cmbn,
+  SRFDAT2D *srf, View2DControlData *vfCtrl )
   {
-  I1 c;       /* first character in line */
-  IX nv=0;    /* number of vertices */
-  IX ns=0;    /* number of surfaces */
-  IX flag=0;  /* NxtWord flag: 0 for first word of first line */
-  VERTEX2D *xy;  /* vector of vertces [1:nVertices] */
-  IX n;
+  char c;       /* first character in line */
+  int nv=0;    /* number of vertices */
+  int ns=0;    /* number of surfaces */
+  int flag=0;  /* NxtWord flag: 0 for first word of first line */
+  Vec2 *xy;  /* vector of vertces [1:nVertices] */
+  int n;
 
   error( -2, __FILE__, __LINE__, "" );  /* clear error count */
   rewind( _unxt );
-  xy = Alc_V( 1, vfCtrl->nVertices, sizeof(VERTEX2D), __FILE__, __LINE__ );
+  xy = Alc_V( 1, vfCtrl->nVertices, sizeof(Vec2), __FILE__, __LINE__ );
 
   while( NxtWord( _string, flag, sizeof(_string) ) != NULL )
     {
@@ -435,7 +443,7 @@ void GetVS2D( I1 **name, R4 *emit, IX *base, IX *cmbn,
           srf[ns].v2.y = xy[n].y;
           }
 
-        SetSrf( &srf[ns] );          /* compute area and direction cosines */
+        SetSrf2D( &srf[ns] );          /* compute area and direction cosines */
 
         if( c=='O' ) break;
 
@@ -458,7 +466,7 @@ void GetVS2D( I1 **name, R4 *emit, IX *base, IX *cmbn,
              " must be after base surface ", IntStr(n), "" );
           else
             {
-            IX i;
+            int i;
             for( i=ns-1; i>n; i-- )
               if( base[i] == 0 ) break;
             if( i != n ) error( 2, __FILE__, __LINE__, "Subsurface ", IntStr(ns),
@@ -515,7 +523,7 @@ void GetVS2D( I1 **name, R4 *emit, IX *base, IX *cmbn,
     }
 
 finish:
-  Fre_V( xy, 1, vfCtrl->nVertices, sizeof(VERTEX2D), __FILE__, __LINE__ );
+  Fre_V( xy, 1, vfCtrl->nVertices, sizeof(Vec2), __FILE__, __LINE__ );
   if( error( -1, __FILE__, __LINE__, "" )>0 )
     error( 3, __FILE__, __LINE__, "Fix errors in input data", "" );
 
@@ -523,22 +531,22 @@ finish:
 
 /***  ReportAF.c  ************************************************************/
 
-R4 ReportAF( const IX nSrf, const IX encl, const I1 *title, const I1 **name,
-  const R4 *area, const R4 *emit, const IX *base, R8 **AF, R4 *eMax )
+float ReportAF( const int nSrf, const int encl, const char *title, const char **name,
+  const float *area, const float *emit, const int *base, double **AF, float *eMax )
   {
-  IX n;    /* row */
-  IX m;    /* column */
-  R4 err;  /* error values assuming enclosure */
-  R8 F, sumF;  /* view factor, sum of F for row */
-/*  R4 eMax;   /* maximum row error, if enclosure */
-  R8 eRMS=0.;  /* sum for RMS error */
+  int n;    /* row */
+  int m;    /* column */
+  float err;  /* error values assuming enclosure */
+  double F, sumF;  /* view factor, sum of F for row */
+/*  float eMax;   * maximum row error, if enclosure * */
+  double eRMS=0.;  /* sum for RMS error */
 #define MAXEL 10
   struct
     {
-    R4 err;   /* enclosure error */
-    IX n;     /* row number */
+    float err;   /* enclosure error */
+    int n;     /* row number */
     } elist[MAXEL+1];
-  IX i;
+  int i;
 
   fprintf( _ulog, "\n%s\n", title );
   if( encl && _list>0 )
@@ -564,7 +572,7 @@ R4 ReportAF( const IX nSrf, const IX encl, const I1 *title, const I1 **name,
 
     if( encl )                /* compute enclosure error value */
       {
-      err = (R4)fabs( sumF - emit[n]);
+      err = (float)fabs( sumF - emit[n]);
       eRMS += err * err;
       for( i=MAXEL; i>0; i-- )
         {
@@ -578,7 +586,7 @@ R4 ReportAF( const IX nSrf, const IX encl, const I1 *title, const I1 **name,
 
     if( _list>1 )   /* print row n values */
       {
-      R8 invArea = 1.0 / area[n];
+      double invArea = 1.0 / area[n];
       for( m=1; m<=nSrf; m++ )
         {
         if( m>=n )
@@ -612,7 +620,7 @@ R4 ReportAF( const IX nSrf, const IX encl, const I1 *title, const I1 **name,
     fprintf( _ulog, "\n" );
     }
 
-  return (R4)eRMS;
+  return (float)eRMS;
 
   }  /* end of ReportAF */
 
@@ -621,7 +629,7 @@ R4 ReportAF( const IX nSrf, const IX encl, const I1 *title, const I1 **name,
 /*  Find user designated file.  REPLACE WITH FILEOPEN.TXT ???
  *  First character of type string must be 'r', 'w', or 'a'.  */
 
-void FindFile( I1 *msg, I1 *fileName, I1 *type )
+void FindFile( char *msg, char *fileName, char *type )
 /*  msg;    message to user
  *  name;   file name (string long enough for any file name)
  *  type;   type of file, see fopen() */
@@ -653,7 +661,7 @@ void FindFile( I1 *msg, I1 *fileName, I1 *type )
 /*  Open user designated file.
  *  First character of type string must be 'r', 'w', or 'a'.  */
 
-FILE *OpenFile( I1 *msg, I1 *name, I1 *type )
+FILE *OpenFile( char *msg, char *name, char *type )
 /*  msg;    message to user
  *  name;   file name (string long enough for any file name)
  *  type;   type of file, see fopen() */
@@ -681,18 +689,18 @@ tryagain:
 
 /*  Determine list of possible view obstructing surfaces  */
 
-IX setlpos2( SRFDATD *srfv, IX *stype, IX *lpos )
+int setlpos2( SRFDATD *srfv, int *stype, int *lpos )
 /*
  * stype;  surface type data:  1 = obstruction only surface,
  *         0 = normal surface, -1 = included surface,
  *        -2 = part of an obstruction surface
  */
   {
-  IX npos;     /* number of possible view obstructing surfaces */
-  IX m, n;     /* surface numbers */
-  IX infront;  /* true if a vertex is in front of surface n */
-  IX behind;   /* true if a vertex is behind surface n */
-  R4 t;
+  int npos;     /* number of possible view obstructing surfaces */
+  int m, n;     /* surface numbers */
+  int infront;  /* true if a vertex is in front of surface n */
+  int behind;   /* true if a vertex is behind surface n */
+  float t;
 
   for( npos=0,n=_ntot; n; n-- )
     {
