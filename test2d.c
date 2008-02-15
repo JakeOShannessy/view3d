@@ -74,7 +74,7 @@ int BoxTest2D( SRFDAT2D *srfN, SRFDAT2D *srfM, SRFDAT2D *srf,
   sideA.v1.y = srfN->v2.y;
   sideA.v2.x = srfM->v1.x;
   sideA.v2.y = srfM->v1.y;
-  SetSrf( &sideA );
+  SetSrf2D( &sideA );
   if( sideA.area < FLT_EPSILON ) adegen = 1;
 
                    /* Set up side B */
@@ -314,7 +314,7 @@ void CoordTrans2D( SRFDAT2D *srf1, SRFDAT2D *srf2, SRFDAT2D *srf,
   y = srf1->v2.y - srf2->v1.y;
   srf1T->v2.x = x * cosphi + y * sinphi;
   srf1T->v2.y = y * cosphi - x * sinphi;
-  SetSrf( srf1T );
+  SetSrf2D( srf1T );
 
             /* transform surface 2 */
   srf2T = &vfCtrl->srf2T;
@@ -579,8 +579,7 @@ int SelfObstructionTest2D( SRFDAT2D *srf1, SRFDAT2D *srf2, SRFDAT2D *srfN )
 
 /*  Set surface area and direction cosine values from vertices.  */
 
-void SetSrf( SRFDAT2D *srf )
-  {
+void SetSrf2D( SRFDAT2D *srf ){
   Vec2 v; /* vector v1-->v2 */
 
   v.x = srf->v2.x - srf->v1.x;
@@ -597,7 +596,7 @@ void SetSrf( SRFDAT2D *srf )
   else
     srf->area = 0.0;
 
-  }  /* end SetSrf */
+}  /* end SetSrf */
 
 /***  SetPosObstr2D.c  *******************************************************/
 

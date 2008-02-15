@@ -10,8 +10,6 @@
 void CountVS2D( char *title, View2DControlData *vfCtrl );
 void GetVS2D( char **name, float *emit, int *base, int *cmbn,
   SRFDAT2D *srf, View2DControlData *vfCtrl );
-float ReportAF( const int nSrf, const int encl, const char *title, const char **name,
-  const float *area, const float *emit, const int *base, double **AF, float *eMax );
 void SaveVF( char *fileName, char *program, char *version,
              int format, int encl, int didemit, int nSrf,
              float *area, float *emit, double **AF, float *vtmp );
@@ -28,10 +26,5 @@ int errorf( int severity, char *file, int line, ... );
 
 /* text here moved to test2d.h */
 
-     /* post processing */
-void NormAF( const int nSrf, const float *emit, const float *area, double **AF,
-  const double eMax, const int itMax );
-int Combine( const int nSrf, const int *cmbn, float *area, char **name, double **AF );
-void Separate( const int nSrf, const int *base, float *area, double **AF );
-void IntFac( const int nSrf, const float *emit, const float *area, double **AF );
+/* post processing functions the same as for View3D */
 
