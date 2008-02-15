@@ -1,31 +1,33 @@
 /*subfile:  test2d.c  ********************************************************/
 
+#define V3D_BUILD
+#include "test2d.h"
+#include "view3d.h"
+
 #include <stdio.h>
 #include <string.h> /* prototype: memcpy */
 #include <math.h>   /* prototype: fabs */
 #include <float.h>  /* define: FLT_EPSILON */
 #include "types.h" 
-#include "view2d.h"
-#include "prtyp.h" 
 
-extern IX _list;    /* output control, higher value = more output */
-extern FILE *_ulog; /* log file */
+#define izero1(n,x) memset(x,0,n*sizeof(int))    /* zero current integers */
+
 
 /***  BoxTest.c  *************************************************************/
 
 /*  Determine which surfaces might obstruct the view from N to M.
  *  Tests are ordered to eliminate surfaces as quiclky as possible.  */
 
-IX BoxTest( SRFDAT2D *srfN, SRFDAT2D *srfM, SRFDAT2D *srf,
-  IX *los, IX *oos, IX npos )
+int BoxTest2D( SRFDAT2D *srfN, SRFDAT2D *srfM, SRFDAT2D *srf,
+  int *los, int *oos, int npos )
   {
 /* los  - list of probable obstructing surfaces (input and revised as output).
  * oos  - orientations of obstructing surfaces J, 
  *         +1 = J can see only N, -1 = J can see only M; 0 = J can see both.
  * npos - initial number of possible obstructions.  */
-  IX nos=0; /* number of view obstructing surfaces, -1 = blocked view */
-  R8 dot;
-  IX u[12];
+  int nos=0; /* number of view obstructing surfaces, -1 = blocked view */
+  double dot;
+  int u[12];
 /*         u[0]  > 0 if vertex 1 of surface N is to left of surface J.
  *         u[1]  > 0 if vertex 2 of surface N is to left of surface J.
  *         u[2]  > 0 if vertex 1 of surface M is to left of surface J.
@@ -59,12 +61,12 @@ IX BoxTest( SRFDAT2D *srfN, SRFDAT2D *srfM, SRFDAT2D *srf,
 #define UDOT(a,b) if(dot>b) a=1; else if(dot<-b) a=-1; else a=0
 
   SRFDAT2D sideA, sideB;
-  IX adegen=0;  /* true if side A is degenerate:  start of M = end of N */
-  IX bdegen=0;  /* true if side B is degenerate:  start of N = end of M */
-  IX block=0;   /* true is view N-M is totally blocked by surface J */
-  IX left;      /* true if all vertices of quadrilateral are left of J */
-  IX right;     /* true if all vertices of quadrilateral are right of J */
-  IX j, k, n;
+  int adegen=0;  /* true if side A is degenerate:  start of M = end of N */
+  int bdegen=0;  /* true if side B is degenerate:  start of N = end of M */
+  int block=0;   /* true is view N-M is totally blocked by surface J */
+  int left;      /* true if all vertices of quadrilateral are left of J */
+  int right;     /* true if all vertices of quadrilateral are right of J */
+  int j, k, n;
 
                    /* Set up side A */
   sideA.nr = 0;
@@ -236,12 +238,12 @@ IX BoxTest( SRFDAT2D *srfN, SRFDAT2D *srfM, SRFDAT2D *srf,
 /*  Clip line according to FLAG and DIST vector.
  *  Ordering of vertices is retained.  */
 
-void ClipSrf2D( SRFDAT2D *srf, const R4 flag )
+void ClipSrf2D( SRFDAT2D *srf, const float flag )
 /* flag   - save vertices above or below clipping plane
  *          for flag equal to 1.0 or -1.0, respectively. */
   {
-  R8 h;  /* linear interpolation factor */
-  VECTOR2D v;
+  double h;  /* linear interpolation factor */
+  Vec2 v;
 
   h = srf->dist[0] / (srf->dist[1] - srf->dist[0]);
 
@@ -267,7 +269,7 @@ void ClipSrf2D( SRFDAT2D *srf, const R4 flag )
 
   v.x = srf->v2.x - srf->v1.x;
   v.y = srf->v2.y - srf->v1.y;
-  srf->area = (R4)sqrt( v.x * v.x + v.y * v.y );
+  srf->area = (float)sqrt( v.x * v.x + v.y * v.y );
 
 #ifdef DEBUG
   if( _list>4 )
@@ -285,14 +287,14 @@ void ClipSrf2D( SRFDAT2D *srf, const R4 flag )
  */
 
 void CoordTrans2D( SRFDAT2D *srf1, SRFDAT2D *srf2, SRFDAT2D *srf,
-  IX *probableObstr, VFCTRL *vfCtrl )
+  int *probableObstr, View2DControlData *vfCtrl )
   {
   SRFDAT2D *srf1T;   /* pointer to surface 1 */
   SRFDAT2D *srf2T;   /* pointer to surface 2 */
   SRF2D *srfOT;      /* pointer to obstrucing surface */
-  R8 cosphi, sinphi; /* cosine & sine of rotation angle */
-  R8 x, y;           /* coordinates after translation */
-  IX i, j;
+  double cosphi, sinphi; /* cosine & sine of rotation angle */
+  double x, y;           /* coordinates after translation */
+  int i, j;
 
             /* determine rotation angle */
   cosphi = (srf2->v2.x - srf2->v1.x) / srf2->area;
@@ -369,11 +371,11 @@ void CoordTrans2D( SRFDAT2D *srf1, SRFDAT2D *srf2, SRFDAT2D *srf,
 
 /*  Clip line so none of it is below y = 0.  */
 
-IX ClipY0( VERTEX2D *v1, VERTEX2D *v2 )
+int ClipY0( Vec2 *v1, Vec2 *v2 )
 /*  v;  vertices of endpoints
  *  y0;  clipping line */
   {
-  IX flag=0;  /* result of clip (1 = line eliminated)  */
+  int flag=0;  /* result of clip (1 = line eliminated)  */
 
   if( v1->y < 0.0 )
     if( v2->y < 0.0 )
@@ -402,8 +404,8 @@ IX ClipY0( VERTEX2D *v1, VERTEX2D *v2 )
  *  Return direction indicator: 1 = n to m, -1 = m to n.
  */
 
-IX ProjectionDirection( SRFDAT2D *srfN, SRFDAT2D *srfM, SRFDAT2D *srf,
-  IX *probableObstr, IX *orientObstr, VFCTRL *vfCtrl )
+int ProjectionDirection2D( SRFDAT2D *srfN, SRFDAT2D *srfM, SRFDAT2D *srf,
+  int *probableObstr, int *orientObstr, View2DControlData *vfCtrl )
 /* srf  - data for all surfaces.
  * srfN - data for surface N.
  * srfM - data for surface M.
@@ -413,11 +415,11 @@ IX ProjectionDirection( SRFDAT2D *srfN, SRFDAT2D *srfM, SRFDAT2D *srf,
  * ctrl - computation controls.
  */
   {
-  IX n, k;   /* surface number */
-  VERTEX2D center;
-  R8 dx, dy, dist;  /* components of distance calculation */
-  R8 sdtoN, sdtoM;  /* minimum distances from obstruction to N and M */
-  IX direction=-1;  /* 1 = N is surface 1; 0 = M is surface 1 */
+  int n, k;   /* surface number */
+  Vec2 center;
+  double dx, dy, dist;  /* components of distance calculation */
+  double sdtoN, sdtoM;  /* minimum distances from obstruction to N and M */
+  int direction=-1;  /* 1 = N is surface 1; 0 = M is surface 1 */
 
 #ifdef DEBUG
   if( _list>4 )
@@ -532,11 +534,11 @@ IX ProjectionDirection( SRFDAT2D *srfN, SRFDAT2D *srfM, SRFDAT2D *srf,
  *  Return 0 if the SRF2 is entirely behind SRF1; return 1 if SRF2 is fully
  *  or partially in front.  If partially in front, srfN->area set to 0.  */
 
-IX SelfObstructionTest2D( SRFDAT2D *srf1, SRFDAT2D *srf2, SRFDAT2D *srfN )
+int SelfObstructionTest2D( SRFDAT2D *srf1, SRFDAT2D *srf2, SRFDAT2D *srfN )
   {
-  IX infront=0; /* true if a vertex of surface 2 is in front of surface 1 */
-  IX behind=0;  /* true if a vertex of surface 2 is behind surface 1 */
-  R8 eps=1.0e-5*srf2->area; /* test value for "close to plane of SRF1" */
+  int infront=0; /* true if a vertex of surface 2 is in front of surface 1 */
+  int behind=0;  /* true if a vertex of surface 2 is behind surface 1 */
+  double eps=1.0e-5*srf2->area; /* test value for "close to plane of SRF1" */
 
                             /* check both vertices of srf2 against srf1 */
   srf2->dist[0] = srf2->v1.x * srf1->dc.x 
@@ -579,7 +581,7 @@ IX SelfObstructionTest2D( SRFDAT2D *srf1, SRFDAT2D *srf2, SRFDAT2D *srfN )
 
 void SetSrf( SRFDAT2D *srf )
   {
-  VECTOR2D v; /* vector v1-->v2 */
+  Vec2 v; /* vector v1-->v2 */
 
   v.x = srf->v2.x - srf->v1.x;
   v.y = srf->v2.y - srf->v1.y;
@@ -602,18 +604,18 @@ void SetSrf( SRFDAT2D *srf )
 /*  Set list of possible view obstructing surfaces.
  *  Return number of possible view obstructing surfaces.  */
 
-IX SetPosObstr2D( IX nSrf, SRFDAT2D *srf, IX *possibleObstr )
+int SetPosObstr2D( int nSrf, SRFDAT2D *srf, int *possibleObstr )
 /* nSrf;  total number of surfaces ('S' and 'O')
  * srf;   vector of surface data [1:nSrf]
  * possibleObstr;  vector of possible view obtructions [1:nSrf]
  */
   {
-  IX ns;       /* surface number */
-  IX n;        /* surface number */
-  IX infront;  /* true if a vertex is in front of surface ns */
-  IX behind;   /* true if a vertex is behind surface ns */
-  R8 dot, eps; /* dot product and test value */
-  IX npos=0;   /* number of possible view obstructing surfaces */
+  int ns;       /* surface number */
+  int n;        /* surface number */
+  int infront;  /* true if a vertex is in front of surface ns */
+  int behind;   /* true if a vertex is behind surface ns */
+  double dot, eps; /* dot product and test value */
+  int npos=0;   /* number of possible view obstructing surfaces */
 
   for( ns=nSrf; ns; ns-- )  /* reverse order for obstruction surfaces first */
     {
@@ -650,33 +652,6 @@ IX SetPosObstr2D( IX nSrf, SRFDAT2D *srf, IX *possibleObstr )
 
   }  /*  end of SetPosObstr2D  */
 
-/***  DumpOS.c  **************************************************************/
-
-/*  Dump list of view obsrtucting surfaces  */
-
-void DumpOS( I1 *title, const IX nos, IX *list )
-/* nos;  number of surfaces
- * list;  list of surface numbers */
-  {
-  IX n;
-
-  fprintf( _ulog, "%s", title );
-  if( (strlen(title) + 6*nos) > 78 )
-    fprintf( _ulog, "\n" );
-  for( n=1; n<=nos; n++ )
-    {
-    fprintf( _ulog, " %5d", list[n] );
-    if( n%10 == 0 )
-      fprintf( _ulog, "\n" );
-    }
-  if( nos%10 != 0 )
-    fprintf( _ulog, "\n" );
-#ifdef DEBUG
-  fflush( _ulog );
-#endif
-
-  }  /*  end of DumpOS  */
-
 #ifdef DEBUG
 /***  DumpSrf.c  *************************************************************/
 
@@ -694,14 +669,14 @@ void DumpSrf( SRFDAT2D *srf )
 /*  Clip line according to FLAG and DIST vector.
  *  Ordering of vertices is retained.  */
 
-void ClipLine( VERTEX2D *v0, VERTEX2D *v1, const R8 dist[2], const R4 flag )
+void ClipLine( Vec2 *v0, Vec2 *v1, const double dist[2], const float flag )
 /* v0,v1  - end points of line.
  * dist   - distance of each vertex above clipping plane; found by dot
  *          product of vertex with clipping plane normal form coefficients.
  * flag   - save vertices above or below clipping plane
  *          for flag equal to 1.0 or -1.0, respectively. */
   {
-  R8 h;  /* linear interpolation factor */
+  double h;  /* linear interpolation factor */
 
   h = dist[1] / (dist[1] - dist[0]);   /* no division by zero */
 
@@ -731,9 +706,9 @@ void ClipLine( VERTEX2D *v0, VERTEX2D *v1, const R8 dist[2], const R4 flag )
  *  (Constants in row 3 are assumed)
  */
 
-void CT2D( const IX nv, const R4 t[3][2], const VERTEX2D *p, VERTEX2D *q )
+void CT2D( const int nv, const float t[3][2], const Vec2 *p, Vec2 *q )
   {
-  IX n;
+  int n;
 
   for( n=nv; n; n--,p++,q++ )
     {

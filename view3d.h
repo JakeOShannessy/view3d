@@ -28,12 +28,12 @@
 #define EPS 1.0e-6
 #define EPS2 1.0e-12
 
-typedef struct v2d{       /* structure for 2D vertex */
+typedef struct Vec2_struct{       /* structure for 2D vertex */
   double  x;  /* X-coordinate */
   double  y;  /* Y-coordinate */
 } Vec2;
 
-typedef struct v3d{       /* structure for a 3D vertex or vector */
+typedef struct Vec3_struct{       /* structure for a 3D vertex or vector */
   double  x;  /* X-coordinate */
   double  y;  /* Y-coordinate */
   double  z;  /* Z-coordinate */
@@ -77,13 +77,19 @@ typedef struct v3d{       /* structure for a 3D vertex or vector */
     b->y = c * a->y; \
     b->z = c * a->z; 
 
-typedef struct dircos         /* structure for direction cosines */
-  {
+typedef struct DirCos_struct{         /* structure for direction cosines */
   double  x;  /* X-direction cosine */
   double  y;  /* Y-direction cosine */
   double  z;  /* Z-direction cosine */
   double  w;  /* distance from surface to origin (signed) */
-  } DirCos;
+} DirCos;
+
+typedef struct DirCos2_struct{         /* structure for direction cosines */
+  double x;  /* X-direction cosine */
+  double y;  /* Y-direction cosine */
+  double w;  /* distance from surface to origin (signed) */
+} DirCos2;
+
 
 typedef struct srfdat3d       /* structure for 3D surface data */
   {
@@ -101,6 +107,32 @@ typedef struct srfdat3d       /* structure for 3D surface data */
                           0: part of N behind S, part in front */
   int MrelS;           /* orientation of srf M relative to S */
   } SRFDAT3D;
+
+typedef struct srfdat2d       /* structure for 2D surface data */
+  {
+  Vec2 v1;  /* coordinates of first vertex */
+  Vec2 v2;  /* coordinates of second vertex */
+  DirCos2 dc;    /* direction cosines of surface normal */
+  double area;      /* area (length) of surface */
+  double dist[2];   /* distances of vertices above clipping plane */
+  int nr;        /* surface number */
+  int type;      /* surface type data:  1 = obstruction only surface,
+                   0 = normal surface, -1 = included surface,
+                  -2 = part of an obstruction surface */
+} SRFDAT2D;
+
+typedef struct Line_struct{           /* structure for 1-D lines */
+  struct Line_struct *next; /* pointer to next line */
+  double xl;   /* minimum X-coordinate */
+  double xr;   /* maximum X-coordinate */} LINE;
+
+
+typedef struct srf2d          /* structure for limited surface data */
+  {
+  Vec2 v1;  /* coordinates of first vertex */
+  Vec2 v2;  /* coordinates of second vertex */
+  int nr;        /* surface number */
+  } SRF2D;
 
 #define RSRF 0  /* normal surface */
 #define SUBS 1  /* subsurface */
@@ -187,6 +219,34 @@ typedef struct{          /* view factor calculation control values */
                        dimensioned from 0 to maxSrfT in View3d();
                        coordinates transformed relative to srf2T. */
 } View3DControlData;
+
+typedef struct{         /* view factor calculation control values */
+  int nAllSrf;       /* total number of surfaces */
+  int nRadSrf;       /* number of radiating surfaces */
+  int nObstrSrf;     /* number of obstruction surfaces */
+  int nVertices;     /* number of vertices */
+  int enclosure;     /* 1 = surfaces form an enclosure */
+  int emittances;    /* 1 = process emittances */
+  int outFormat;     /* output file format */
+  int nPossObstr;    /* number of possible view obstructing surfaces */
+  int nProbObstr;    /* number of probable view obstructing surfaces */
+  int prjReverse;    /* projection control; 0 = normal, 1 = reverse */
+  float epsObstr;      /* convergence for obstrcted views */
+  int maxRecursion;  /* maximum number of recursion levels */
+  int minRecursion;  /* minimum number of recursion levels */
+  int failRecursion; /* 1 = obstructed view factor did not converge */
+  float epsAF;         /* convergence for current AF calculation */
+  unsigned long wastedVObs;    /* number of ViewObstructed() calculations wasted */
+  unsigned long usedVObs;      /* number of ViewObstructed() calculations used */
+  int failConverge;  /* 1 if any calculation failed to converge */
+  SRFDAT2D srf1T;   /* participating surface; transformed coordinates */
+  SRFDAT2D srf2T;   /* participating surface; transformed coordinates;
+                        view from srf1T toward srf2T. */ 
+  SRF2D *srfOT;     /* pointer to array of view obstrucing surfaces;
+                        dimensioned from 0 to maxSrfT in View3d();
+                        coordinates transformed relative to srf2T. */
+  LINE *lines;      /* coordinates of lines representing obstruction shadows */
+} View2DControlData;
 
 #define UNK -1  /* unknown integration method */
 #define DAI 0   /* double area integration */

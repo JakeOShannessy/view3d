@@ -105,7 +105,9 @@ conf.Finish()
 srcs = Split("""
 	ctrans.c  heap.c  polygn.c  savevf.c  viewobs.c  viewunob.c
 	getdat.c  misc.c  readvf.c  test3d.c  view3d.c  viewpp.c
-	common.c
+	common.c 
+
+	view2d.c test2d.c
 """)
 
 env.Append(
@@ -120,6 +122,8 @@ if env.get('DEBUG'):
 lib = env.SharedLibrary('view3d',srcs)
 
 prog = env.Program('view3d', ['v3main.c'], LIBS=['view3d'], LIBPATH=['#'])
+
+prog2d = env.Program('view2d', ['v2main.c'], LIBS=['view2d'], LIBPATH=['#'])
 
 #------------
 # viewer program
