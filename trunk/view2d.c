@@ -1,13 +1,20 @@
 /*subfile:  view2d.c  ********************************************************/
 
+#define V3D_BUILD
+#include "view2d.h"
+
 #include <stdio.h>
 #include <stdarg.h> /* variable argument list macro definitions */
 #include <string.h> /* prototype: memcpy */
 #include <math.h>   /* prototypes: fabs, sqrt */
 #include <float.h>  /* define: FLT_EPSILON */
 #include "types.h"
-#include "view2d.h"
-#include "prtyp.h"
+#include "heap.h"
+#include "misc.h"
+#include "test2d.h"
+#include "test3d.h" /* for DumpOS */
+
+#include <stdlib.h>
 
 #ifdef STKTEST
 # ifdef __WATCOMC__
@@ -15,19 +22,37 @@
 # endif
 #endif
 
+#if 0
 extern IX _list;    /* output control, higher value = more output */
 extern FILE *_ulog; /* log file */
 extern I1 _string[]; /* buffer for a character string */
-extern IX _dmem2;   /* list every heap allocation or free */
+#endif
 
-IX _row=0;   /* row number; save for errorf() */
-IX _col=0;   /* column number; " */
+/*  redefinition of C variable types and path parameters.  */
+#define I1 char
+#define I2 short
+#define I4 long
+#define IX int
+
+#define U1 usigned char
+#define U2 unsigned short
+#define U4 unsigned long
+#define UX unsigned
+
+#define R4 float
+#define double double
+#define RX long double
+
+extern int _dmem2;   /* list every heap allocation or free */
+
+static int _row=0;   /* row number; save for errorf() */
+static int _col=0;   /* column number; " */
 
   /* Gaussian ordinates and weights */
-const R8 gx3[3] = { 0.112701665, 0.500000000, 0.887298335 };
-const R8 gw3[3] = { 0.277777778, 0.444444444, 0.277777778 };
-const R8 gx4[4] = { 0.069431844, 0.330009478, 0.669990522, 0.930568156 };
-const R8 gw4[4] = { 0.173927423, 0.326072577, 0.326072577, 0.173927423 };
+const double gx3[3] = { 0.112701665, 0.500000000, 0.887298335 };
+const double gw3[3] = { 0.277777778, 0.444444444, 0.277777778 };
+const double gx4[4] = { 0.069431844, 0.330009478, 0.669990522, 0.930568156 };
+const double gw4[4] = { 0.173927423, 0.326072577, 0.326072577, 0.173927423 };
 
 /***  View2D.c  **************************************************************/
 
@@ -46,7 +71,7 @@ const R8 gw4[4] = { 0.173927423, 0.326072577, 0.326072577, 0.173927423 };
  *  |  ...   |  ...   |  ...   |  ...   | ...
  */
 
-void View2D( SRFDAT2D *srf, R8 **AF, VFCTRL *vfCtrl )
+void View2D( SRFDAT2D *srf, double **AF, View2DControlData *vfCtrl )
 /* srf    - surface / vertex data for all surfaces
  * AF     - array of Area * F values
  * vfCtrl - control values consolitated into struct
@@ -63,7 +88,7 @@ void View2D( SRFDAT2D *srf, R8 **AF, VFCTRL *vfCtrl )
            srfM,   /* column M surface */
           *srf1,   /* view from srf1 to srf2 -- */
           *srf2;   /*   one is srfN, the other is srfM. */
-  R8 calcAF;       /* computed AF value */
+  double calcAF;       /* computed AF value */
   UX nAF0=0,       /* number of AF which must equal 0 */
      nAFnO=0,      /* number of AF without obstructing surfaces */
      nAFwO=0,      /* number of AF with obstructing surfaces */
@@ -135,7 +160,7 @@ void View2D( SRFDAT2D *srf, R8 **AF, VFCTRL *vfCtrl )
         if( nProb )
           {
           memcpy( probableObstr+1, possibleObstr+1, nProb*sizeof(IX) );
-          nProb = BoxTest( &srfN, &srfM, srf,
+          nProb = BoxTest2D( &srfN, &srfM, srf,
             probableObstr, orientObstr, nProb );
           if( nProb < 0 )
             mayView = 0;
@@ -147,9 +172,9 @@ void View2D( SRFDAT2D *srf, R8 **AF, VFCTRL *vfCtrl )
         {
         if( vfCtrl->nProbObstr>0 )
           {
-          VERTEX2D *v1, *v2;    /* vertices of surface 1 */
-          R8 minArea;           /* area of smaller surface */
-          if( ProjectionDirection( &srfN, &srfM, srf,
+          Vec2 *v1, *v2;    /* vertices of surface 1 */
+          double minArea;           /* area of smaller surface */
+          if( ProjectionDirection2D( &srfN, &srfM, srf,
               probableObstr, orientObstr, vfCtrl ) > 0 )
             { srf1 = &srfN; srf2 = &srfM; }
           else                  /* set direction of projection */
@@ -206,7 +231,7 @@ void View2D( SRFDAT2D *srf, R8 **AF, VFCTRL *vfCtrl )
   fprintf( _ulog, "Surface pairs with obstructing surfaces:   %6u\n", nAFwO );
   if( nAFwO>0 )
     fprintf( _ulog, "Average number of obstructions per view:   %6.2f\n",
-             (R8)nObstr / (R8)nAFwO );
+             (double)nObstr / (double)nAFwO );
   fprintf( _ulog, "Adaptive integration evaluations used: %10lu\n",
     vfCtrl->usedVObs );
   fprintf( _ulog, "Adaptive integration evaluations lost: %10lu\n",
@@ -240,14 +265,14 @@ void View2D( SRFDAT2D *srf, R8 **AF, VFCTRL *vfCtrl )
  *  ( 4 sqrt, 9 *, 14 +- typical )
  */
 
-R8 FA1A2( VERTEX2D *v1a, VERTEX2D *v1b, VERTEX2D *v2a, VERTEX2D *v2b )
+double FA1A2( Vec2 *v1a, Vec2 *v1b, Vec2 *v2a, Vec2 *v2b )
 /*  v1a  coordinates of first vertex of surface A1
  *  v1b  coordinates of second vertex of surface A1
  *  v2a  coordinates of first vertex of surface A2
  *  v2b  coordinates of second vertex of surface A2 */
   {
-  VECTOR2D v;
-  R8 AF;
+  Vec2 v;
+  double AF;
                                         /* crossed strings */
   v.x = v2a->x - v1a->x;
   v.y = v2a->y - v1a->y;
@@ -277,7 +302,7 @@ R8 FA1A2( VERTEX2D *v1a, VERTEX2D *v1b, VERTEX2D *v2a, VERTEX2D *v2b )
 
 /*  Clip line  v1 -- v2 so none of it is above y = yc  */
 
-IX ClipYC( VERTEX2D *v1, VERTEX2D *v2, const R8 yc )
+IX ClipYC( Vec2 *v1, Vec2 *v2, const double yc )
 /*  v1,v2;  vertices of endpoints
  *  yc;  clipping plane */
   {
@@ -309,23 +334,23 @@ IX ClipYC( VERTEX2D *v1, VERTEX2D *v2, const R8 yc )
  *  combined.  
  */
 
-R8 ViewObstructed( VERTEX2D *v1, VFCTRL *vfCtrl )
+double ViewObstructed2D( Vec2 *v1, View2DControlData *vfCtrl )
   {
   LINE base;  /* coordinates of base line */
   LINE new;   /* coordinates of new line */
   LINE used;  /* pointer to first used line */
   LINE free;  /* pointer to first free line */
   LINE *pl;   /* pointer to line data */
-  R8 eps;     /* small value used to prevent accumulation of lines
+  double eps;     /* small value used to prevent accumulation of lines
                   separated by very small spaces */
   IX flag;    /* action taken:  FLAG = 1:  no action;  FLAG = 2:  new line
                   added to list;  FLAG = 3:  lines cover the base;
                   FLAG = 4:  insufficient array space */
-  VERTEX2D vs1, vs2; /* vertices of shadin surface / shadow */
+  Vec2 vs1, vs2; /* vertices of shadin surface / shadow */
   SRFDAT2D *ps;  /* pointer to surface */
-  R8 x1, x2;  /* ends of projected shadow */
-  R8 yc;      /* height of clipping plane */
-  R8 dF;      /* shape factor from point to shadow */
+  double x1, x2;  /* ends of projected shadow */
+  double yc;      /* height of clipping plane */
+  double dF;      /* shape factor from point to shadow */
   IX shadow;  /* true if base is covered by a shadow */
   IX j;
 
@@ -410,7 +435,7 @@ R8 ViewObstructed( VERTEX2D *v1, VFCTRL *vfCtrl )
 
   for( pl=used.next; pl; pl=pl->next )
     {
-    R8 dFs;
+    double dFs;
     vs1.x = pl->xr;
     vs2.x = pl->xl;
     vs1.y = vs2.y = 0.0;
@@ -439,14 +464,14 @@ R8 ViewObstructed( VERTEX2D *v1, VFCTRL *vfCtrl )
  *  ( 2 sqrt, 2 /, 9 *, 12 +- typical )
  */
 
-R8 FdA1A2( VERTEX2D *v1, DIRCOS *u1, VERTEX2D *v2a, VERTEX2D *v2b )
+double FdA1A2( Vec2 *v1, DirCos2 *u1, Vec2 *v2a, Vec2 *v2b )
 /*  v1   coordinates of surface (point) dA1
  *  u1   components of unit vector normal to surface dA1
  *  v2a  coordinates of first vertex of surface A2
  *  v2b  coordinates of second vertex of surface A2 */
   {
-  VECTOR2D v; /* vector v1-->v2a or v1-->v2b */
-  R8 vlen,    /* length of v */
+  Vec2 v; /* vector v1-->v2a or v1-->v2b */
+  double vlen,    /* length of v */
    dF=0.0;    /* accumulated value of FdA1A2 */
 
   v.x = v2a->x - v1->x;
@@ -504,7 +529,7 @@ R8 FdA1A2( VERTEX2D *v1, DIRCOS *u1, VERTEX2D *v2a, VERTEX2D *v2b )
  *                              XOL------XOR
  */
 
-IX LineOverlap( LINE *base, LINE *new, LINE *used, LINE *free, const R8 eps )
+IX LineOverlap( LINE *base, LINE *new, LINE *used, LINE *free, const double eps )
 /*  base;  coordinates of base line
  *  new;   coordinates of new line
  *  used;  pointer to list of old (used) lines
@@ -586,16 +611,16 @@ finish:
 
 /*  2-D adaptive view factor calculation.  Recursive calculation!  */
 
-R8 ViewAdapt2D( VERTEX2D *v1, VERTEX2D *v2, R8 area, IX level, VFCTRL *vfCtrl )
+double ViewAdapt2D( Vec2 *v1, Vec2 *v2, double area, IX level, View2DControlData *vfCtrl )
 /* v1,v2 - endpoints of surface 1;
  * area  - area of surface (distance between endpoints);
  * vfCtrl->maxRecursion - recursion limit. */
   {
-  R8 AF3,      /* AF values for 3-  */
+  double AF3,      /* AF values for 3-  */
      AF4;      /* and 4-point integration */
   IX cnvg=0;   /* true if both AF.. sufficiently close */
-  VERTEX2D vp; /* coordinates of view point */
-  R8 dx, dy;
+  Vec2 vp; /* coordinates of view point */
+  double dx, dy;
   IX n;        /* subsurface number */
 
   if( level >= vfCtrl->minRecursion )
@@ -606,13 +631,13 @@ R8 ViewAdapt2D( VERTEX2D *v1, VERTEX2D *v2, R8 area, IX level, VFCTRL *vfCtrl )
       {
       vp.x = v1->x + gx3[n] * dx;
       vp.y = v1->y + gx3[n] * dy;
-      AF3 += gw3[n] * area * ViewObstructed( &vp, vfCtrl );
+      AF3 += gw3[n] * area * ViewObstructed2D( &vp, vfCtrl );
       }
     for( AF4=0.0,n=0; n<4; n++ )
       {
       vp.x = v1->x + gx4[n] * dx;
       vp.y = v1->y + gx4[n] * dy;
-      AF4 += gw4[n] * area * ViewObstructed( &vp, vfCtrl );
+      AF4 += gw4[n] * area * ViewObstructed2D( &vp, vfCtrl );
       }
     }
   else
@@ -664,77 +689,19 @@ R8 ViewAdapt2D( VERTEX2D *v1, VERTEX2D *v2, R8 area, IX level, VFCTRL *vfCtrl )
 
   }  /* end ViewAdapt2D */
 
-/***  errorf.c  **************************************************************/
-
-/*  error messages for view factor calculations  */
-
-IX errorf( IX severity, I1 *file, IX line, ... )
-/* severity;  values 0 - 3 defined below
- * file;      file name: __FILE__
- * line;      line number: __LINE__
- * ...;       string variables (up to 80 char total) */
-  {
-  va_list argp;     /* variable argument list */
-  I1 start[]=" ";
-  I1 *msg, *s;
-  static I1 *head[4] = { "  *** note *** ",
-                         "*** warning ***",
-                         " *** error *** ",
-                         " *** fatal *** " };
-  IX n=1;
-
-  if( severity >= 0 )
-    {
-    if( severity>3 ) severity = 3;
-    sprintf( _string, "%s  (file %s, line %d)\n", head[severity], sfname( file ), line );
-    fputs( "\n", stderr );
-    fputs( _string, stderr );
-    if( _ulog != NULL && _ulog != stderr )
-      {
-      fputs( _string, _ulog );
-      fflush( _ulog );
-      }
-
-    msg = start;   /* merge message strings */
-    sprintf( _string, "row %d, col %d; ", _row, _col );
-    s = _string;
-    while( *s )
-      s++;
-    va_start( argp, line );
-    while( *msg && n<80 )
-      {
-      while( *msg && n++<80 )
-        *s++ = *msg++;
-      msg = (I1 *)va_arg( argp, I1 * );
-      }
-    *s++ = '\n';
-    *s = '\0';
-    va_end( argp );
-
-    fputs( _string, stderr );
-    if( _ulog != NULL && _ulog != stderr )
-      fputs( _string, _ulog );
-    }
-
-  if( severity>2 ) exit( 1 );
-
-  return 0;
-
-  }  /*  end of errorf  */
-
 #ifdef XXX
 /***  SimpAdapt.c  ***********************************************************/
 
 /*  Compute integral by adaptive Simpson integration.
  *  This is a recursive calculation!  */
 
-R8 SimpAdapt( VERTEX2D Vold[3], R8 dFold[3], R4 length6,
-  IX level, VFCTRL *vfCtrl )
+double SimpAdapt( Vec2 Vold[3], double dFold[3], R4 length6,
+  IX level, View2DControlData *vfCtrl )
 /* length6 = (length of line) / 6.0 */
   {
-  VERTEX2D V[5];
-  R8 dF[5];
-  R8 F3,  /* F using 3-point Simpson integration */
+  Vec2 V[5];
+  double dF[5];
+  double F3,  /* F using 3-point Simpson integration */
      F5;  /* F using 5-point Simpson integration */
   IX j;
 
@@ -748,11 +715,11 @@ R8 SimpAdapt( VERTEX2D Vold[3], R8 dFold[3], R4 length6,
 
   V[1].x = V[0].x + 0.5 * (V[2].x - V[0].x);
   V[1].y = V[0].y + 0.5 * (V[2].y - V[0].y);
-  dF[1] = ViewObstructed( V+1, vfCtrl );
+  dF[1] = ViewObstructed2D( V+1, vfCtrl );
 
   V[3].x = V[2].x + 0.5 * (V[4].x - V[2].x);
   V[3].y = V[2].y + 0.5 * (V[4].y - V[2].y);
-  dF[3] = ViewObstructed( V+3, vfCtrl );
+  dF[3] = ViewObstructed2D( V+3, vfCtrl );
   length6 *= 0.5;
   F5 = (dF[0] + 4.0*dF[1] + 2.0*dF[2] + 4.0*dF[3] + dF[4]) * length6;
   vfCtrl->usedVObs += 2;
