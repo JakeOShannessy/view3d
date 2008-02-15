@@ -139,6 +139,11 @@ soqt_env.Append(
 viewer = soqt_env.Program('viewer',['viewer.cpp','render.cpp'])
 
 #------------
+# examples
+
+env.SConscript('examples/SConscript','env');
+
+#------------
 # create distribution tarball
 
 env['DISTTAR_FORMAT']='bz2'

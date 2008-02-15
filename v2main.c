@@ -69,28 +69,32 @@ int main( int argc, char **argv ){
   float eRMS=0.0;     /* RMS row error, if enclosure */
   int n, flag;
 
-  if( argv[1][0] == '?' )
-    {
-    fputs("\n\
-    VIEW2D - compute view factors for a 2D geometry.\n\n\
-      VIEW2D  input_file  output_file \n\n",
-      stderr );
-    exit( 1 );
-    }
-                /* open log file */
-  _ulog = fopen( "View2D.log", "w" );
+  if(argc < 3){
+	  fprintf(stderr,
+			"VIEW2D - compute view factors for a 2D geometry.\n"
+			"Usage: %s INFILE.vs2 OUTFILE.txt\n"
+				, argv[0]
+	  );
+  }
+
+	/* open log file */
+	_ulog = fopen( "View2D.log", "w" );
+	if(_ulog==NULL){
+		fprintf(stderr,"Unable to open logfile for writing\n");
+		exit(1);
+	}
 
   fprintf( _ulog, "Program: %s\n", argv[0] );
 
   if( argc > 1 )
     strcpy( inFile, argv[1] );
-  FindFile( "Enter name of V/S data file", inFile, "r" );
-  fprintf( _ulog, "Data file:  %s\n", inFile );
+  FindFile( "Enter name of input file (vertices/surfaces)", inFile, "r" );
+  fprintf( _ulog, "Data file:   %s\n", inFile );
 
   if( argc > 2 )
     strcpy( outFile, argv[2] );
-  FindFile( "Enter name of VF output file", outFile, "w" );
-  fprintf( _ulog, "Output file:  %s\n", outFile );
+  FindFile( "Enter name of output file (view factors)", outFile, "w" );
+  fprintf( _ulog, "Output file: %s\n", outFile );
 
   time(&bintime);
   curtime = localtime(&bintime);
@@ -410,7 +414,7 @@ void FindFile( char *msg, char *fileName, char *type )
       {
       pfile = fopen( fileName, type );
       if( pfile == NULL )
-        fprintf( stderr, "Error! Failed to open: %s\nTry again.\n", fileName );
+        fprintf( stderr, "ERROR: Failed to open '%s'. Try again...\n", fileName );
       }
     if( !pfile )        /* ask for file name */
       {
