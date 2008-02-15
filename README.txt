@@ -17,3 +17,6 @@ integration method is compared with two other common methods implemented in a
 modern computer program and found to have significant advantages in accuracy 
 and even advantages in computational speed in some cases.
 
+Details of the input file format and postprocessing steps are included
+in the file MANUAL.doc included with this source code tarball.
+
