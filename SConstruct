@@ -123,7 +123,7 @@ lib = env.SharedLibrary('view3d',srcs)
 
 prog = env.Program('view3d', ['v3main.c'], LIBS=['view3d'], LIBPATH=['#'])
 
-prog2d = env.Program('view2d', ['v2main.c'], LIBS=['view2d'], LIBPATH=['#'])
+prog2d = env.Program('view2d', ['v2main.c'], LIBS=['view3d'], LIBPATH=['#'])
 
 #------------
 # viewer program

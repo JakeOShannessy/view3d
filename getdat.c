@@ -781,4 +781,239 @@ void TestSubSrf( SRFDAT3D *srf, const int *baseSrf, View3DControlData *vfCtrl )
     }  /* end surface loop */
 
   }  /* end of TestSubSrf */
+
+/***  CountVS2D.c  ***********************************************************/
+
+/*  Determine number of vertices, number of surfaces,
+ *  control parameters, and format of the input file.  */
+
+void CountVS2D( char *title, View2DControlData *vfCtrl )
+  {
+  int c;     /* first character in line */
+  int ctrl=0;
+  int flag=0;  /* NxtWord flag: 0 for first word of first line */
+
+  vfCtrl->nRadSrf = vfCtrl->nObstrSrf = 0;
+
+  while( NxtWord( _string, flag, sizeof(_string) ) != NULL )
+    {
+    c = toupper( _string[0] );
+    switch( c )
+      {
+      case 'S':               /* surface */
+        vfCtrl->nRadSrf += 1;
+        break;
+      case 'O':               /* obstruction */
+        vfCtrl->nObstrSrf += 1;
+        break;
+      case 'V':               /* vertex */
+        vfCtrl->nVertices += 1;
+        break;
+      case 'T':               /* title */
+        NxtWord( title, 2, sizeof(_string) );
+        break;
+      case 'G':               /* geometry */
+        c = ReadIX( 0 );
+        if( c != 2 )
+          error( 2, __FILE__, __LINE__, "Invalid geometry value", "" );
+        break;
+      case 'C':               /* C run control data */
+        ctrl = 1;
+        vfCtrl->enclosure = ReadIX( 0 );
+          if( vfCtrl->enclosure ) vfCtrl->enclosure = 1;
+
+        _list = ReadIX( 0 );
+          if( _list<0 ) _list = 0;
+
+        vfCtrl->epsObstr = ReadR4( 0 );
+        if( vfCtrl->epsObstr < 1.0e-7 )
+          {
+          error( 1, __FILE__, __LINE__,
+            " obstructed convergence limited to 1e-07", "" );
+          vfCtrl->epsObstr = 1.0e-7f;
+          }
+
+        vfCtrl->maxRecursion = ReadIX( 0 );
+        if( vfCtrl->maxRecursion < 4 )
+          {
+          error( 1, __FILE__, __LINE__,
+            " maximum recursions reset to 4", "" );
+          vfCtrl->maxRecursion = 4;
+          }
+        if( vfCtrl->maxRecursion > 12 )
+          error( 1, __FILE__, __LINE__,
+            " maximum recursions may be too large", "" );
+
+        vfCtrl->minRecursion = ReadIX( 0 );
+        if( vfCtrl->minRecursion < 0 )
+         vfCtrl->minRecursion = 0;
+        if( vfCtrl->minRecursion > 2 )
+          error( 1, __FILE__, __LINE__,
+            " minimum recursions may be too large", "" );
+
+        vfCtrl->emittances = ReadIX( 0 );
+          if( vfCtrl->emittances ) vfCtrl->emittances = 1;
+        break;
+      case 'E':               /* end of data */
+        goto finish;
+      default:
+        break;
+      }
+    flag = 1;
+    }
+finish:
+  vfCtrl->nAllSrf = vfCtrl->nRadSrf + vfCtrl->nObstrSrf;
+  if( !ctrl ) error( 3, __FILE__, __LINE__,
+     "No control values in data file", "" );
+
+  }  /*  end of CountVS2D  */
+
+/***  GetVS2D.c  *************************************************************/
+
+/*  Read the 2-D surface data file */
+
+void GetVS2D( char **name, float *emit, int *base, int *cmbn,
+  SRFDAT2D *srf, View2DControlData *vfCtrl )
+  {
+  char c;       /* first character in line */
+  int nv=0;    /* number of vertices */
+  int ns=0;    /* number of surfaces */
+  int flag=0;  /* NxtWord flag: 0 for first word of first line */
+  Vec2 *xy;  /* vector of vertces [1:nVertices] */
+  int n;
+
+  error( -2, __FILE__, __LINE__, "" );  /* clear error count */
+  rewind( _unxt );
+  xy = Alc_V( 1, vfCtrl->nVertices, sizeof(Vec2), __FILE__, __LINE__ );
+
+  while( NxtWord( _string, flag, sizeof(_string) ) != NULL )
+    {
+    c = toupper( _string[0] );
+    switch( c )
+      {
+      case 'V':
+        n = ReadIX( 0 );
+        nv += 1;
+        if( n!= nv ) error( 2, __FILE__, __LINE__,
+           "Vertex out of sequence:", IntStr(n), "" );
+        xy[nv].x = ReadR4( 0 );
+        xy[nv].y = ReadR4( 0 );
+        break;
+      case 'S':
+      case 'O':
+        n = ReadIX( 0 );
+        ns += 1;
+        if( n!= ns ) error( 2, __FILE__, __LINE__,
+           "Surface out of sequence:", IntStr(n), "" );
+        if( c=='O' && n<=vfCtrl->nRadSrf ) error( 2, __FILE__, __LINE__,
+           "Obstruction surface out of sequence:", IntStr(n), "" );
+        if( c=='S' && n>vfCtrl->nRadSrf ) error( 2, __FILE__, __LINE__,
+           "Radiating surface out of sequence:", IntStr(n), "" );
+        srf[ns].nr = ns;
+        srf[ns].type = 1;
+
+        n = ReadIX( 0 );
+        if( n<=0 || n>vfCtrl->nVertices ) error( 2, __FILE__, __LINE__,
+           "Improper first vertex; surface ", IntStr(ns), "" );
+        else
+          {
+          srf[ns].v1.x = xy[n].x;
+          srf[ns].v1.y = xy[n].y;
+          }
+
+        n = ReadIX( 0 );
+        if( n<=0 || n>vfCtrl->nVertices ) error( 2, __FILE__, __LINE__,
+           "Improper second vertex; surface ", IntStr(ns), "" );
+        else
+          {
+          srf[ns].v2.x = xy[n].x;
+          srf[ns].v2.y = xy[n].y;
+          }
+
+        SetSrf2D( &srf[ns] );          /* compute area and direction cosines */
+
+        if( c=='O' ) break;
+
+        srf[ns].type = 0;            /* non-obstruction surface data */
+        n = ReadIX( 0 );              /* obstruction surface number */
+        if( n>0 )
+          srf[ns].type = -2;
+        if( n<0 || (n<=vfCtrl->nRadSrf && n>0) || n>vfCtrl->nAllSrf ) 
+          error( 2, __FILE__, __LINE__,
+           "Improper obstruction surface number:", IntStr(n), "" );
+
+        n = ReadIX( 0 );              /* base surface number */
+        base[ns] = n;
+        if( n<0 || n>vfCtrl->nRadSrf ) error( 2, __FILE__, __LINE__,
+           "Improper base surface number:", IntStr(n), "" );
+        else if( n>0 )
+          {
+          srf[ns].type = -1;
+          if( n>=ns ) error( 2, __FILE__, __LINE__, "Subsurface ", IntStr(ns),
+             " must be after base surface ", IntStr(n), "" );
+          else
+            {
+            int i;
+            for( i=ns-1; i>n; i-- )
+              if( base[i] == 0 ) break;
+            if( i != n ) error( 2, __FILE__, __LINE__, "Subsurface ", IntStr(ns),
+               " must be immediately after base surface ", IntStr(n), "" );
+            }
+          }
+
+        n = ReadIX( 0 );              /* combine surface number */
+        cmbn[ns] = n;
+        if( n>=ns ) error( 2, __FILE__, __LINE__,
+           "Must combine surface with previous surface:", IntStr(n), "" );
+        if( cmbn[ns] )
+          if( cmbn[n] ) error( 2, __FILE__, __LINE__,
+           "May not chain combined surfaces:", IntStr(n), "" );
+        if( n<0 || n>vfCtrl->nRadSrf ) error( 2, __FILE__, __LINE__,
+           "Improper combine surface number:", IntStr(n), "" );
+
+        emit[ns] = ReadR4( 0 );       /* surface emittance */
+        if( emit[ns] > 0.99901 )
+          {
+          error( 1, __FILE__, __LINE__,  " Replacing surface ", IntStr(ns),
+             " emittance (", _string, ") with 0.999", "" );
+          emit[ns] = 0.999f;
+          }
+        if( emit[ns] < 0.00099 )
+          {
+          error( 1, __FILE__, __LINE__,  " Replacing surface ", IntStr(ns),
+             " emittance (", _string, ") with 0.001", "" );
+          emit[ns] = 0.001f;
+          }
+
+        NxtWord( _string, 0, sizeof(_string) );        /* surface name */
+        strncpy( name[ns], _string, NAMELEN );
+        name[ns][NAMELEN-1] = '\0';  /* guarantee termination */
+        break;
+
+      case '/':               /* comment */
+      case '!':
+      case 'T':               /* title */
+      case 'G':               /* geometry */
+      case 'C':               /* control */
+      case 'X':               /* coordinate transformation */
+        break;
+
+      case 'E':               /* end of data */
+      case '*':
+        goto finish;
+
+      default:
+        error(1,__FILE__, __LINE__, "Undefined input identifier", "" );
+        break;
+      }
+    flag = 1;
+    }
+
+finish:
+  Fre_V( xy, 1, vfCtrl->nVertices, sizeof(Vec2), __FILE__, __LINE__ );
+  if( error( -1, __FILE__, __LINE__, "" )>0 )
+    error( 3, __FILE__, __LINE__, "Fix errors in input data", "" );
+
+  }  /*  end of GetVS2D  */
+
 

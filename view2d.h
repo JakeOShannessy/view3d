@@ -4,18 +4,9 @@
 #include "common.h"
 #include "view3d.h"
 
-/*  View2D function prototypes.  */
+/* 2-D view factor functions */
+V3D_API void View2D( SRFDAT2D *srf, double **AF, View2DControlData *vfCtrl );
 
-     /* input / output */
-void CountVS2D( char *title, View2DControlData *vfCtrl );
-void GetVS2D( char **name, float *emit, int *base, int *cmbn,
-  SRFDAT2D *srf, View2DControlData *vfCtrl );
-void SaveVF( char *fileName, char *program, char *version,
-             int format, int encl, int didemit, int nSrf,
-             float *area, float *emit, double **AF, float *vtmp );
-
-     /* 2-D view factor functions */
-void View2D( SRFDAT2D *srf, double **AF, View2DControlData *vfCtrl );
 double FA1A2( Vec2 *v1a, Vec2 *v1b, Vec2 *v2a, Vec2 *v2b );
 double FdA1A2( Vec2 *v1, DirCos2 *u1, Vec2 *v2a, Vec2 *v2b );
 int ClipYC( Vec2 *v1, Vec2 *v2, const double yc );
