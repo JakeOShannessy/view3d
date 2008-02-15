@@ -1,0 +1,25 @@
+T  TEST3:  .5x.5 square centered in 1x1 square
+! encl list eps  maxr minr emit
+C  1    2  1.e-4   6    0    0
+G  2
+!    #    x     y
+V    1    .00   .00
+V    2   1.00   .00
+V    3   1.00  1.00
+V    4    .00  1.00
+V    5    .25   .25
+V    6    .25   .75
+V    7    .75   .75
+V    8    .75   .25
+!    #   v1  v2  obs bas cmb emit  name
+S    1    2   3   0   0   0  0.90  Encl-E
+S    2    4   1   0   0   0  0.90  Encl-W
+S    3    1   2   0   0   0  0.90  Encl-S
+S    4    3   4   0   0   0  0.90  Encl-N
+S    5    7   8   0   0   0  0.90  Obst-E
+S    6    5   6   0   0   0  0.90  Obst-W
+S    7    8   5   0   0   0  0.90  Obst-S
+S    8    6   7   0   0   0  0.90  Obst-N
+/
+End of data
+
