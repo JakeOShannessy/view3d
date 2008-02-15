@@ -1,4 +1,4 @@
-/*	VIEW3D
+/*	VIEW3D OpenGL examiner/viewer
 	Copyright (C) 2008 John Pye
 
 	This program is free software; you can redistribute it and/or modify
@@ -273,23 +273,20 @@ int main(int argc, char **argv){
 	textcolor->diffuseColor.setValue(1,0,0);
 	root->addChild(textcolor);
 
-#if 1	
+	// label the faces, and give their emissivities
 	for(map<int,SbVec3f>::const_iterator mi=sfclabels.begin(); mi!=sfclabels.end(); ++mi){
-		//fprintf(stderr,"Adding label for surface %d = %f, %f, %f\n",mi->first, mi->second[0], mi->second[1], mi->second[2]);
-		SoSeparator *s = new SoSeparator;
-		SoTranslation *tr = new SoTranslation;
-		tr->translation = mi->second;
-		s->addChild(tr);
-		SoText2 *txt = new SoText2;
 		stringstream ss;
 		ss << name[mi->first] << " (e=" << emitt[mi->first] << ")";
-		//fprintf(stderr,"mi->first = %d\n", mi->first);
-		txt->string = SbString(ss.str().c_str());
-		//fprintf(stderr,"Label = %s", ss.str().c_str());
-		s->addChild(txt);
-		root->addChild(s);
+		root->addChild(text(mi->second,ss.str().c_str(),RED));
 	}		
-#endif
+
+	// label the vertices
+	for(int i=0; i<CD.nVertices; ++i){
+		SbVec3f P(xyz[i+1].x, xyz[i+1].y, xyz[i+1].z);
+		stringstream ss;
+		ss << (i+1) << endl;
+		root->addChild(text(P,ss.str().c_str(),CYAN));
+	}
 
 	// add axes
 	root->addChild(axes());

@@ -1,0 +1,16 @@
+T  TEST1:  4 surfaces - simple enclosure - no obstructions
+! encl list eps  maxr minr emit
+C  1    2  1.e-5   6    0    0
+G  2
+!   #    x     y
+V   1    .00   .00
+V   2   2.00   .00
+V   3   2.00  1.00
+V   4    .00  1.00
+!   #  v1  v2  obs bas cmb emit  name
+S   1   1   2   0   0   0  0.90  surface-1
+S   2   2   3   0   0   0  0.90  surface-2
+S   3   3   4   0   0   0  0.90  surface-3
+S   4   4   1   0   0   0  0.90  surface-4
+End of data
+
