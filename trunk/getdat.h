@@ -14,5 +14,10 @@ V3D_API void GetVS3Da( char **name, float *emit, int *base, int *cmbn
 	, SRFDAT3D *srf, Vec3 *xyz, View3DControlData *vfCtrl
 );
 
+V3D_API void CountVS2D( char *title, View2DControlData *vfCtrl );
+
+V3D_API void GetVS2D( char **name, float *emit, int *base, int *cmbn,
+  SRFDAT2D *srf, View2DControlData *vfCtrl );
+
 #endif
 

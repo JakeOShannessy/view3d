@@ -83,7 +83,7 @@ int BoxTest2D( SRFDAT2D *srfN, SRFDAT2D *srfM, SRFDAT2D *srf,
   sideB.v1.y = srfM->v2.y;
   sideB.v2.x = srfN->v1.x;
   sideB.v2.y = srfN->v1.y;
-  SetSrf( &sideB );
+  SetSrf2D( &sideB );
   if( sideB.area < FLT_EPSILON ) bdegen = 1;
 
   izero1( 12, u );
