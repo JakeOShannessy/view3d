@@ -66,6 +66,7 @@ int main(){
 		for(unsigned i=0; i<ntubes; ++i){
 			cerr << "tube = " << i << endl;
 			SbVec2d C = L + i * delta;
+			unsigned vfirst = vcurrent;
 			for(unsigned j=0; j<nsegs; ++j){
 				double phi = dtheta * j;
 				SbVec2d R = C + r * SbVec2d(cos(phi), sin(phi));
@@ -73,16 +74,19 @@ int main(){
 				ss << "p" << i << "s" << j;
 				Surface2D S1;
 				if(j==nsegs-1){
-					S1 = Surface2D(vcurrent, 0, eps_pipe);
+					S1 = Surface2D(vcurrent, vfirst, eps_pipe);
 				}else{
 					S1 = Surface2D(vcurrent, vcurrent+1, eps_pipe);
 				}
 				cerr << "S1.epsilon = " << S1.epsilon << endl;
 				surfaces[ss.str()] = S1;
+				cerr << "adding vcurrent = " << vcurrent << endl;
 				vertices[vcurrent++] = R;
 			}
 		}
 	}
+
+	//vertices[0] = SbVec2d(-1,-1);
 
 	for(map<string,Surface2D>::const_iterator i = surfaces.begin(); i!=surfaces.end(); ++i){
 		cerr << i->first << " (" << i->second.from << "--" << i->second.to << ") = (" 
