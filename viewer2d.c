@@ -220,8 +220,11 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 	width  = widget->allocation.width;
 	height = widget->allocation.height;
 
-	float sx = dx/width; /* true-length per pixel */
-	float sy = dy/height;
+	// margins
+	float mx = 20, my = 20;
+
+	float sx = dx/(width - 2*mx); /* true-length per pixel */
+	float sy = dy/(height - 2*my);
 
 	float s = sx;
 	if(sy > sx)s = sy;
@@ -236,10 +239,15 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 	cairo_set_source_rgb(cr, 1,1,1);
 	cairo_paint(cr);
 
-	cairo_translate(cr, 0,0);
-	cairo_scale (cr, 1./s, 1./s);
+	float cx = 0.5*(maxx+minx);
+	float cy = 0.5*(maxy+miny);
+	fprintf(stderr,"cx = %f, cy = %f",cx,cy);
+	cairo_translate(cr, width/2. - cx/s, height/2. + cy/s);
 
-	cairo_set_line_width (cr, s);
+	/* negate y scaling so that up is positive */
+	cairo_scale (cr, 1./s, -1./s);
+
+	cairo_set_line_width (cr, 2*s);
 
 	cairo_set_source_rgb (cr, 0, 0, 0);
 
