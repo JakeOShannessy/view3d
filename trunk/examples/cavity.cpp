@@ -32,7 +32,7 @@ int main(){
 	double D_cav = 0.200;
 	double theta = PI/180. * 32;
 
-	double ntubes = 12, nsegs = 8;
+	double ntubes = 12, nsegs = 5;
 	double d = 0.0422;
 	double wbank = 0.500;
 	double vsep = d;
@@ -44,10 +44,10 @@ int main(){
 	map<string,Surface2D> surfaces;
 
 	// create the outer vertices
-	vertices[1] = SbVec2d(-W_abs/2.,0);
-	vertices[2] = SbVec2d(+W_abs/2.,0);
-	vertices[3] = SbVec2d(+B_cav/2.,-D_cav);
-	vertices[4] = SbVec2d(-B_cav/2.,-D_cav);
+	vertices[1] = SbVec2d(+W_abs/2.,0); /* A */
+	vertices[2] = SbVec2d(-W_abs/2.,0); /* B */
+	vertices[3] = SbVec2d(-B_cav/2.,-D_cav); /* C */
+	vertices[4] = SbVec2d(+B_cav/2.,-D_cav); /* D */
 
 	// create the cavity outer surfaces
 	surfaces["AB"] = Surface2D(1, 2, 0.4);
@@ -65,10 +65,10 @@ int main(){
 		double r = d / 2.;
 		for(unsigned i=0; i<ntubes; ++i){
 			cerr << "tube = " << i << endl;
-			SbVec2d C = L + i * delta;
+			SbVec2d C = L - i * delta;
 			unsigned vfirst = vcurrent;
 			for(unsigned j=0; j<nsegs; ++j){
-				double phi = dtheta * j;
+				double phi = -dtheta * j;
 				SbVec2d R = C + r * SbVec2d(cos(phi), sin(phi));
 				stringstream ss;
 				ss << "p" << i << "s" << j;
