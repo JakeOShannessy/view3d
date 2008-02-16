@@ -20,6 +20,8 @@
 #include "polygn.h"
 #include "viewobs.h"
 #include "ctrans.h"
+#include "heap.h"
+#include "test2d.h"
 
 #define PI 3.141592653589793238
 #define deg2rad(x)  ((x)*PI/180.) /* angle: degrees -> radians */

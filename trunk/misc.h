@@ -32,7 +32,7 @@ char *NxtWord( char *str, int flag, int maxlen );
 
 float ReadR4( int flag );
 
-char *sfname( char* longfilename );
+const char *sfname(const char* longfilename);
 
 #endif
 

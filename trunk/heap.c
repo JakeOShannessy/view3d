@@ -78,13 +78,13 @@ MEMLIST *_memList=NULL;
  *  @param file   name of file for originating call.
  *  @param line   line in file.
 */
-void *Alc_E( long length, char *file, int line ){
+void *Alc_E( long length, const char *file, int line ){
   unsigned char *p;     // pointer to allocated memory
 #if( MEMTEST > 0 )
   unsigned long *pt;    // pointer to heap guard bytes
 # if( MEMTEST > 1 )
   MEMLIST *pml;
-  char *fname;
+  const char *fname;
 # endif
 #endif
 
@@ -155,7 +155,7 @@ void *Alc_E( long length, char *file, int line ){
  *  @param file   name of file for originating call.
  *  @param line   line in file.
 */
-int Chk_E( void *pm, unsigned length, char *file, int line ){
+int Chk_E( void *pm, unsigned length, const char *file, int line ){
   int status=0;
 #if( MEMTEST > 0 )   // test guard bytes
   unsigned char *p;     // pointer to allocated memory
@@ -218,7 +218,7 @@ int Chk_E( void *pm, unsigned length, char *file, int line ){
 	@param file;   name of file for originating call.
 	@param line;   line in file.  
 */
-void *Fre_E( void *pm, unsigned length, char *file, int line ){
+void *Fre_E( void *pm, unsigned length, const char *file, int line ){
   unsigned char *p=pm;     // pointer to allocated memory
 #if( MEMTEST > 1 )
   MEMLIST *pml, *pmlt=NULL;
@@ -368,7 +368,7 @@ typedef struct memblock   // block of memory for Alc_EC() allocation
   long dataOffset;  // offset to free space
 } MEMBLOCK;
 
-void *Alc_EC( char **block, long size, char *file, int line ){
+void *Alc_EC( char **block, long size, const char *file, int line ){
 /*  block;  pointer to current memory block.
  *  size;   size (bytes) of structure being allocated.
  *  file;   name of file for originating call.
@@ -425,7 +425,7 @@ void *Alc_EC( char **block, long size, char *file, int line ){
  *    char *_ms;    // memory block for small structures
  *    _ms = (char *)alc_eci( 2000, "ms-block" );  */
 
-void *Alc_ECI( long size, char *file, int line )
+void *Alc_ECI( long size, const char *file, int line )
 /*  size;   size (bytes) of block being allocated.
  *  file;   name of file for originating call.
  *  line;   line in file. */
@@ -453,7 +453,7 @@ void *Alc_ECI( long size, char *file, int line )
 
 /*  Check data blocks allocated by Alc_EC.  */
 
-void Chk_EC( void *block, char *file, int line )
+void Chk_EC( void *block, const char *file, int line )
 /*  block;  pointer to current (last in list) memory block. */
   {
   int status=0;
@@ -505,7 +505,7 @@ void Chk_EC( void *block, char *file, int line )
 /*  Clear (but do not free) blocks allocated by Alc_EC.
  *  Return pointer to first block in linked list.  */
 
-void *Clr_EC( void *block, char *file, int line )
+void *Clr_EC( void *block, const char *file, int line )
 /*  block;  pointer to current (last in list) memory block. */
   {
   unsigned char *p;      /* pointer to the block */
@@ -533,7 +533,7 @@ void *Clr_EC( void *block, char *file, int line )
 
 /*  Free blocks allocated by Alc_EC.  */
 
-void *Fre_EC( void *block, char *file, int line )
+void *Fre_EC( void *block, const char *file, int line )
 /*  block;  pointer to current memory block.
  *  file;   name of file for originating call.
  *  line;   line in file. */
@@ -572,7 +572,7 @@ void *Fre_EC( void *block, char *file, int line )
  *  compliance for min_index = 1; a more general method is used here which
  *  is activated by #define ANSIOFFSET 1  (applies when min_index > 0)  */
 
-void *Alc_V( int min_index, long max_index, int size, char *file, int line )
+void *Alc_V( int min_index, long max_index, int size, const char *file, int line )
 /*  min_index;  minimum vector index:  vector[min_index] valid.
  *  max_index;  maximum vector index:  vector[max_index] valid.
  *  size;   size (bytes) of one data element.
@@ -635,7 +635,7 @@ void *Alc_V( int min_index, long max_index, int size, char *file, int line )
 
 /*  Check a vector allocated by Alc_V().  */
 
-void Chk_V( void *v, int min_index, int max_index, int size, char *file, int line )
+void Chk_V( void *v, int min_index, int max_index, int size, const char *file, int line )
 /*  v;      pointer to allocated vector.
  *  min_index;  minimum vector index.
  *  max_index;  maximum vector index.
@@ -675,7 +675,7 @@ void Chk_V( void *v, int min_index, int max_index, int size, char *file, int lin
 
 /*  Clear (zero all elements of) a vector created by Alc_V( ).  */
 
-void Clr_V( void *v, int min_index, int max_index, int size, char *file, int line )
+void Clr_V( void *v, int min_index, int max_index, int size, const char *file, int line )
 /*  min_index;  minimum vector index:  vector[min_index] valid.
  *  max_index;  maximum vector index:  vector[max_index] valid.
  *  size;   size (bytes) of one data element.
@@ -696,7 +696,7 @@ void Clr_V( void *v, int min_index, int max_index, int size, char *file, int lin
 
 /*  Free pointer to a vector allocated by Alc_V().  */
 
-void *Fre_V( void *v, int min_index, int max_index, int size, char *file, int line )
+void *Fre_V( void *v, int min_index, int max_index, int size, const char *file, int line )
 /*  v;      pointer to allocated vector.
  *  min_index;  minimum vector index.
  *  max_index;  maximum vector index.
@@ -752,7 +752,7 @@ void *Fre_V( void *v, int min_index, int max_index, int size, char *file, int li
 	@param line           line in file.
 */
 void *Alc_MC( int min_row_index, int max_row_index, int min_col_index,
-              int max_col_index, int size, char *file, int line
+              int max_col_index, int size, const char *file, int line
 ){
   // prow - vector of pointers to rows of M
   int nrow = max_row_index - min_row_index + 1;    // number of rows [i]
@@ -781,7 +781,7 @@ void *Alc_MC( int min_row_index, int max_row_index, int min_col_index,
 #if( MEMTEST > 0 )
 /** Check a matrix allocated by Alc_MC().  */
 void Chk_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
-             int max_col_index, int size, char *file, int line 
+             int max_col_index, int size, const char *file, int line 
 ){
   int nrow = max_row_index - min_row_index + 1;
   int tot_row_index = min_row_index + nrow - 1;
@@ -801,7 +801,7 @@ void Chk_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
 	Clear (zero all elements of) a matrix created by Alc_MC( ).
 */
 void Clr_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
-             int max_col_index, int size, char *file, int line 
+             int max_col_index, int size, const char *file, int line 
 ){
   int nrow = max_row_index - min_row_index + 1;
   int ncol = max_col_index - min_col_index + 1;
@@ -822,7 +822,7 @@ void Clr_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
 	Free pointer to a matrix allocated by Alc_MC().
 */
 void *Fre_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
-             int max_col_index, int size, char *file, int line 
+             int max_col_index, int size, const char *file, int line 
 ){
   int nrow = max_row_index - min_row_index + 1;
   int tot_row_index = min_row_index + nrow - 1;
@@ -862,7 +862,7 @@ void *Fre_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
  *  @param file;   name of file for originating call.
  *  @param line;   line in file.
 */
-void *Alc_MSC( int min_index, int max_index, int size, char *file, int line){
+void *Alc_MSC( int min_index, int max_index, int size, const char *file, int line){
   // prow - vector of pointers to rows of M
   char **prow = (char **)Alc_V( min_index, max_index, sizeof(char *), file, line );
 
@@ -886,7 +886,7 @@ void *Alc_MSC( int min_index, int max_index, int size, char *file, int line){
 /**
 	Check a symmetric matrix allocated by Alc_MSC().
 */
-void Chk_MSC( void *m, int min_index, int max_index, int size, char *file, int line )
+void Chk_MSC( void *m, int min_index, int max_index, int size, const char *file, int line )
 {
   int nrow = max_index - min_index + 1;
   int nval = nrow * (nrow + 1) / 2;
@@ -903,7 +903,7 @@ void Chk_MSC( void *m, int min_index, int max_index, int size, char *file, int l
 /**
 	Clear (zero all elements of) a symmetric matrix created by Alc_MSC( ).
 */
-void Clr_MSC( void *m, int min_index, int max_index, int size, char *file, int line){
+void Clr_MSC( void *m, int min_index, int max_index, int size, const char *file, int line){
   int nrow = max_index - min_index + 1;
   int nval = nrow * (nrow + 1) / 2;
   int tot_index = min_index + nval - 1;
@@ -921,7 +921,7 @@ void Clr_MSC( void *m, int min_index, int max_index, int size, char *file, int l
 	Free a symmetric matrix allocated by Alc_MSC.
 	param v      pointer to allocated vector. (???)
 */
-void *Fre_MSC( void *m, int min_index, int max_index, int size, char *file, int line){
+void *Fre_MSC( void *m, int min_index, int max_index, int size, const char *file, int line){
   int nrow = max_index - min_index + 1;
   int nval = nrow * (nrow + 1) / 2;
   int tot_index = min_index + nval - 1;
@@ -956,7 +956,7 @@ void *Fre_MSC( void *m, int min_index, int max_index, int size, char *file, int 
  *  size;   size (bytes) of one data element.
  *  name;   name of variable being allocated.
  */
-void *Alc_MSR( int min_index, int max_index, int size, char *file, int line ){
+void *Alc_MSR( int min_index, int max_index, int size, const char *file, int line ){
   char **p;  /*  pointer to the array of row pointers  */
   int i;     /* row number */
   int j;     /* column number */
@@ -977,7 +977,7 @@ void *Alc_MSR( int min_index, int max_index, int size, char *file, int line ){
 
 #if( MEMTEST > 0 )
 /*  Check a symmetric matrix allocated by Alc_MSR().  */
-void Chk_MSR(void *m, int min_index, int max_index, int size, char *file, int line){
+void Chk_MSR(void *m, int min_index, int max_index, int size, const char *file, int line){
   char **p;  /*  pointer to the array of row pointers  */
   int i;     /* row number */
   int j;     /* column number */
@@ -991,7 +991,7 @@ void Chk_MSR(void *m, int min_index, int max_index, int size, char *file, int li
 #endif
 
 /*  Clear (zero all elements of) a symmetric matrix created by Alc_MSR( ).  */
-void Clr_MSR(void *m, int min_index, int max_index, int size, char *file, int line){
+void Clr_MSR(void *m, int min_index, int max_index, int size, const char *file, int line){
   char **p;  /*  pointer to the array of row pointers  */
   int i;     /* row number */
   int j;     /* column number */
@@ -1013,7 +1013,7 @@ void Clr_MSR(void *m, int min_index, int max_index, int size, char *file, int li
  *  @param size      size (bytes) of one data element.
  *  @param name      name of variable being freed.
 */
-void *Fre_MSR( void *v, int min_index, int max_index, int size, char *file, int line ){
+void *Fre_MSR( void *v, int min_index, int max_index, int size, const char *file, int line ){
   char **p;  /*  pointer to the array of row pointers  */
   int i;     /* row number */
   int j;     /* column number */

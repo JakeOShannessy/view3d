@@ -32,13 +32,10 @@ FILE *_uout; /* output file */
 
 void FindFile( char *msg, char *name, char *type );
 
-static float ReportAF(const int nSrf, const int encl, const char *title, const char **name,
-  const float *area, const float *emit, const int *base, double **AF, float *eMax
+static float ReportAF(const int nSrf, const int encl, const char *title
+	, char * const *const name
+	, const float *area, const float *emit, const int *base, double **AF, float *eMax
 );
-
-float ReportAF( const int nSrf, const int encl, const char *title, const char **name,
-  const float *area, const float *emit, const int *base, double **AF, float *eMax );
-
 
 /*------------------------------------------------------------------------------
   VIEW2D driver
@@ -303,9 +300,10 @@ int main( int argc, char **argv ){
 
 /***  ReportAF.c  ************************************************************/
 
-float ReportAF( const int nSrf, const int encl, const char *title, const char **name,
-  const float *area, const float *emit, const int *base, double **AF, float *eMax )
-  {
+float ReportAF(const int nSrf, const int encl, const char *title
+	, char *const *const name, const float *area, const float *emit, const int *base
+	, double **AF, float *eMax 
+){
   int n;    /* row */
   int m;    /* column */
   float err;  /* error values assuming enclosure */
