@@ -32,7 +32,7 @@ int main(){
 	double D_cav = 0.200;
 	double theta = PI/180. * 32;
 
-	double ntubes = 12, nsegs = 5;
+	double ntubes = 12, nsegs = 8;
 	double d = 0.0422;
 	double wbank = 0.500;
 	double vsep = d;
@@ -65,7 +65,7 @@ int main(){
 		double r = d / 2.;
 		for(unsigned i=0; i<ntubes; ++i){
 			cerr << "tube = " << i << endl;
-			SbVec2d C = L - i * delta;
+			SbVec2d C = L + i * delta;
 			unsigned vfirst = vcurrent;
 			for(unsigned j=0; j<nsegs; ++j){
 				double phi = -dtheta * j;
