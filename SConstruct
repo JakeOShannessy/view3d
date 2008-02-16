@@ -8,7 +8,7 @@ else:
 	deftool = ['default']
 
 env = Environment(
-	tools=deftool + ['disttar','soqt']
+	tools=deftool + ['disttar','soqt','gtk']
 	,toolpath=['scons']
 )
 
@@ -126,7 +126,7 @@ prog = env.Program('view3d', ['v3main.c'], LIBS=['view3d'], LIBPATH=['#'])
 prog2d = env.Program('view2d', ['v2main.c'], LIBS=['view3d'], LIBPATH=['#'])
 
 #------------
-# viewer program
+# 3D viewer program
 
 soqt_env = env.Copy()
 soqt_env.Append(
@@ -137,6 +137,19 @@ soqt_env.Append(
 )
 
 viewer = soqt_env.Program('viewer',['viewer.cpp','render.cpp'])
+
+#------------
+# 2D viewer program
+
+gtk_env = env.Copy()
+gtk_env.Append(
+	CPPPATH = env.get('GTK_CPPPATH')
+	, LIBS = ['view3d'] + env.get('GTK_LIBS')
+	, LIBPATH = ['#'] + env.get('GTK_LIBPATH')
+	, CPPDEFINES = env.get('GTK_CPPDEFINES')
+)
+
+viewer2d = gtk_env.Program('viewer2d',['viewer2d.c'])
 
 #------------
 # examples
