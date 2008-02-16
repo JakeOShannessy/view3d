@@ -169,19 +169,17 @@ int error( int severity, const char *file, const int line, ... ){
 
 /*  Return pointer to file name from the full path name.  */
 
-char *sfname( char* fullpath ){
-  char *name=fullpath, *c;  // allow for name == fullpath
+const char *sfname(const char* fullpath){
+	const char *name=fullpath, *c;  // allow for name == fullpath
 
-  for( c=fullpath; *c; c++ )  // find last dir char before name
-    {
-    if( *c == '/' ) name = c+1;
-    if( *c == '\\' ) name = c+1;
-    if( *c == ':' ) name = c+1;
-    }
-
-  return name;
-
+	for( c=fullpath; *c; c++ ){  // find last dir char before name
+		if( *c == '/' ) name = c+1;
+		if( *c == '\\' ) name = c+1;
+		if( *c == ':' ) name = c+1;
+	}
+	return name;
 }  /* end sfname */
+
 
 #if( __GNUC__ )
 #include <unistd.h> // prototypes: getcwd
