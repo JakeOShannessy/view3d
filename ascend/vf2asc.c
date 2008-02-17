@@ -75,7 +75,7 @@ int main(int argc, char **argv){
 	}
 	
 	fprintf(of,"REQUIRE \"johnpye/cavity.a4c\";\n\n");
-	fprintf(of,"MODEL cavity_view3d REFINES cavity_base;\n");
+	fprintf(of,"MODEL view3d REFINES cavity_base;\n");
 
 	fprintf(of,"\t(* surface names *)\n");
 	fprintf(of,"\tn :== [");
@@ -121,9 +121,12 @@ int main(int argc, char **argv){
 		fprintf(of,"\tA['%d'] := %0.8g {m};\n",i,V->area[i]);
 	}
 	fprintf(of,"\n\t(* view factors *)\n");
+	fprintf(of,"\tF[n][n] := 0;\n");
 	for(i=1; i<=V->nsrf; ++i){
 		for(j=1; j<=V->nsrf; ++j){
-			fprintf(of,"\tF['%d']['%d'] := %0.8g;\n",i,j,V->F[i][j]);
+			if(V->F[i][j]!=0.0){
+				fprintf(of,"\tF['%d']['%d'] := %0.8g;\n",i,j,V->F[i][j]);
+			}
 		}
 	}
 	fprintf(of,"\n\t(* emissivities *)\n");
@@ -131,7 +134,7 @@ int main(int argc, char **argv){
 		fprintf(of,"\teps['%d'] := %0.7g;\n",i,V->emissivity[i]);
 	}
 	fprintf(of,"END values;\n");
-	fprintf(of,"END cavity_view3d;\n");
+	fprintf(of,"END view3d;\n");
 
 	if(outfile){
 		fclose(of);
