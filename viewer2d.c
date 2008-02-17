@@ -5,7 +5,9 @@
 
 	Based on cairo-demo/gtk/hello.c by Øvyind Kolås.
 
-	Should compile/run on Windows providing you have GTK+ installed.
+	Only so far developed/tested on Windows, but should build/run fine on 
+	Windows provided you have a recent version GTK+ (developer version)
+	installed.
 */
 
 #include "view2d.h"
@@ -229,9 +231,9 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 	float s = sx;
 	if(sy > sx)s = sy;
 	
-	fprintf(stderr,"minx = %f, maxx = %f\n", minx, maxx);
-	fprintf(stderr,"miny = %f, maxy = %f\n", miny, maxy);
-	fprintf(stderr,"s = %f\n",s);
+	//fprintf(stderr,"minx = %f, maxx = %f\n", minx, maxx);
+	//fprintf(stderr,"miny = %f, maxy = %f\n", miny, maxy);
+	//fprintf(stderr,"s = %f\n",s);
 
 	cr = gdk_cairo_create (widget->window);
 
@@ -241,7 +243,7 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 
 	float cx = 0.5*(maxx+minx);
 	float cy = 0.5*(maxy+miny);
-	fprintf(stderr,"cx = %f, cy = %f",cx,cy);
+	//fprintf(stderr,"cx = %f, cy = %f",cx,cy);
 	cairo_translate(cr, width/2. - cx/s, height/2. + cy/s);
 
 	/* negate y scaling so that up is positive */
