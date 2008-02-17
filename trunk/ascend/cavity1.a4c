@@ -1,0 +1,35 @@
+REQUIRE "view3d.a4c";
+
+MODEL cavity1 REFINES view3d;
+	h IS_A heat_transfer_coefficient;
+	T_amb IS_A temperature;
+	q['3'] = h * A['3'] * (T['3'] - T_amb);
+METHODS
+METHOD on_load;
+	RUN reset;
+	RUN values;
+END on_load;
+METHOD specify;
+	RUN view3d::specify;
+	FIX T[n];
+	FREE q[n];
+	FREE T['1','2','3','4'];
+	FIX q['1','2','4'];
+	FIX T_amb;
+	FIX h;
+END specify;
+METHOD values;
+	RUN view3d::values;
+	T[n] := 400 {K};
+	
+	q['1'] := 0 {W/m};
+	q['2'] := 0 {W/m};
+	q['4'] := 0 {W/m};
+	(* q['3'] by external convection *)
+
+	T_amb := 290 {K};
+	h := 50 {W/m^2/K};
+END values;
+
+END cavity1;
+
