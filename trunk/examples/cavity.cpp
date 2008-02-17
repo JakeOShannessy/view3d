@@ -35,7 +35,7 @@ int main(){
 	double ntubes = 12, nsegs = 8;
 	double d = 0.0422;
 	double wbank = 0.500;
-	double vsep = d;
+	double vsep = 0.7*d;
 	double eps_pipe = 0.4;
 
 	double B_cav = W_abs + 2 * D_cav/tan(theta);

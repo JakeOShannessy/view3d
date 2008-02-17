@@ -2,18 +2,19 @@
 
 /*  Function to read View3D 3.2 view factor files.  */
 
-#include <stdio.h>
-#include "types.h"
-
 #define V3D_BUILD
 #include "readvf.h"
 #include "misc.h"
+#include "types.h"
+#include "heap.h"
+
+#include <stdio.h>
 
 /***  ReadF0s.c  *************************************************************/
 
 /*  Read view factors + area + emit; text format.  Save in square array.  */
 
-static void ReadF0s( char *fileName, int nSrf, float *area, float *emit, float **F ){
+static void ReadF0s(const char *fileName, const int nSrf, float *area, float *emit, float **F ){
   FILE *vfin;
   char header[36];
   int n;    /* row */
@@ -38,7 +39,7 @@ static void ReadF0s( char *fileName, int nSrf, float *area, float *emit, float *
 
 /*  Read view factors + area + emit; text format. Save in triangular array.  */
 
-static void ReadF0t( char *fileName, int nSrf, float *area, float *emit, double **AF ){
+static void ReadF0t(const char *fileName, const int nSrf, float *area, float *emit, double **AF ){
   FILE *vfin;
   char header[36];
   int n;    /* row */
@@ -71,7 +72,7 @@ static void ReadF0t( char *fileName, int nSrf, float *area, float *emit, double 
 
 /*  Read view factors + area + emit; binary format.  Save in square array.  */
 
-static void ReadF1s( char *fileName, int nSrf, float *area, float *emit, float **F){
+static void ReadF1s(const char *fileName, const int nSrf, float *area, float *emit, float **F){
   FILE *vfin;
   char header[36];
   int n;    /* row */
@@ -92,7 +93,7 @@ static void ReadF1s( char *fileName, int nSrf, float *area, float *emit, float *
 
 /* Read view factors + area + emit; binary format. Save in triangular array. */
 
-static void ReadF1t( char *fileName, int nSrf, float *area, float *emit, double **AF ){
+static void ReadF1t(const char *fileName, const int nSrf, float *area, float *emit, double **AF ){
   FILE *vfin;
   char header[36];
   int n;    /* row */
@@ -116,9 +117,10 @@ static void ReadF1t( char *fileName, int nSrf, float *area, float *emit, double 
 
 /*  Read view factors file.  */
 
-void ReadVF( char *fileName, char *program, char *version,
+void ReadVF(const char *fileName, char *program, char *version,
 		int *format, int *encl, int *didemit, int *nSrf,
-		float *area, float *emit, double **AF, float **F, int init, int shape
+		float *area, float *emit, double **AF, float **F
+		, const int init, const int shape
 ){
   if(init){
     char header[36];
@@ -145,4 +147,46 @@ void ReadVF( char *fileName, char *program, char *version,
 	}
   }
 }  /* end ReadVF */
+
+ViewFactors *read_view_factors(const char *filename){
+	ViewFactors *V;
+	V = V3D_NEW(ViewFactors);
+
+	if(V==NULL){
+		fprintf(stderr,"Unable to allocate ViewFactors\n");
+		return NULL;
+	}
+
+	/* read the file header */
+	ReadVF(filename, V->program, V->version
+		, &(V->format), &(V->encl), &(V->didemit), &(V->nsrf)
+		, NULL, NULL, NULL, NULL
+		, 1/* to read headers */, 0/* shape doesn't matter for this */
+	);
+
+	/* allocate memory according to the size declared in the file */
+	V->area = V3D_NEW_ARRAY(float, V->nsrf);
+	V->emissivity = V3D_NEW_ARRAY(float, V->nsrf);
+	V->AF = V3D_NEW_MATRIX_SYMM(float, V->nsrf);
+	V->F = V3D_NEW_MATRIX(float,V->nsrf,V->nsrf);
+
+	/* now read the actual data */
+	ReadVF(filename, V->program, V->version
+		, &(V->format), &(V->encl), &(V->didemit), &(V->nsrf)
+		, V->area, V->emissivity, V->AF, V->F
+		, 0/* to read data */, V3D_SHAPE_SQUARE
+	);
+
+	return V;
+}
+
+
+void view_factors_destroy(ViewFactors *V){
+	V3D_FREE_ARRAY(float,V->nsrf,V->area);
+	V3D_FREE_ARRAY(float,V->nsrf,V->emissivity);
+	V3D_FREE_MATRIX_SYMM(float, V->nsrf, V->AF);
+	V3D_FREE_MATRIX(float,V->nsrf,V->nsrf, V->F);
+	V3D_FREE(ViewFactors, V);
+}
+
 

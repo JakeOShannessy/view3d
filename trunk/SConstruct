@@ -1,5 +1,5 @@
 
-version = '0.20080215'
+version = '0.20080216'
 
 import os
 if os.environ.get('TERM')=="msys":
@@ -155,6 +155,11 @@ viewer2d = gtk_env.Program('viewer2d',['viewer2d.c'])
 # examples
 
 env.SConscript('examples/SConscript','env');
+
+#------------
+# ASCEND tools for use with View3D/View2D.
+
+env.SConscript('ascend/SConscript','env');
 
 #------------
 # create distribution tarball
