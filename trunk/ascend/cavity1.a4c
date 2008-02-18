@@ -5,24 +5,58 @@ MODEL cavity1 REFINES view3d;
 	T_amb IS_A temperature;
 	T_tubes IS_A temperature;
 	n_tubes IS_A set OF symbol_constant;
-	n_tubes :== n - ['1','2','3','4'];
+
+	(* this is insanity; unfortunately the cavity model is set up to take
+	a set of symbol_constant instead of numbers *)
+	n_top, n_left, n_right, n_window IS_A set OF symbol_constant;
+	n_top :==['1','2','3','4','5','6','7','8','9','10','11','12'];
+	n_left :== ['13','14','15','16'];
+	n_window :== ['17','18','19','20','21','22','23','24','25','26','27','28'];
+	n_right :== ['29','30','31','32'];
+
+	eps_window ALIASES eps['17'];
+	eps_tubes ALIASES eps['128'];
+
+	n_tubes :== n - n_top - n_left - n_window - n_right;
 	T[n_tubes], T_tubes ARE_THE_SAME;
 
-	q_window_rad IS_A energy_rate_per_length;
-	q_window_conv IS_A energy_rate_per_length;
+	q_window_rad[n_window] IS_A energy_rate_per_length;
+	q_window_conv[n_window] IS_A energy_rate_per_length;
 
-	q_window_conv = h_window * A['3'] * (T['3'] - T_amb);
-	q_window_rad = A['3'] * eps['3'] * 1{SIGMA_C} * (T['3']^4 - T_amb^4);
-	-q['3'] = q_window_rad + q_window_conv;
+	FOR i IN n_window CREATE
+		q_window_conv[i] = h_window * A[i] * (T[i] - T_amb);
+		q_window_rad[i] = A[i] * eps[i] * 1{SIGMA_C} * (T[i]^4 - T_amb^4);
+		-q[i] = q_window_rad[i] + q_window_conv[i];
+	END FOR;
 
-	-q['2'] = h_sides * A['2'] * (T['2'] - T_amb);
-	-q['4'] = h_sides * A['4'] * (T['4'] - T_amb);
-	-q['1'] = h_top * A['1'] * (T['1'] - T_amb);
+	FOR i IN n_left + n_right CREATE
+		-q[i] = h_sides * A[i] * (T[i] - T_amb);
+	END FOR;
 
-	T_top ALIASES T['1'];
-	T_window ALIASES T['3'];
-	T_left ALIASES T['2'];
-	T_right ALIASES T['4'];
+	FOR i IN n_top CREATE
+		-q[i] = h_top * A[i] * (T[i] - T_amb);
+	END FOR;
+
+	T_window_avg IS_A temperature;
+	T_window_avg = SUM[T[i] | i IN n_window] / 12.	;
+
+	T_top_avg IS_A temperature;
+	T_top_avg = SUM[T[i] | i IN n_top] / 12.;
+
+	T_side_avg IS_A temperature;
+	T_side_avg = SUM[T[i] | i IN n_left + n_right] / 8.;
+
+	F_equiv IS_A factor;
+	q_equiv_int, q_equiv_ext_c, q_equiv_ext_r IS_A energy_rate_per_length;
+	q_equiv_int = F_equiv / (1./eps_window + 1./eps_tubes - 1) * 1{SIGMA_C} * (T_tubes^4 - T_window_avg^4);
+
+	A_window IS_A distance;
+	A_window = SUM[A[i] | i IN n_window];
+	
+	q_equiv_ext_c = h_window * A_window * ( T_window_avg - T_amb);
+	q_equiv_ext_r = A_window * eps_window * 1{SIGMA_C} * (T_window_avg^4 - T_amb^4);
+
+	q_equiv_int = q_equiv_ext_c + q_equiv_ext_r;
 
 METHODS
 METHOD on_load;

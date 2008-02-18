@@ -25,9 +25,9 @@ def generate(env):
 			env['SOQT_LIBPATH'] = env1.get('LIBPATH')
 			env['SOQT_LIBS'] = env1.get('LIBS')
 
-		print "SOQT_LIBS =",env.get('SOQT_LIBS')
-		print "SOQT_LIBPATH =",env.get('SOQT_LIBPATH')
-		print "SOQT_CPPPATH =",env.get('SOQT_CPPPATH')
+		#print "SOQT_LIBS =",env.get('SOQT_LIBS')
+		#print "SOQT_LIBPATH =",env.get('SOQT_LIBPATH')
+		#print "SOQT_CPPPATH =",env.get('SOQT_CPPPATH')
 
 	except:
 		print "FAILED TO SET UP SOQT"
