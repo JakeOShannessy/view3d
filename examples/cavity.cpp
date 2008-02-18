@@ -32,7 +32,7 @@ int main(){
 	double D_cav = 0.200;
 	double theta = PI/180. * 32;
 
-	double ntubes = 12, nsegs = 8;
+	double ntubes = 12, nsegs = 14;
 	double d = 0.0422;
 	double wbank = 0.500;
 	double vsep = 0.7*d;
