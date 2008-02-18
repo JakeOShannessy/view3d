@@ -25,9 +25,9 @@ def generate(env):
 			env['GTK_LIBPATH'] = env1.get('LIBPATH') or []
 			env['GTK_LIBS'] = env1.get('LIBS')
 
-		print "GTK_LIBS =",env.get('GTK_LIBS')
-		print "GTK_LIBPATH =",env.get('GTK_LIBPATH')
-		print "GTK_CPPPATH =",env.get('GTK_CPPPATH')
+		#print "GTK_LIBS =",env.get('GTK_LIBS')
+		#print "GTK_LIBPATH =",env.get('GTK_LIBPATH')
+		#print "GTK_CPPPATH =",env.get('GTK_CPPPATH')
 
 	except:
 		print "FAILED TO SET UP GTK"

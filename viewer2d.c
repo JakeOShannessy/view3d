@@ -91,23 +91,23 @@ int main (int argc, char **argv){
 	int n;
 
 	/* initialize control data */
-	memset( &CD, 0, sizeof(View2DControlData) );
+	memset(&CD, 0, sizeof(View2DControlData) );
 
 	/* read Vertex/Surface data file */
 	NxtOpen(filename, __FILE__, __LINE__ );
 	CountVS2D( title, &CD );
-	fprintf( stderr, "Title: %s\n", title );
-	fprintf( stderr, "Control values for 2-D view factor calculations:\n" );
-	fprintf( stderr, "     enclosure designator: %3d \n", CD.enclosure );
-	fprintf( stderr, " output control parameter: %3d \n", _list );
-	fprintf( stderr, "   obstructed convergence: %g \n", CD.epsObstr );
-	fprintf( stderr, "       maximum recursions: %3d \n", CD.maxRecursion );
-	fprintf( stderr, "       minimum recursions: %3d \n", CD.minRecursion );
-	fprintf( stderr, "       process emittances: %3d \n", CD.emittances );
+	fprintf(stderr, "Title: %s\n", title );
+	fprintf(stderr, "Control values for 2-D view factor calculations:\n" );
+	fprintf(stderr, "     enclosure designator: %3d \n", CD.enclosure );
+	fprintf(stderr, " output control parameter: %3d \n", _list );
+	fprintf(stderr, "   obstructed convergence: %g \n", CD.epsObstr );
+	fprintf(stderr, "       maximum recursions: %3d \n", CD.maxRecursion );
+	fprintf(stderr, "       minimum recursions: %3d \n", CD.minRecursion );
+	fprintf(stderr, "       process emittances: %3d \n", CD.emittances );
 
-	fprintf( stderr, "\n" );
-	fprintf( stderr, " total number of surfaces: %3d \n", CD.nAllSrf );
-	fprintf( stderr, "   heat transfer surfaces: %3d \n", CD.nRadSrf );
+	fprintf(stderr, "\n" );
+	fprintf(stderr, " total number of surfaces: %3d \n", CD.nAllSrf );
+	fprintf(stderr, "   heat transfer surfaces: %3d \n", CD.nRadSrf );
 
 	S.nsrf = CD.nRadSrf;
 	encl = CD.enclosure;
@@ -146,47 +146,49 @@ int main (int argc, char **argv){
 		);
 	}
 
-	Fre_V( S.cmbn, 1, S.nsrf, sizeof(int), __FILE__, __LINE__ );
-	Fre_V( S.base, 1, S.nsrf, sizeof(int), __FILE__, __LINE__ );
-	Fre_V( vtmp, 1, S.nsrf, sizeof(float), __FILE__, __LINE__ );
-	Fre_V( S.emit, 1, S.nsrf, sizeof(float), __FILE__, __LINE__ );
-	Fre_MC( (void **)S.name, 1, S.nsrf, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
+	Fre_V(S.cmbn, 1, S.nsrf, sizeof(int), __FILE__, __LINE__ );
+	Fre_V(S.base, 1, S.nsrf, sizeof(int), __FILE__, __LINE__ );
+	Fre_V(vtmp, 1, S.nsrf, sizeof(float), __FILE__, __LINE__ );
+	Fre_V(S.emit, 1, S.nsrf, sizeof(float), __FILE__, __LINE__ );
+	Fre_MC((void **)S.name, 1, S.nsrf, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
 
-  /* render it to 2D window */
-  GtkWidget *window;
-  GtkWidget *canvas;
+	/* render it to 2D window */
+	GtkWidget *window;
+	GtkWidget *canvas;
 
-  gtk_init (&argc, &argv);
+	gtk_init(&argc, &argv);
 
-  /* create a new top level window */
-  window   = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+	/* create a new top level window */
+	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
-  /* make the gtk terminate the process the close button is pressed */
-  g_signal_connect (G_OBJECT (window), "delete-event",
-                    G_CALLBACK (gtk_main_quit), NULL);
+	/* make the gtk terminate the process the close button is pressed */
+	g_signal_connect(
+		G_OBJECT (window), "delete-event",
+		G_CALLBACK (gtk_main_quit), NULL
+	);
 
-  /* create a new drawing area widget */
-  canvas = gtk_drawing_area_new ();
+	/* create a new drawing area widget */
+	canvas = gtk_drawing_area_new();
 
-  /* set a requested (minimum size) for the canvas
-   */
-  gtk_widget_set_size_request (canvas, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+	/* set a requested (minimum size) for the canvas */
+	gtk_widget_set_size_request(canvas, DEFAULT_WIDTH, DEFAULT_HEIGHT);
 
-  /* connect our drawing method to the "expose" signal */
-  g_signal_connect (G_OBJECT (canvas), "expose-event",
-                    G_CALLBACK (paint),
-                    &S /* pointer to our scene data for rendering */
-                  );
+	/* connect our drawing method to the "expose" signal */
+	g_signal_connect(
+		G_OBJECT (canvas), "expose-event",
+		G_CALLBACK (paint),
+		&S /* pointer to our scene data for rendering */
+	);
 
-  /* pack canvas widget into window */
-  gtk_container_add (GTK_CONTAINER (window), canvas);
+	/* pack canvas widget into window */
+	gtk_container_add(GTK_CONTAINER (window), canvas);
 
-  /* show window and all it's children (just the canvas widget) */
-  gtk_widget_show_all (window);
- 
-  /* enter main loop */ 
-  gtk_main ();
-  return 0;
+	/* show window and all it's children (just the canvas widget) */
+	gtk_widget_show_all(window);
+
+	/* enter main loop */ 
+	gtk_main();
+	return 0;
 }
 
 

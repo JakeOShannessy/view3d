@@ -25,6 +25,42 @@ public:
 	int cmb;
 };
 
+/*
+	Add a slices of surface S to the scene, including the additional 
+	vertices that are required. Note that S itself is not added to the scene.
+*/
+void addSliced(const unsigned n, const Surface2D &S
+	, map<unsigned,SbVec2d> &vertices
+	, map<string,Surface2D> &surfaces
+	, const string &prefix
+	, unsigned &currentindex
+){
+	const unsigned &from = S.from;
+	const unsigned &to = S.to;
+	SbVec2d delta = (vertices[to] - vertices[from]) / n;
+	SbVec2d A = vertices[from];
+	for(unsigned i=0; i < n; ++i){
+		SbVec2d B = A + delta;
+		unsigned from1 = from;
+		unsigned to1 = to;
+		if(i>0){
+			from1 = currentindex - 1;
+			// we will already have added it at the last step
+		}
+		if(i<n-1){
+			to1 = currentindex++;
+			vertices[to1] = B;
+		}	
+		Surface2D S1(S);
+		S1.from = from1;
+		S1.to = to1;
+		stringstream ss;
+		ss << prefix << i;
+		surfaces[ss.str()] = S1;
+		A = B;
+	}
+}
+
 #define EDG(A,B) pair<unsigned,unsigned>((A),(B))
 
 int main(){
@@ -32,7 +68,7 @@ int main(){
 	double D_cav = 0.200;
 	double theta = PI/180. * 32;
 
-	double ntubes = 12, nsegs = 14;
+	unsigned ntubes = 12, nsegs = 8;
 	double d = 0.0422;
 	double wbank = 0.500;
 	double vsep = 0.7*d;
@@ -49,14 +85,19 @@ int main(){
 	vertices[3] = SbVec2d(-B_cav/2.,-D_cav); /* C */
 	vertices[4] = SbVec2d(+B_cav/2.,-D_cav); /* D */
 
+	unsigned vcurrent = 5;
+	addSliced(ntubes, Surface2D(1,2, 0.4), vertices, surfaces, "AB", vcurrent);
+	addSliced(4, Surface2D(2,3, 0.7), vertices, surfaces, "BC", vcurrent);
+	addSliced(ntubes, Surface2D(3,4, 0.92), vertices, surfaces, "CD", vcurrent);
+	addSliced(4, Surface2D(4,1, 0.7), vertices,surfaces, "DA", vcurrent);
+
 	// create the cavity outer surfaces
-	surfaces["AB"] = Surface2D(1, 2, 0.4);
-	surfaces["BC"] = Surface2D(2, 3, 0.7);
-	surfaces["CD"] = Surface2D(3, 4, 0.92);
-	surfaces["DA"] = Surface2D(4, 1, 0.7);
+	//surfaces["AB"] = Surface2D(1, 2, 0.4);
+	//surfaces["BC"] = Surface2D(2, 3, 0.7);
+	//surfaces["CD"] = Surface2D(3, 4, 0.92);
+	//surfaces["DA"] = Surface2D(4, 1, 0.7);
 
 	// create each of the pipes on the interior
-	unsigned vcurrent = 5;
 	{
 		double sep = wbank / (ntubes - 1);
 		SbVec2d L(-wbank/2., -vsep);
