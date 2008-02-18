@@ -1,9 +1,29 @@
 REQUIRE "view3d.a4c";
 
 MODEL cavity1 REFINES view3d;
-	h IS_A heat_transfer_coefficient;
+	h_window, h_sides, h_top IS_A heat_transfer_coefficient;
 	T_amb IS_A temperature;
-	q['3'] = h * A['3'] * (T['3'] - T_amb);
+	T_tubes IS_A temperature;
+	n_tubes IS_A set OF symbol_constant;
+	n_tubes :== n - ['1','2','3','4'];
+	T[n_tubes], T_tubes ARE_THE_SAME;
+
+	q_window_rad IS_A energy_rate_per_length;
+	q_window_conv IS_A energy_rate_per_length;
+
+	q_window_conv = h_window * A['3'] * (T['3'] - T_amb);
+	q_window_rad = A['3'] * eps['3'] * 1{SIGMA_C} * (T['3']^4 - T_amb^4);
+	-q['3'] = q_window_rad + q_window_conv;
+
+	-q['2'] = h_sides * A['2'] * (T['2'] - T_amb);
+	-q['4'] = h_sides * A['4'] * (T['4'] - T_amb);
+	-q['1'] = h_top * A['1'] * (T['1'] - T_amb);
+
+	T_top ALIASES T['1'];
+	T_window ALIASES T['3'];
+	T_left ALIASES T['2'];
+	T_right ALIASES T['4'];
+
 METHODS
 METHOD on_load;
 	RUN reset;
@@ -11,24 +31,20 @@ METHOD on_load;
 END on_load;
 METHOD specify;
 	RUN view3d::specify;
-	FIX T[n];
+	FIX T_tubes;
 	FREE q[n];
 	FREE T['1','2','3','4'];
-	FIX q['1','2','4'];
 	FIX T_amb;
-	FIX h;
+	FIX h_sides, h_window, h_top;
 END specify;
 METHOD values;
 	RUN view3d::values;
-	T[n] := 400 {K};
-	
-	q['1'] := 0 {W/m};
-	q['2'] := 0 {W/m};
-	q['4'] := 0 {W/m};
-	(* q['3'] by external convection *)
+	T_tubes := 250 {K} + 273.15 {K};
 
 	T_amb := 290 {K};
-	h := 50 {W/m^2/K};
+	h_sides := 0.5 {W/m^2/K};
+	h_top := 0.5 {W/m^2/K};
+	h_window := 10 {W/m^2/K};
 END values;
 
 END cavity1;
