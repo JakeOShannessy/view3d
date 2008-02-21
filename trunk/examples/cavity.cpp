@@ -1,5 +1,8 @@
 /*
-	Program to create the CLFR cavity receiver geometry for export to View2D
+	Program to create the CLFR cavity receiver geometry for export to View2D.
+	
+	We use the SbVec2d data type from the COIN3D library to perform the simple
+	vector algebra in this case.
 */
 #include <Inventor/SbVec2d.h>
 
@@ -70,7 +73,7 @@ int main(){
 
 	unsigned ntubes = 12, nsegs = 8;
 	double d = 0.0422;
-	double wbank = 0.500;
+	double wbank = 0.520;
 	double vsep = 0.7*d;
 	double eps_pipe = 0.4;
 
@@ -140,7 +143,7 @@ int main(){
 	ofstream fs("cavity.vs2");
 	fs << "T CLFR Stage 2 cavity cross-section" << endl;
 	fs << "! encl list eps  maxr minr emit" << endl;
-	fs << "C  1    2  1.e-5   8    1    0" << endl;
+	fs << "C  1    2  2.e-6   10    1    1" << endl;
 	fs << "G 2" << endl;
 	for(map<unsigned,SbVec2d>::const_iterator i=vertices.begin(); i!=vertices.end(); ++i){
 		fs << "V " << (i->first) << " " << i->second[0] << " " << i->second[1] << endl;
@@ -155,7 +158,6 @@ int main(){
 	fs.close();
 	
 	return 0;
-
 }
 
 

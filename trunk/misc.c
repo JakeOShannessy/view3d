@@ -417,11 +417,10 @@ int NxtOpen(const char *file_name, const char *file, int line ){
 
   if( _unxt ) error( 3, file, line, "_UNXT already open", "" );
   _unxt = fopen( file_name, "r" );  /* = NULL if no file */
-  if( !_unxt )
-    {
+  if( !_unxt ){
     error( 2, file, line, "Could not open file: ", file_name, "" );
     result = 1;
-    }
+  }
 
   return result;
 

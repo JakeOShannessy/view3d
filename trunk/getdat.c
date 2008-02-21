@@ -1019,3 +1019,57 @@ finish:
   }  /*  end of GetVS2D  */
 
 
+/*------------------------------------------------------------------------------
+  unified file reading routine
+*/
+
+VertexSurfaceData *read_vertex_surface_data(const char *filename){
+	FILE *f;
+	VertexSurfaceData *V;
+
+	/* read Vertex/Surface data file */
+	f = fopen(filename,'r');
+	if(!f){
+		fprintf(stderr,"Unable to open vertex/surface data file '%s'\n",filename);
+		return NULL;
+	}
+
+	/* allocate and zero space for the data */
+	V = V3D_NEW(VertexSurfaceData);
+	memset(&V, 0, sizeof(VertexSurfaceData));
+
+	/* read the file header and count the amount of required data allocation */
+	CountVS(f, V);
+
+	V->name = Alc_MC( 1, V->nsrf, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
+	V->emissivity = V3D_NEW_ARRAY(float,V->nsrf);
+	V->base = V3D_NEW_ARRAY(int,V->nsrf);
+	V->cmbn = V3D_NEW_ARRAY(int,V->nsrf);
+	if(V->type == V3D_2D){
+		V->2d.srf = V3D_NEW_ARRAY(SRFDAT2D,V->nallsrf);
+	}else{
+		V->3d.srf = V3D_NEW_ARRAY(SRFDAT3D,V->nallsrf);
+	}
+
+	/* do we need to repoen the file pointer back to zero? */
+
+    /* Read the actual data into memory */
+	GetVS(V);
+	fclose(f);
+
+	return 0;
+}
+
+void vertex_surface_data_destroy(VertexSurfaceData *V){
+	Fre_MC((void **)name, 1, V->nsrf, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
+	V3D_FREE_ARRAY(float,V->nsrf,V->emissivity);
+	V3D_FREE_ARRAY(int,V->nsrf,V->base);
+	V3D_FREE_ARRAY(int,V->nsrf,V->cmbn);
+	if(V->type==V3D_2D){
+		V3D_FREE_ARRAY(SRFDAT2D,V->CD.nAllSrf,V->d2.srf);
+	}else{
+		V3D_FREE_ARRAY(SRFDAT3D,V->CD.nAllSrf,V->d3.srf);
+	}
+	V3D_FREE(VertexSurfaceData,V);
+}
+
