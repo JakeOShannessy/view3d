@@ -6,6 +6,10 @@ Owner: US Government.
 Full details of this program and the algorithm that it implements are 
 available from:
 
+Walton, G. N.: "Calculation of obstructed view factors by adaptive integration",
+Technical Report NISTIR–6925, National Institute of Standards and Technology,
+Gaithersburg, MD, 2002.
+
 http://www.bfrl.nist.gov/IAQanalysis/docs/NISTIR-6925.pdf
 
 Abstract from the above report:
