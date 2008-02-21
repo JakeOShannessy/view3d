@@ -14,6 +14,9 @@ void usage(const char *progname){
 			"based modelling.\n"
 			"  INFILE        View2D/View3D output file (areas and view factors,\n"
 			"                eg 'out.txt')\n"
+			"  -v VS2FILE    Vertex/Surface definition file. If provided, will\n"
+			"                be used to label surfaces in the ASCEND model. If\n"
+			"                not provided, integer surface numbers are used.\n"
 			"  -o [OUTFILE]  ASCEND model file to be output. This file will\n"
 			"                be set up as a refinement of the 'cavity' model\n"
 			" 	             and needs to be further refines to add the\n"
@@ -28,10 +31,11 @@ int main(int argc, char **argv){
 
 	short infotext = 0;
 	const char *outfile = NULL;
+	const char *vs2file = NULL;
 	int i,j;
 
 	char c;	
-	while((c=getopt(argc,argv,"o::"))!=-1){
+	while((c=getopt(argc,argv,"v:o::"))!=-1){
 		switch(c){
 			case 'o':
 				if(optarg){
@@ -39,6 +43,9 @@ int main(int argc, char **argv){
 				}else{
 					outfile = defaultoutfile;
 				}
+				break;
+			case 'v':
+				vs2file = optarg;
 				break;
 			case '?':
 				usage(argv[0]);
@@ -53,7 +60,7 @@ int main(int argc, char **argv){
 	}
 	const char *filename = argv[optind];
 
-	fprintf(stderr,"Opening file '%s'...",filename);
+	fprintf(stderr,"Opening file '%s' of calculated view factors...",filename);
 
 	ViewFactors *V = NULL;
 	V = read_view_factors(filename);
@@ -62,6 +69,13 @@ int main(int argc, char **argv){
 	fprintf(stderr,"done\n");
 
 	fprintf(stderr,"Got view factors for %d surfaces.\n",V->nsrf);
+
+	if(vs2file){
+		fprintf(stderr,"Opening file '%s' of vertex/surface data...",vs2file);
+
+
+	}
+
 
 	FILE *of;
 	if(outfile){
