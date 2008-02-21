@@ -817,7 +817,7 @@ void Clr_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
 #endif
 
 }  /*  end of Clr_MC  */
-
+
 /**
 	Free pointer to a matrix allocated by Alc_MC().
 */

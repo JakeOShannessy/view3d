@@ -783,7 +783,7 @@ void TestSubSrf( SRFDAT3D *srf, const int *baseSrf, View3DControlData *vfCtrl )
     }  /* end surface loop */
 
   }  /* end of TestSubSrf */
-
+
 /***  CountVS2D.c  ***********************************************************/
 
 /*  Determine number of vertices, number of surfaces,
