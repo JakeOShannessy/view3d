@@ -30,13 +30,8 @@
 #include <gtk/gtk.h>
 #include <cairo.h>
 
-#define DEFAULT_WIDTH  400
-#define DEFAULT_HEIGHT 200
-
-/* forward decls */
-static void paint (GtkWidget *widget, GdkEventExpose *eev
-	, gpointer data
-);
+#define DEFAULT_WIDTH  600
+#define DEFAULT_HEIGHT 400
 
 void usage(const char *progname){
 	fprintf(stderr,
@@ -48,6 +43,18 @@ void usage(const char *progname){
 	);	
 }
 
+/* data structures */
+
+/* information about the current mouse selection (for zooming) */
+typedef struct
+{
+  gboolean active;   /* whether the selection is active or not */
+  gdouble  x, y;
+  gdouble  w, h;
+}
+SelectionInfo;
+
+/* all scene data to be used in the drawing */
 typedef struct{
 	float *emit;        /* vector of surface emittances [1:nsrf] */
 	int *base;        /* vector of base surface numbers [1:nsrf] */
@@ -55,8 +62,29 @@ typedef struct{
 	SRFDAT2D *srf;   /* vector of surface data structures [1:nsrf] */
 	int nsrf;
 	char **name;       /* surface names [1:nsrf][0:NAMELEN] */
+	char infotext;
+	SelectionInfo sel;
+	float tx, ty, s; /* translation and scaling, used to work out where we will be zooming to */
 } Scene2D;
 
+/* forward decls */
+static void paint (GtkWidget *widget, GdkEventExpose *eev
+	, gpointer data
+);
+
+static void paint_selection(cairo_t *cr, SelectionInfo *sel);
+
+static gboolean event_press(
+	GtkWidget *widget, GdkEventButton *bev, SelectionInfo  *sel
+);
+
+static gboolean event_motion(
+	GtkWidget *widget, GdkEventMotion *mev, SelectionInfo  *sel
+);
+
+static gboolean event_release(
+	GtkWidget *widget, GdkEventButton *bev, SelectionInfo  *sel
+);
 /*------------------------------------------------------------------------------
 	Main routine, sets up the window and links drawing methods to it
 */
@@ -90,24 +118,17 @@ int main (int argc, char **argv){
 	int encl;         /* 1 = surfaces form enclosure */
 	int n;
 
+	S.infotext = infotext;
+
 	/* initialize control data */
 	memset(&CD, 0, sizeof(View2DControlData) );
 
 	/* read Vertex/Surface data file */
 	NxtOpen(filename, __FILE__, __LINE__ );
 	CountVS2D( title, &CD );
-	fprintf(stderr, "Title: %s\n", title );
-	fprintf(stderr, "Control values for 2-D view factor calculations:\n" );
-	fprintf(stderr, "     enclosure designator: %3d \n", CD.enclosure );
-	fprintf(stderr, " output control parameter: %3d \n", _list );
-	fprintf(stderr, "   obstructed convergence: %g \n", CD.epsObstr );
-	fprintf(stderr, "       maximum recursions: %3d \n", CD.maxRecursion );
-	fprintf(stderr, "       minimum recursions: %3d \n", CD.minRecursion );
-	fprintf(stderr, "       process emittances: %3d \n", CD.emittances );
-
-	fprintf(stderr, "\n" );
-	fprintf(stderr, " total number of surfaces: %3d \n", CD.nAllSrf );
-	fprintf(stderr, "   heat transfer surfaces: %3d \n", CD.nRadSrf );
+	fprintf(stderr, "Title:       %s\n", title );
+	fprintf(stderr, "  Enclosure: %s\n", (CD.enclosure ? "YES" : "NO"));
+	fprintf(stderr, "  Surfaces:  %3d (total) %3d (heat transfer)\n", CD.nAllSrf, CD.nRadSrf);
 
 	S.nsrf = CD.nRadSrf;
 	encl = CD.enclosure;
@@ -122,6 +143,7 @@ int main (int argc, char **argv){
 	GetVS2D( S.name, S.emit, S.base, S.cmbn, S.srf, &CD );
 	NxtClose();
 
+#if 0
 	fprintf( stderr, "Surfaces:\n" );
 	fprintf( stderr, "   #     emit   base  cmbn   name\n" );
 	for( n=1; n<=S.nsrf; n++ ){
@@ -145,12 +167,8 @@ int main (int argc, char **argv){
 			,n, S.srf[n].v1.x, S.srf[n].v1.y, S.srf[n].v2.x, S.srf[n].v2.y
 		);
 	}
+#endif
 
-	Fre_V(S.cmbn, 1, S.nsrf, sizeof(int), __FILE__, __LINE__ );
-	Fre_V(S.base, 1, S.nsrf, sizeof(int), __FILE__, __LINE__ );
-	Fre_V(vtmp, 1, S.nsrf, sizeof(float), __FILE__, __LINE__ );
-	Fre_V(S.emit, 1, S.nsrf, sizeof(float), __FILE__, __LINE__ );
-	Fre_MC((void **)S.name, 1, S.nsrf, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
 
 	/* render it to 2D window */
 	GtkWidget *window;
@@ -180,6 +198,22 @@ int main (int argc, char **argv){
 		&S /* pointer to our scene data for rendering */
 	);
 
+	/* connect callbacks for zooming the display */
+
+	gtk_widget_add_events (canvas,
+		GDK_BUTTON1_MOTION_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
+	);
+
+	g_signal_connect (G_OBJECT (canvas), "button_press_event",
+	    G_CALLBACK (event_press), &(S.sel)
+	);
+	g_signal_connect (G_OBJECT (canvas), "button_release_event",
+	    G_CALLBACK (event_release), &(S.sel)
+	);
+	g_signal_connect (G_OBJECT (canvas), "motion_notify_event",
+	    G_CALLBACK (event_motion), &(S.sel)
+	);
+
 	/* pack canvas widget into window */
 	gtk_container_add(GTK_CONTAINER (window), canvas);
 
@@ -188,6 +222,14 @@ int main (int argc, char **argv){
 
 	/* enter main loop */ 
 	gtk_main();
+
+	fprintf(stderr,"FREEING DATA...\n");
+	Fre_V(S.cmbn, 1, S.nsrf, sizeof(int), __FILE__, __LINE__ );
+	Fre_V(S.base, 1, S.nsrf, sizeof(int), __FILE__, __LINE__ );
+	Fre_V(vtmp, 1, S.nsrf, sizeof(float), __FILE__, __LINE__ );
+	Fre_V(S.emit, 1, S.nsrf, sizeof(float), __FILE__, __LINE__ );
+	Fre_MC((void **)S.name, 1, S.nsrf, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
+
 	return 0;
 }
 
@@ -202,6 +244,8 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 	gint width, height;
 	gint i;
 	cairo_t *cr;
+	float d, ox, oy;
+	cairo_text_extents_t ex;
 
 	float minx = FLT_MAX, miny = FLT_MAX, maxx = -FLT_MAX, maxy = -FLT_MAX;
 	for(i=1; i<=S->nsrf; ++i){
@@ -225,7 +269,7 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 	height = widget->allocation.height;
 
 	// margins
-	float mx = 20, my = 20;
+	float mx = 25, my = 25;
 
 	float sx = dx/(width - 2*mx); /* true-length per pixel */
 	float sy = dy/(height - 2*my);
@@ -237,57 +281,152 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 	//fprintf(stderr,"miny = %f, maxy = %f\n", miny, maxy);
 	//fprintf(stderr,"s = %f\n",s);
 
-	cr = gdk_cairo_create (widget->window);
+	cr = gdk_cairo_create(widget->window);
 
 	/* clear background */
 	cairo_set_source_rgb(cr, 1,1,1);
 	cairo_paint(cr);
 
+	cairo_save(cr);
+
 	float cx = 0.5*(maxx+minx);
 	float cy = 0.5*(maxy+miny);
 	//fprintf(stderr,"cx = %f, cy = %f",cx,cy);
-	cairo_translate(cr, width/2. - cx/s, height/2. + cy/s);
 
-	/* negate y scaling so that up is positive */
-	cairo_scale (cr, 1./s, -1./s);
+	S->tx = width/2. - cx/s;
+	S->ty = height/2. + cy/s;
+	S->s = s;
+	cairo_translate(cr, S->tx, S->ty);
 
+	/* 
+		note that we don't scale y, so when plotting, 'y' values must be negated
+		to make +y be up the screen
+	*/
+	cairo_scale (cr, 1./s, 1./s);
+	cairo_set_font_size (cr, 10.*s);
 	cairo_set_line_width (cr, 2*s);
-
 	cairo_set_source_rgb (cr, 0, 0, 0);
 
+
 	for(i=1; i<=S->nsrf; ++i){
-		cairo_move_to(cr, S->srf[i].v1.x, S->srf[i].v1.y);
-		cairo_line_to(cr, S->srf[i].v2.x, S->srf[i].v2.y);
+		cairo_move_to(cr, S->srf[i].v1.x, -S->srf[i].v1.y);
+		cairo_line_to(cr, S->srf[i].v2.x, -S->srf[i].v2.y);
 	};
 	cairo_stroke(cr);
 
-#if 0
-	cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL,
-		                                CAIRO_FONT_WEIGHT_BOLD);
-    /* enclosing in a save/restore pair since we alter the
-     * font size */
-    cairo_save (cr);
-      cairo_set_font_size (cr, 40);
-      cairo_move_to (cr, 40, 60);
-      cairo_set_source_rgb (cr, 0,0,0);
-      cairo_show_text (cr, "Hello World");
-    cairo_restore (cr);
+	/* draw a dot at the start of each edge */
+	for(i=1; i<=S->nsrf; ++i){
+		cairo_arc(cr, S->srf[i].v1.x, -S->srf[i].v1.y, 2*s, 0, 2*M_PI);
+		cairo_fill(cr);
+	}
 
-    cairo_set_source_rgb (cr, 1,0,0);
-    cairo_set_font_size (cr, 20);
-    cairo_move_to (cr, 50, 100);
-    cairo_show_text (cr, "greetings from gtk and cairo");
+	if(S->infotext){
+		//fprintf(stderr,"WRITING INFOTEXT...\n");
 
-    cairo_set_source_rgb (cr, 0,0,1);
+		cairo_select_font_face (cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
 
-    cairo_move_to (cr, 0, 150);
-    for (i=0; i< width/10; i++){
-		cairo_rel_line_to (cr, 5,  10);
-		cairo_rel_line_to (cr, 5, -10);
-    }
-    cairo_stroke (cr);
-#endif
+		/* enclosing in a save/restore pair since we alter the
+		* font size */
+		for(i=1; i<=S->nsrf; ++i){
+			/* reuse the vars cx,cy for the midpoint of the edge */
+			cx = 0.5 * (S->srf[i].v1.x + S->srf[i].v2.x);
+			cy = 0.5 * (S->srf[i].v1.y + S->srf[i].v2.y);
+			/* reuse the vars dx,dy for the gradient of the line */
+			dx = (S->srf[i].v2.x - S->srf[i].v1.x);
+			dy = (S->srf[i].v2.y - S->srf[i].v1.y);
+			d = sqrt(dx*dx + dy*dy);
+			//fprintf(stderr,"dx = %f, dy = %f, d = %f\n",dx,dy,d);
+			dx *= 10.*s / d;
+			dy *= 10.*s / d;
+			/* calculate the width of the text so that we can right-justify if required */
+			cairo_text_extents(cr,S->name[i],&ex);
+			ox = 0; oy = 0;
+			if(dy < 0){
+				ox = -ex.width;
+			}else if(dy==0){
+				ox = -0.5*ex.width;
+			}
+			if(dx > 0){
+				oy = -ex.height;
+			}
 
+			/* draw a line to the midpoint label point */
+			cairo_save(cr);
+			cairo_set_line_width (cr, 1*s);
+			cairo_set_source_rgb (cr, 1, 0.7, 0.7);
+			cairo_move_to(cr, cx, -cy);
+			cairo_line_to(cr, cx + dy, -(cy - dx));
+			cairo_stroke(cr);
+			cairo_restore(cr);
+
+			/* we will offset the text normal to the edge */
+			cairo_save(cr);
+			cairo_set_source_rgb (cr, 1.0, 0, 0);
+			cairo_move_to (cr, cx + dy + ox, -(cy - dx + oy));
+			//fprintf(stderr,"text at (%f, %f) = %s\n",cx-dy,cy+dx,S->name[i]);
+			cairo_show_text (cr, S->name[i]);
+			cairo_restore(cr);
+		}
+	}
+
+	cairo_restore(cr);
+	paint_selection(cr, &(S->sel));
 	cairo_destroy (cr);
+}
+
+/* drag-to-zoom stuff */
+
+/* function to draw the rectangular selection */
+void paint_selection(cairo_t *cr, SelectionInfo *sel){
+	if(!sel->active)
+	return;
+
+	cairo_save (cr);
+	cairo_rectangle (cr, sel->x, sel->y, sel->w, sel->h);
+	cairo_set_source_rgba (cr, 0, 0, 1, 0.2);
+	cairo_fill_preserve (cr);
+	cairo_set_source_rgba (cr, 0, 0, 0, 0.5);
+	cairo_stroke (cr);
+	cairo_restore (cr);
+}
+
+gboolean event_press(
+	GtkWidget *widget, GdkEventButton *bev, SelectionInfo  *sel
+){
+	sel->active = TRUE;
+
+	sel->x = bev->x;
+	sel->y = bev->y;
+	sel->w = 0;
+	sel->h = 0;
+
+	//fprintf(stderr,"PRESS at %f,%f\n",sel->x, sel->y);
+
+	/* tell the canvas widget that it needs to redraw itself */
+	gtk_widget_queue_draw (widget);
+
+	return TRUE;
+}
+
+
+gboolean event_motion(
+	GtkWidget *widget, GdkEventMotion *mev, SelectionInfo  *sel
+){
+  sel->w = mev->x - sel->x;
+  sel->h = mev->y - sel->y;
+
+  /* tell the canvas widget that it needs to redraw itself */
+  gtk_widget_queue_draw (widget);
+  return TRUE;
+}
+
+gboolean event_release(
+	GtkWidget *widget, GdkEventButton *bev, SelectionInfo  *sel
+){
+  sel->active = FALSE;
+
+  /* tell the canvas widget that it needs to redraw itself */
+  gtk_widget_queue_draw (widget);
+  return TRUE;
 }
 
