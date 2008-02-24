@@ -1,5 +1,14 @@
 REQUIRE "view3d.a4c";
-
+IMPORT "johnpye/extpy/extpy";
+IMPORT "ascend/plottemps";
+(*
+	Solution to the cavity radiation exchange problem with arbitrary
+	boundary conditions. This model loads view factors from the file
+	'view3d.a4c', which is an automatically-generated file created by the
+	'vf2asc' program that is part of the VIEW3D code. That file in turn 
+	depends the 'cavity.a4c' file that defines the basic datatypes for a
+	cavity problem.
+*)
 MODEL cavity1 REFINES view3d;
 	h_window, h_sides, h_top IS_A heat_transfer_coefficient;
 	T_amb IS_A temperature;
@@ -19,6 +28,8 @@ MODEL cavity1 REFINES view3d;
 
 	eps_window ALIASES eps['CD0'];
 	eps_tubes ALIASES eps['p0s0'];
+	eps_top ALIASES eps['AB0'];
+	eps_sides ALIASES eps['BC0'];
 
 	s_tubes :== n - s_top - s_left - s_window - s_right;
 	T[s_tubes], T_tubes ARE_THE_SAME;
@@ -61,6 +72,36 @@ MODEL cavity1 REFINES view3d;
 
 	q_equiv_int = q_equiv_ext_c + q_equiv_ext_r;
 
+	(* for convenience of plotting *)
+	T_window[0..11] IS_A temperature;
+	T_window[0], T['CD0'] ARE_THE_SAME;
+	T_window[1], T['CD1'] ARE_THE_SAME;
+	T_window[2], T['CD2'] ARE_THE_SAME;
+	T_window[3], T['CD3'] ARE_THE_SAME;
+	T_window[4], T['CD4'] ARE_THE_SAME;
+	T_window[5], T['CD5'] ARE_THE_SAME;
+	T_window[6], T['CD6'] ARE_THE_SAME;
+	T_window[7], T['CD7'] ARE_THE_SAME;
+	T_window[8], T['CD8'] ARE_THE_SAME;
+	T_window[9], T['CD9'] ARE_THE_SAME;
+	T_window[10], T['CD10'] ARE_THE_SAME;
+	T_window[11], T['CD11'] ARE_THE_SAME;
+
+
+	T_top[0..11] IS_A temperature;
+	T_top[0], T['AB0'] ARE_THE_SAME;
+	T_top[1], T['AB1'] ARE_THE_SAME;
+	T_top[2], T['AB2'] ARE_THE_SAME;
+	T_top[3], T['AB3'] ARE_THE_SAME;
+	T_top[4], T['AB4'] ARE_THE_SAME;
+	T_top[5], T['AB5'] ARE_THE_SAME;
+	T_top[6], T['AB6'] ARE_THE_SAME;
+	T_top[7], T['AB7'] ARE_THE_SAME;
+	T_top[8], T['AB8'] ARE_THE_SAME;
+	T_top[9], T['AB9'] ARE_THE_SAME;
+	T_top[10], T['AB10'] ARE_THE_SAME;
+	T_top[11], T['AB11'] ARE_THE_SAME;
+
 METHODS
 METHOD on_load;
 	RUN reset;
@@ -83,6 +124,11 @@ METHOD values;
 	h_top := 0.5 {W/m^2/K};
 	h_window := 10 {W/m^2/K};
 END values;
-
+METHOD plot;
+	EXTERNAL plotwindowtemps(SELF);
+END plot;
+METHOD plot_top;
+	EXTERNAL plottoptemps(SELF);
+END plot_top;
 END cavity1;
 

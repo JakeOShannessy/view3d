@@ -37,12 +37,14 @@
 
 void usage(const char *progname){
 	fprintf(stderr,
-			"Usage: %s [-o OUTFILE] [-h] [-t] INFILE\n"
+			"Usage: %s [-o OUTFILE] [-h] [-t [-m ID]] INFILE\n"
 			"Load and parse a View2D file and render using Cairo/GTK+\n"
 			"  INFILE      View2D .vs2 file to render (eg 'facet.vs2')\n"
 			"  -t          Include text in the rendered output.\n"
 			"  -o OUTFILE  Name of a PDF file to which output should be\n"
 			"              directed (instead of on-screen rendering)\n"
+			"  -m ID       Don't draw text labels for surfaces with ID\n"
+			"              exceeding this value\n"
 		, progname
 	);	
 }
@@ -64,6 +66,7 @@ typedef struct{
 	char infotext;
 	SelectionInfo sel;
 	const char *outfile; /* set non-null if output to a PDF file is desired (this will be the filename) */
+	int maxlabel; /* maximum ID for surface labelling (or -1 if all should be labelled) */
 	float tx, ty, s; /* translation and scaling, used to work out where we will be zooming to */
 } Scene2D;
 
@@ -91,15 +94,19 @@ static gboolean event_release(
 int main (int argc, char **argv){
 	short infotext = 0;
 	const char *outfile = NULL;
-	
+	int maxlabel = 0;
+
 	char c;	
-	while((c=getopt(argc,argv,"o:t"))!=-1){
+	while((c=getopt(argc,argv,"o:tm:"))!=-1){
 		switch(c){
 			case 'o':
 				outfile = optarg;
 				break;
 			case 't':
 				infotext = 1;
+				break;
+			case 'm':
+				maxlabel = atoi(optarg);
 				break;
 			case '?':
 				usage(argv[0]);
@@ -117,6 +124,7 @@ int main (int argc, char **argv){
 	Scene2D S;
 	S.infotext = infotext;
 	S.outfile = outfile;
+	S.maxlabel = maxlabel;
 
 	S.V = read_vertex_surface_data(filename);
 	if(S.V==NULL){
@@ -291,6 +299,10 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 		/* enclosing in a save/restore pair since we alter the
 		* font size */
 		for(i=1; i<=V->nrad; ++i){
+			if(S->maxlabel && i > S->maxlabel){	
+				fprintf(stderr,"Stopping with maxlabel = %d\n",i);
+				break;
+			}
 			/* reuse the vars cx,cy for the midpoint of the edge */
 			cx = 0.5 * (V->d2.srf[i].v1.x + V->d2.srf[i].v2.x);
 			cy = 0.5 * (V->d2.srf[i].v1.y + V->d2.srf[i].v2.y);
