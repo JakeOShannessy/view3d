@@ -4,6 +4,7 @@
 #include "common.h"
 #include "view3d.h"
 
+
 V3D_API void CountVS3D(char *title, View3DControlData *vfCtrl );
 
 V3D_API void GetVS3D(char **name, float *emit, int *base, int *cmbn
@@ -22,18 +23,21 @@ V3D_API void GetVS2D( char **name, float *emit, int *base, int *cmbn,
 typedef enum{
 	V3D_2D = 0
 	,V3D_3D = 1
-) geometry_type;
+} geometry_type;
 
 struct VertexSurfaceData_2D_struct{
 	SRFDAT2D *srf;
-	View2dControlData CD;
+	View2DControlData CD;
 };
+
 struct VertexSurfaceData_3D_struct{
 	SRFDAT3D *srf;
 	View3DControlData CD;
 };
 
-struct VertexSurfaceData_struct{
+#define V3D_MAXTITLE 256
+
+typedef struct VertexSurfaceData_struct{
 	char title[V3D_MAXTITLE];
 	char **name;
 	float *emissivity;
@@ -46,10 +50,10 @@ struct VertexSurfaceData_struct{
 	geometry_type type;
 	union{
 		/* depending on the value of 'type', either... */
-		VertexSurfaceData_2D_struct d2;
-		VertexSurfaceData_3D_struct d3;
-	}
-};
+		struct VertexSurfaceData_2D_struct d2;
+		struct VertexSurfaceData_3D_struct d3;
+	};
+} VertexSurfaceData;
 
 VertexSurfaceData *read_vertex_surface_data(const char *filename);
 
