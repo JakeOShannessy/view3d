@@ -30,7 +30,6 @@ void usage(const char *progname){
 
 int main(int argc, char **argv){
 
-	short infotext = 0;
 	const char *outfile = NULL;
 	const char *vs2file = NULL;
 	int i,j;
@@ -84,6 +83,11 @@ int main(int argc, char **argv){
 
 	}
 
+	if(D->nrad != V->nsrf){
+		fprintf(stderr,"Number of radiation surfaces in '%s' does not match '%s'.\n",vs2file,filename);
+		exit(4);
+	}
+	fprintf(stderr,"Outputting %d radiation surfaces...\n",D->nrad);
 
 	FILE *of;
 	if(outfile){
@@ -103,7 +107,7 @@ int main(int argc, char **argv){
 	fprintf(of,"\tn :== [");
 	for(i=1; i<=V->nsrf; ++i){
 		if(i>1)fprintf(of,",");
-		fprintf(of,"'%d'",i);
+		fprintf(of,"'%s'",D->name[i]);
 	}
 	fprintf(of,"];\n");
 
@@ -140,20 +144,20 @@ int main(int argc, char **argv){
 	fprintf(of,"METHOD values;\n");
 	fprintf(of,"\t(* areas *)\n");
 	for(i=1; i<=V->nsrf; ++i){
-		fprintf(of,"\tA['%d'] := %0.8g {m};\n",i,V->area[i]);
+		fprintf(of,"\tA['%s'] := %0.8g {m};\n",D->name[i],V->area[i]);
 	}
 	fprintf(of,"\n\t(* view factors *)\n");
 	fprintf(of,"\tF[n][n] := 0;\n");
 	for(i=1; i<=V->nsrf; ++i){
 		for(j=1; j<=V->nsrf; ++j){
 			if(V->F[i][j]!=0.0){
-				fprintf(of,"\tF['%d']['%d'] := %0.7g;\n",i,j,V->F[i][j]);
+				fprintf(of,"\tF['%s']['%s'] := %0.7g;\n",D->name[i],D->name[j],V->F[i][j]);
 			}
 		}
 	}
 	fprintf(of,"\n\t(* emissivities *)\n");
 	for(i=1; i<=V->nsrf; ++i){
-		fprintf(of,"\teps['%d'] := %0.7g;\n",i,V->emissivity[i]);
+		fprintf(of,"\teps['%s'] := %0.7g;\n",D->name[i],V->emissivity[i]);
 	}
 	fprintf(of,"END values;\n");
 	fprintf(of,"END view3d;\n");

@@ -18,13 +18,14 @@
 #include <math.h>   /* prototype: sqrt */
 #include <unistd.h>
 #include <limits.h>
+#include <assert.h>
 
 #include "types.h" 
 #include "misc.h"
 #include "heap.h"
 #include "test2d.h"
 #include "viewpp.h"
-#include "getdat.h"
+#include "readvs.h"
 #include "savevf.h"
 
 #include <gtk/gtk.h>
@@ -56,12 +57,7 @@ SelectionInfo;
 
 /* all scene data to be used in the drawing */
 typedef struct{
-	float *emit;        /* vector of surface emittances [1:nsrf] */
-	int *base;        /* vector of base surface numbers [1:nsrf] */
-	int *cmbn;        /* vector of combine surface numbers [1:nsrf] */
-	SRFDAT2D *srf;   /* vector of surface data structures [1:nsrf] */
-	int nsrf;
-	char **name;       /* surface names [1:nsrf][0:NAMELEN] */
+	VertexSurfaceData *V;
 	char infotext;
 	SelectionInfo sel;
 	float tx, ty, s; /* translation and scaling, used to work out where we will be zooming to */
@@ -111,63 +107,13 @@ int main (int argc, char **argv){
 	const char *filename = argv[optind];
 
 	Scene2D S;
-
-	char title[LINELEN];  /* project title */
-	View2DControlData CD;   /* VF calculation control parameters */
-	float *vtmp;        /* temporary vector [1:nsrf] */
-	int encl;         /* 1 = surfaces form enclosure */
-	int n;
-
 	S.infotext = infotext;
 
-	/* initialize control data */
-	memset(&CD, 0, sizeof(View2DControlData) );
-
-	/* read Vertex/Surface data file */
-	NxtOpen(filename, __FILE__, __LINE__ );
-	CountVS2D( title, &CD );
-	fprintf(stderr, "Title:       %s\n", title );
-	fprintf(stderr, "  Enclosure: %s\n", (CD.enclosure ? "YES" : "NO"));
-	fprintf(stderr, "  Surfaces:  %3d (total) %3d (heat transfer)\n", CD.nAllSrf, CD.nRadSrf);
-
-	S.nsrf = CD.nRadSrf;
-	encl = CD.enclosure;
-	S.name = Alc_MC( 1, S.nsrf, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
-	S.emit = Alc_V( 1, S.nsrf, sizeof(float), __FILE__, __LINE__ );
-	vtmp = Alc_V( 1, S.nsrf, sizeof(float), __FILE__, __LINE__ );
-	S.base = Alc_V( 1, S.nsrf, sizeof(int), __FILE__, __LINE__ );
-	S.cmbn = Alc_V( 1, S.nsrf, sizeof(int), __FILE__, __LINE__ );
-	S.srf = Alc_V( 1, CD.nAllSrf, sizeof(SRFDAT2D), __FILE__, __LINE__ );
-
-	/* read v/s data file */
-	GetVS2D( S.name, S.emit, S.base, S.cmbn, S.srf, &CD );
-	NxtClose();
-
-#if 0
-	fprintf( stderr, "Surfaces:\n" );
-	fprintf( stderr, "   #     emit   base  cmbn   name\n" );
-	for( n=1; n<=S.nsrf; n++ ){
-		fprintf( stderr, "%4d    %5.3f %5d %5d    %s\n", n
-			, S.emit[n], S.base[n], S.cmbn[n], S.name[n] 
-		);
+	S.V = read_vertex_surface_data(filename);
+	if(S.V==NULL){
+		fprintf(stderr,"Failed to read vertex/surface data from '%s'",filename);
+		exit(3);
 	}
-
-	fprintf( stderr, "Area, direction cosines:\n" );
-	fprintf( stderr, "   #     area        x          y          w\n" );
-	for( n=1; n<=CD.nAllSrf; n++ ){
-		fprintf( stderr, "%4d %10.5f %10.5f %10.5f %10.5f\n"
-			, n, S.srf[n].area, S.srf[n].dc.x, S.srf[n].dc.y, S.srf[n].dc.w
-		);
-	}
-
-	fprintf( stderr, "Vertices:\n" );
-	fprintf( stderr, "   #      v1.x       v1.y       v2.x       v2.y\n" );
-	for(n=1; n<=CD.nAllSrf; n++){
-		fprintf( stderr, "%4d %10.3f %10.3f %10.3f %10.3f\n"
-			,n, S.srf[n].v1.x, S.srf[n].v1.y, S.srf[n].v2.x, S.srf[n].v2.y
-		);
-	}
-#endif
 
 
 	/* render it to 2D window */
@@ -223,13 +169,7 @@ int main (int argc, char **argv){
 	/* enter main loop */ 
 	gtk_main();
 
-	fprintf(stderr,"FREEING DATA...\n");
-	Fre_V(S.cmbn, 1, S.nsrf, sizeof(int), __FILE__, __LINE__ );
-	Fre_V(S.base, 1, S.nsrf, sizeof(int), __FILE__, __LINE__ );
-	Fre_V(vtmp, 1, S.nsrf, sizeof(float), __FILE__, __LINE__ );
-	Fre_V(S.emit, 1, S.nsrf, sizeof(float), __FILE__, __LINE__ );
-	Fre_MC((void **)S.name, 1, S.nsrf, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
-
+	vertex_surface_data_destroy(S.V);
 	return 0;
 }
 
@@ -240,6 +180,7 @@ int main (int argc, char **argv){
 */
 void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 	Scene2D *S = (Scene2D *)data;
+	VertexSurfaceData *V = S->V;
 
 	gint width, height;
 	gint i;
@@ -247,15 +188,17 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 	float d, ox, oy;
 	cairo_text_extents_t ex;
 
+	assert(V3D_IS_2D(V));
+
 	float minx = FLT_MAX, miny = FLT_MAX, maxx = -FLT_MAX, maxy = -FLT_MAX;
-	for(i=1; i<=S->nsrf; ++i){
+	for(i=1; i<=V->nall; ++i){
 		float x,y;
-		x = S->srf[i].v1.x; y = S->srf[i].v1.y;
+		x = V->d2.srf[i].v1.x; y = V->d2.srf[i].v1.y;
 		if(x<minx)minx=x;
 		if(y<miny)miny=y;
 		if(x>maxx)maxx=x;
 		if(y>maxy)maxy=y;
-		x = S->srf[i].v2.x; y = S->srf[i].v2.y;
+		x = V->d2.srf[i].v2.x; y = V->d2.srf[i].v2.y;
 		if(x<minx)minx=x;
 		if(y<miny)miny=y;
 		if(x>maxx)maxx=x;
@@ -308,15 +251,15 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 	cairo_set_source_rgb (cr, 0, 0, 0);
 
 
-	for(i=1; i<=S->nsrf; ++i){
-		cairo_move_to(cr, S->srf[i].v1.x, -S->srf[i].v1.y);
-		cairo_line_to(cr, S->srf[i].v2.x, -S->srf[i].v2.y);
+	for(i=1; i<=V->nall; ++i){
+		cairo_move_to(cr, V->d2.srf[i].v1.x, -V->d2.srf[i].v1.y);
+		cairo_line_to(cr, V->d2.srf[i].v2.x, -V->d2.srf[i].v2.y);
 	};
 	cairo_stroke(cr);
 
 	/* draw a dot at the start of each edge */
-	for(i=1; i<=S->nsrf; ++i){
-		cairo_arc(cr, S->srf[i].v1.x, -S->srf[i].v1.y, 2*s, 0, 2*M_PI);
+	for(i=1; i<=V->nall; ++i){
+		cairo_arc(cr, V->d2.srf[i].v1.x, -V->d2.srf[i].v1.y, 2*s, 0, 2*M_PI);
 		cairo_fill(cr);
 	}
 
@@ -327,19 +270,19 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 
 		/* enclosing in a save/restore pair since we alter the
 		* font size */
-		for(i=1; i<=S->nsrf; ++i){
+		for(i=1; i<=V->nrad; ++i){
 			/* reuse the vars cx,cy for the midpoint of the edge */
-			cx = 0.5 * (S->srf[i].v1.x + S->srf[i].v2.x);
-			cy = 0.5 * (S->srf[i].v1.y + S->srf[i].v2.y);
+			cx = 0.5 * (V->d2.srf[i].v1.x + V->d2.srf[i].v2.x);
+			cy = 0.5 * (V->d2.srf[i].v1.y + V->d2.srf[i].v2.y);
 			/* reuse the vars dx,dy for the gradient of the line */
-			dx = (S->srf[i].v2.x - S->srf[i].v1.x);
-			dy = (S->srf[i].v2.y - S->srf[i].v1.y);
+			dx = (V->d2.srf[i].v2.x - V->d2.srf[i].v1.x);
+			dy = (V->d2.srf[i].v2.y - V->d2.srf[i].v1.y);
 			d = sqrt(dx*dx + dy*dy);
 			//fprintf(stderr,"dx = %f, dy = %f, d = %f\n",dx,dy,d);
 			dx *= 10.*s / d;
 			dy *= 10.*s / d;
 			/* calculate the width of the text so that we can right-justify if required */
-			cairo_text_extents(cr,S->name[i],&ex);
+			cairo_text_extents(cr,V->name[i],&ex);
 			ox = 0; oy = 0;
 			if(dy < 0){
 				ox = -ex.width;
@@ -364,7 +307,7 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 			cairo_set_source_rgb (cr, 1.0, 0, 0);
 			cairo_move_to (cr, cx + dy + ox, -(cy - dx + oy));
 			//fprintf(stderr,"text at (%f, %f) = %s\n",cx-dy,cy+dx,S->name[i]);
-			cairo_show_text (cr, S->name[i]);
+			cairo_show_text (cr, V->name[i]);
 			cairo_restore(cr);
 		}
 	}
