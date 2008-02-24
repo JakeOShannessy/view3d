@@ -390,9 +390,13 @@ static int CountVS(FILE *f, VertexSurfaceData *V){
         NxtWord(f, V->title, 2, sizeof(tmpstr) );
         break;
       case 'F':               /* input file format: geometry */
+	  case 'G':
         NxtWord(f, tmpstr, 0, sizeof(tmpstr) );
         V->format = 0;
-        if( streql( tmpstr, "2"  ) ) V->format = 2;
+        if( streql( tmpstr, "2"  )){
+			fprintf(stderr,"FILE FORMAT = 2\n");
+			V->format = 2;
+		}
         if( streql( tmpstr, "3"  ) ) V->format = 3;
         if( streqli( tmpstr, "3a" ) ) V->format = 4;
         break;
@@ -576,7 +580,7 @@ VertexSurfaceData *read_vertex_surface_data(const char *filename){
 		return NULL;
 	}
 
-	fprintf(stderr,"First pass: counted %d radiation surfaces and %d obstruction surfaces, with %d total vertices\n",V->nrad, V->nobst, V->nvert);
+	fprintf(stderr,"File (format %d) has  %d radiation and %d obstruction surfaces, and %d total vertices\n",V->format, V->nrad, V->nobst, V->nvert);
 
 	/* allocate the data in the VertexSurfaceData struct */
 	V->name = Alc_MC( 1, V->nrad, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
