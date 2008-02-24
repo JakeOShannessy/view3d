@@ -1,4 +1,5 @@
 #include "readvf.h"
+#include "readvs.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -70,9 +71,16 @@ int main(int argc, char **argv){
 
 	fprintf(stderr,"Got view factors for %d surfaces.\n",V->nsrf);
 
+	VertexSurfaceData *D = NULL;
 	if(vs2file){
 		fprintf(stderr,"Opening file '%s' of vertex/surface data...",vs2file);
 
+		D = read_vertex_surface_data(vs2file);
+
+		if(D==NULL){
+			fprintf(stderr,"Error reading vertex/surface data file '%s'\n",vs2file);
+			exit(3);
+		}
 
 	}
 
@@ -139,7 +147,7 @@ int main(int argc, char **argv){
 	for(i=1; i<=V->nsrf; ++i){
 		for(j=1; j<=V->nsrf; ++j){
 			if(V->F[i][j]!=0.0){
-				fprintf(of,"\tF['%d']['%d'] := %0.8g;\n",i,j,V->F[i][j]);
+				fprintf(of,"\tF['%d']['%d'] := %0.7g;\n",i,j,V->F[i][j]);
 			}
 		}
 	}

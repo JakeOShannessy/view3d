@@ -104,7 +104,7 @@ conf.Finish()
 
 srcs = Split("""
 	ctrans.c  heap.c  polygn.c  savevf.c  viewobs.c  viewunob.c
-	getdat.c  misc.c  readvf.c  test3d.c  view3d.c  viewpp.c
+	getdat.c  misc.c  readvf.c  readvs.c  test3d.c  view3d.c  viewpp.c
 	common.c 
 
 	view2d.c test2d.c
