@@ -1028,7 +1028,7 @@ VertexSurfaceData *read_vertex_surface_data(const char *filename){
 	VertexSurfaceData *V;
 
 	/* read Vertex/Surface data file */
-	f = fopen(filename,'r');
+	f = fopen(filename,"r");
 	if(!f){
 		fprintf(stderr,"Unable to open vertex/surface data file '%s'\n",filename);
 		return NULL;
