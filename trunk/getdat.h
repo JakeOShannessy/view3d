@@ -20,6 +20,8 @@ V3D_API void CountVS2D( char *title, View2DControlData *vfCtrl );
 V3D_API void GetVS2D( char **name, float *emit, int *base, int *cmbn,
   SRFDAT2D *srf, View2DControlData *vfCtrl );
 
+/* unified data types for reading vertex/surface data both 2D and 3D */
+
 typedef enum{
 	V3D_2D = 0
 	,V3D_3D = 1
@@ -54,6 +56,8 @@ typedef struct VertexSurfaceData_struct{
 		struct VertexSurfaceData_3D_struct d3;
 	};
 } VertexSurfaceData;
+
+/* unified file reading routines */
 
 VertexSurfaceData *read_vertex_surface_data(const char *filename);
 
