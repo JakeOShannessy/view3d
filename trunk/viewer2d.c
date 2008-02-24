@@ -30,16 +30,19 @@
 
 #include <gtk/gtk.h>
 #include <cairo.h>
+#include <cairo-pdf.h>
 
 #define DEFAULT_WIDTH  600
 #define DEFAULT_HEIGHT 400
 
 void usage(const char *progname){
 	fprintf(stderr,
-			"Usage: %s [-o [OUTFILE]] [-h] [-t] INFILE\n"
+			"Usage: %s [-o OUTFILE] [-h] [-t] INFILE\n"
 			"Load and parse a View2D file and render using Cairo/GTK+\n"
-			"  INFILE  View2D .vs2 file to render (eg 'facet.vs2')\n"
-			"  -t      Include text in the rendered output.\n"
+			"  INFILE      View2D .vs2 file to render (eg 'facet.vs2')\n"
+			"  -t          Include text in the rendered output.\n"
+			"  -o OUTFILE  Name of a PDF file to which output should be\n"
+			"              directed (instead of on-screen rendering)\n"
 		, progname
 	);	
 }
@@ -60,6 +63,7 @@ typedef struct{
 	VertexSurfaceData *V;
 	char infotext;
 	SelectionInfo sel;
+	const char *outfile; /* set non-null if output to a PDF file is desired (this will be the filename) */
 	float tx, ty, s; /* translation and scaling, used to work out where we will be zooming to */
 } Scene2D;
 
@@ -86,10 +90,14 @@ static gboolean event_release(
 */
 int main (int argc, char **argv){
 	short infotext = 0;
+	const char *outfile = NULL;
 	
 	char c;	
-	while((c=getopt(argc,argv,"t"))!=-1){
+	while((c=getopt(argc,argv,"o:t"))!=-1){
 		switch(c){
+			case 'o':
+				outfile = optarg;
+				break;
 			case 't':
 				infotext = 1;
 				break;
@@ -108,6 +116,7 @@ int main (int argc, char **argv){
 
 	Scene2D S;
 	S.infotext = infotext;
+	S.outfile = outfile;
 
 	S.V = read_vertex_surface_data(filename);
 	if(S.V==NULL){
@@ -115,61 +124,64 @@ int main (int argc, char **argv){
 		exit(3);
 	}
 
+	if(!S.outfile){
+		/* render it to 2D window */
+		GtkWidget *window;
+		GtkWidget *canvas;
 
-	/* render it to 2D window */
-	GtkWidget *window;
-	GtkWidget *canvas;
+		gtk_init(&argc, &argv);
 
-	gtk_init(&argc, &argv);
+		/* create a new top level window */
+		window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
-	/* create a new top level window */
-	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+		/* make the gtk terminate the process the close button is pressed */
+		g_signal_connect(
+			G_OBJECT (window), "delete-event",
+			G_CALLBACK (gtk_main_quit), NULL
+		);
 
-	/* make the gtk terminate the process the close button is pressed */
-	g_signal_connect(
-		G_OBJECT (window), "delete-event",
-		G_CALLBACK (gtk_main_quit), NULL
-	);
+		/* create a new drawing area widget */
+		canvas = gtk_drawing_area_new();
 
-	/* create a new drawing area widget */
-	canvas = gtk_drawing_area_new();
+		/* set a requested (minimum size) for the canvas */
+		gtk_widget_set_size_request(canvas, DEFAULT_WIDTH, DEFAULT_HEIGHT);
 
-	/* set a requested (minimum size) for the canvas */
-	gtk_widget_set_size_request(canvas, DEFAULT_WIDTH, DEFAULT_HEIGHT);
+		/* connect our drawing method to the "expose" signal */
+		g_signal_connect(
+			G_OBJECT (canvas), "expose-event",
+			G_CALLBACK (paint),
+			&S /* pointer to our scene data for rendering */
+		);
 
-	/* connect our drawing method to the "expose" signal */
-	g_signal_connect(
-		G_OBJECT (canvas), "expose-event",
-		G_CALLBACK (paint),
-		&S /* pointer to our scene data for rendering */
-	);
+		/* connect callbacks for zooming the display */
 
-	/* connect callbacks for zooming the display */
+		gtk_widget_add_events (canvas,
+			GDK_BUTTON1_MOTION_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
+		);
 
-	gtk_widget_add_events (canvas,
-		GDK_BUTTON1_MOTION_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
-	);
+		g_signal_connect (G_OBJECT (canvas), "button_press_event",
+			G_CALLBACK (event_press), &(S.sel)
+		);
+		g_signal_connect (G_OBJECT (canvas), "button_release_event",
+			G_CALLBACK (event_release), &(S.sel)
+		);
+		g_signal_connect (G_OBJECT (canvas), "motion_notify_event",
+			G_CALLBACK (event_motion), &(S.sel)
+		);
 
-	g_signal_connect (G_OBJECT (canvas), "button_press_event",
-	    G_CALLBACK (event_press), &(S.sel)
-	);
-	g_signal_connect (G_OBJECT (canvas), "button_release_event",
-	    G_CALLBACK (event_release), &(S.sel)
-	);
-	g_signal_connect (G_OBJECT (canvas), "motion_notify_event",
-	    G_CALLBACK (event_motion), &(S.sel)
-	);
+		/* pack canvas widget into window */
+		gtk_container_add(GTK_CONTAINER (window), canvas);
 
-	/* pack canvas widget into window */
-	gtk_container_add(GTK_CONTAINER (window), canvas);
+		/* show window and all it's children (just the canvas widget) */
+		gtk_widget_show_all(window);
 
-	/* show window and all it's children (just the canvas widget) */
-	gtk_widget_show_all(window);
+		/* enter main loop */ 
+		gtk_main();
 
-	/* enter main loop */ 
-	gtk_main();
-
-	vertex_surface_data_destroy(S.V);
+		vertex_surface_data_destroy(S.V);
+	}else{
+		paint(NULL,NULL,&S);
+	}
 	return 0;
 }
 
@@ -187,6 +199,7 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 	cairo_t *cr;
 	float d, ox, oy;
 	cairo_text_extents_t ex;
+	float mx, my, dx, dy;
 
 	assert(V3D_IS_2D(V));
 
@@ -205,26 +218,33 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 		if(y>maxy)maxy=y;
 	}
 
-	float dx = maxx-minx;
-	float dy = maxy-miny;
-	
-	width  = widget->allocation.width;
-	height = widget->allocation.height;
-
-	// margins
-	float mx = 25, my = 25;
-
-	float sx = dx/(width - 2*mx); /* true-length per pixel */
-	float sy = dy/(height - 2*my);
-
-	float s = sx;
-	if(sy > sx)s = sy;
-	
+	dx = maxx-minx;
+	dy = maxy-miny;
+		
 	//fprintf(stderr,"minx = %f, maxx = %f\n", minx, maxx);
 	//fprintf(stderr,"miny = %f, maxy = %f\n", miny, maxy);
 	//fprintf(stderr,"s = %f\n",s);
 
-	cr = gdk_cairo_create(widget->window);
+	cairo_surface_t *sfc;
+	if(S->outfile){
+		mx = 25, my = 25;
+		width = 1000;
+		height = 2*my + (width - 2*mx) * dy / dx;
+		sfc = cairo_pdf_surface_create(S->outfile,width, height);
+		cr = cairo_create(sfc);
+	}else{
+		// render via GTK
+		cr = gdk_cairo_create(widget->window);
+		width  = widget->allocation.width;
+		height = widget->allocation.height;
+		// margins
+		mx = 25, my = 25;
+	}
+
+	float sx = dx/(width - 2*mx); /* true-length per pixel */
+	float sy = dy/(height - 2*my);
+	float s = sx;
+	if(sy > sx)s = sy;
 
 	/* clear background */
 	cairo_set_source_rgb(cr, 1,1,1);
@@ -312,9 +332,16 @@ void paint(GtkWidget *widget, GdkEventExpose *eev, gpointer data){
 		}
 	}
 
-	cairo_restore(cr);
-	paint_selection(cr, &(S->sel));
-	cairo_destroy (cr);
+	if(!S->outfile){
+		cairo_restore(cr);
+		paint_selection(cr, &(S->sel));
+	}
+
+	cairo_destroy(cr);
+	if(S->outfile){
+		fprintf(stderr,"Finalising surface...\n");
+		cairo_surface_destroy(sfc);
+	}
 }
 
 /* drag-to-zoom stuff */
