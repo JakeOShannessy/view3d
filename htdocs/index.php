@@ -1,6 +1,9 @@
 <html><head><title>View3D: calculation of radiation view factors in 2D and 3D</title></head>
 <body>
 
+<a href="test5-2d-screenshot.png"><img align=right style="float:right" src="test5-2d-screenshot-thumb.png" alt="[2D screenshot]"></a>
+<a href="gunter1-screenshot.png"><img align=right src="gunter1-screenshot-thumb.png " alt="[3D screenshot]"></a>
+
 <h1>View3D</h1>
 
 <p><b>View3D</b> is a command-line tool for evaluating radiation view factors for scenes with complex 2D and 3D geometry. It uses an adaptive integration method to calculate the view factors between faces where there is partial obstruction from inbetween faces.</p>
