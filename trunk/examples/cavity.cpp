@@ -8,6 +8,9 @@
 
 const double PI = 3.14159265358;
 
+#include <unistd.h>
+#include <stdlib.h>
+
 #include <string>
 #include <map>
 #include <sstream>
@@ -66,7 +69,43 @@ void addSliced(const unsigned n, const Surface2D &S
 
 #define EDG(A,B) pair<unsigned,unsigned>((A),(B))
 
-int main(){
+void usage(const char *progname){
+	fprintf(stderr,
+			"Usage: %s [-t] [-v]\n"
+			"Create a View2D input file containing vertex/surface data for\n"
+			"the CLFR cavity absorber.\n"
+			"  -v      Give verbose output\n"
+			"  -t      Exclude the tubes from created scene.\n\n"
+		, progname
+	);	
+}
+
+int main(int argc, char **argv){
+	bool with_tubes = true;
+	const char *outfilename = "cavity.vs2";
+	bool verbose_output = false;
+
+	char c;
+	while((c=getopt(argc,argv,"vt?"))!=-1){
+		switch(c){
+			case 't':
+				with_tubes = false; 
+				outfilename = "cavity_no_tubes.vs2";
+				break;
+			case 'v': verbose_output = true; break;
+			case '?':
+				usage(argv[0]);
+				exit(1);
+		}
+	}
+
+	cerr << "Creating geometry..." << endl;
+	if(with_tubes){
+		cerr << "Tubes included!" << endl;
+	}else{
+  		cerr << "No tubes!" << endl;
+	}
+
 	double W_abs = 0.575;
 	double D_cav = 0.200;
 	double theta = PI/180. * 32;
@@ -101,7 +140,7 @@ int main(){
 	//surfaces["DA"] = Surface2D(4, 1, 0.7);
 
 	// create each of the pipes on the interior
-	{
+	if(with_tubes){
 		double sep = wbank / (ntubes - 1);
 		SbVec2d L(-wbank/2., -vsep);
 		SbVec2d delta(sep, 0);
@@ -132,18 +171,21 @@ int main(){
 
 	//vertices[0] = SbVec2d(-1,-1);
 
-	for(map<string,Surface2D>::const_iterator i = surfaces.begin(); i!=surfaces.end(); ++i){
-		cerr << i->first << " (" << i->second.from << "--" << i->second.to << ") = (" 
-			<< vertices[i->second.from][0] << "," << vertices[i->second.from][1] << ") to ("
-			<< vertices[i->second.to][0] << "," << vertices[i->second.to][1] << ")" 
-			<< ", eps = " << i->second.epsilon << endl;
+	if(verbose_output){
+		for(map<string,Surface2D>::const_iterator i = surfaces.begin(); i!=surfaces.end(); ++i){
+			cerr << i->first << " (" << i->second.from << "--" << i->second.to << ") = (" 
+				<< vertices[i->second.from][0] << "," << vertices[i->second.from][1] << ") to ("
+				<< vertices[i->second.to][0] << "," << vertices[i->second.to][1] << ")" 
+				<< ", eps = " << i->second.epsilon << endl;
+		}
 	}
 
 	// ok, so if it looks OK let's output to the View2D format:
-	ofstream fs("cavity.vs2");
+	cerr << "Writing '" << outfilename << "'..." << endl;
+	ofstream fs(outfilename);
 	fs << "T CLFR Stage 2 cavity cross-section" << endl;
 	fs << "! encl list eps  maxr minr emit" << endl;
-	fs << "C  1    2  2.e-6   10    1    1" << endl;
+	fs << "C  1    2  2.e-6   10    1    0" << endl;
 	fs << "G 2" << endl;
 	for(map<unsigned,SbVec2d>::const_iterator i=vertices.begin(); i!=vertices.end(); ++i){
 		fs << "V " << (i->first) << " " << i->second[0] << " " << i->second[1] << endl;
