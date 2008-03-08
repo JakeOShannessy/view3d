@@ -14,8 +14,11 @@
 #include <string.h> /* prototype: strcpy */
 #include <stdlib.h> /* prototype: exit */
 #include <math.h>   /* prototype: sqrt */
-#include <time.h>   /* prototypes: time, localtime, asctime;
-                       define: tm, time_t */
+#include <time.h>   /* prototypes: time, localtime, asctime; define: tm, time_t */
+
+#include <unistd.h>
+#include <stdlib.h>
+
 #include "types.h" 
 #include "misc.h"
 #include "heap.h"
@@ -40,6 +43,14 @@ static float ReportAF(const int nSrf, const int encl, const char *title
 /*------------------------------------------------------------------------------
   VIEW2D driver
 */
+
+void usage(const char *progname){
+	fprintf(stderr,
+		"VIEW2D - compute view factors for a 2D geometry.\n"
+		"Usage: %s INFILE.vs2 OUTFILE.txt\n"
+			, progname
+	);
+}
 
 int main( int argc, char **argv ){
   char program[]="View2D";   /* program name */
@@ -66,13 +77,23 @@ int main( int argc, char **argv ){
   float eRMS=0.0;     /* RMS row error, if enclosure */
   int n, flag;
 
-  if(argc < 3){
-	  fprintf(stderr,
-			"VIEW2D - compute view factors for a 2D geometry.\n"
-			"Usage: %s INFILE.vs2 OUTFILE.txt\n"
-				, argv[0]
-	  );
-  }
+	char c;
+	while((c=getopt(argc,argv,"?"))!=-1){
+		switch(c){
+			case '?':
+				usage(argv[0]);
+				exit(1);
+		}
+	}
+  
+	if(optind != argc - 2){
+		fprintf(stderr,"ERROR: missing command-line arguments\n");
+		usage(argv[0]);
+		exit(1);
+	}
+
+	strcpy( inFile, argv[optind++] );
+	strcpy( outFile, argv[optind++] );
 
 	/* open log file */
 	_ulog = fopen( "View2D.log", "w" );
@@ -81,21 +102,13 @@ int main( int argc, char **argv ){
 		exit(1);
 	}
 
-  fprintf( _ulog, "Program: %s\n", argv[0] );
+	fprintf( _ulog, "Program: %s\n", argv[0] );
+	fprintf( _ulog, "Data file:   %s\n", inFile );
+	fprintf( _ulog, "Output file: %s\n", outFile );
 
-  if( argc > 1 )
-    strcpy( inFile, argv[1] );
-  FindFile( "Enter name of input file (vertices/surfaces)", inFile, "r" );
-  fprintf( _ulog, "Data file:   %s\n", inFile );
-
-  if( argc > 2 )
-    strcpy( outFile, argv[2] );
-  FindFile( "Enter name of output file (view factors)", outFile, "w" );
-  fprintf( _ulog, "Output file: %s\n", outFile );
-
-  time(&bintime);
-  curtime = localtime(&bintime);
-  fprintf( _ulog, "Time:  %s", asctime(curtime) );
+	time(&bintime);
+	curtime = localtime(&bintime);
+	fprintf( _ulog, "Time:  %s", asctime(curtime) );
 
   fputs("\n\
   View2D - calculation of view factors between 2-D planar surfaces.\n\
