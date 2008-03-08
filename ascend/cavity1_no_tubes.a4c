@@ -1,19 +1,14 @@
-REQUIRE "view3d.a4c";
+REQUIRE "view3d_no_tubes.a4c";
 IMPORT "johnpye/extpy/extpy";
 IMPORT "ascend/plottemps";
 (*
-	Solution to the cavity radiation exchange problem with arbitrary
-	boundary conditions. This model loads view factors from the file
-	'view3d.a4c', which is an automatically-generated file created by the
-	'vf2asc' program that is part of the VIEW3D code. That file in turn 
-	depends the 'cavity.a4c' file that defines the basic datatypes for a
-	cavity problem.
+	As for 'cavity1.a4c' except that this time we have no tubes in the
+	cavity, and the top surface is constrained equal to T_tubes.
 *)
-MODEL cavity1 REFINES view3d;
+MODEL cavity1_no_tubes REFINES view3d;
 	h_window, h_sides, h_top IS_A heat_transfer_coefficient;
 	T_amb IS_A temperature;
-	T_tubes IS_A temperature;
-	s_tubes IS_A set OF symbol_constant;
+	T_absorber IS_A temperature;
 
 	s_top, s_left, s_right, s_window IS_A set OF symbol_constant;
 	s_top :== ['AB0','AB1','AB2','AB3','AB4','AB5','AB6','AB7','AB8','AB9','AB10','AB11'];
@@ -27,21 +22,13 @@ MODEL cavity1 REFINES view3d;
 	n_window :== CARD[s_window];
 
 	eps_window ALIASES eps['CD0'];
-	eps_tubes ALIASES eps['p0s0'];
-	eps_top ALIASES eps['AB0'];
+	eps_absorber ALIASES eps['AB0'];
 	eps_sides ALIASES eps['BC0'];
 
-	s_tubes :== n - s_top - s_left - s_window - s_right;
-	T[s_tubes], T_tubes ARE_THE_SAME;
-
-	n_tubes IS_A integer_constant;
-	n_tubes :== CARD[s_tubes];
+	T[s_top], T_absorber ARE_THE_SAME;
 
 	q_window_rad[s_window] IS_A energy_rate_per_length;
 	q_window_conv[s_window] IS_A energy_rate_per_length;
-
-	q_total IS_A energy_rate_per_length;
-	q_total = SUM[q[i] | i IN s_tubes];
 
 	FOR i IN s_window CREATE
 		q_window_conv[i] = h_window * A[i] * (T[i] - T_amb);
@@ -53,37 +40,36 @@ MODEL cavity1 REFINES view3d;
 		-q[i] = h_sides * A[i] * (T[i] - T_amb);
 	END FOR;
 
+	q_top_loss[s_top] IS_A energy_rate_per_length;
 	FOR i IN s_top CREATE
-		-q[i] = h_top * A[i] * (T[i] - T_amb);
+		q_top_loss[i] = h_top * A[i] * (T[i] - T_amb);
 	END FOR;
 
 	T_window_avg IS_A temperature;
 	T_window_avg = SUM[T[i] | i IN s_window] / n_window	;
 
-	T_top_avg IS_A temperature;
-	T_top_avg = SUM[T[i] | i IN s_top] / n_top;
-
 	T_side_avg IS_A temperature;
 	T_side_avg = SUM[T[i] | i IN s_left + s_right] / n_sides;
+
+	q_total IS_A energy_rate_per_length;
+	q_total = SUM[q[i] + q_top_loss[i] | i IN s_top];
 
 	A_window IS_A distance;
 	A_window = SUM[A[i] | i IN s_window];
 
-	F_total, F_top, F_total_adj IS_A factor;
-	F_total = SUM[SUM[F[i][j] | j IN s_window] | i IN s_tubes] / n_tubes;
-	F_top = SUM[SUM[F[i][j] | j IN s_top] | i IN s_tubes] / n_tubes;
-	F_total_adj = F_total / (1 - F_top);
-
 (*
 	F_equiv IS_A factor;
 	q_equiv_int, q_equiv_ext_c, q_equiv_ext_r IS_A energy_rate_per_length;
-	q_equiv_int = F_equiv / (1./eps_window + 1./eps_tubes - 1) * 1{SIGMA_C} * (T_tubes^4 - T_window_avg^4);
-	
+	q_equiv_int = F_equiv / (1./eps_window + 1./eps_absorber - 1) * 1{SIGMA_C} * (T_absorber^4 - T_window_avg^4);
+
 	q_equiv_ext_c = h_window * A_window * ( T_window_avg - T_amb);
 	q_equiv_ext_r = A_window * eps_window * 1{SIGMA_C} * (T_window_avg^4 - T_amb^4);
 
 	q_equiv_int = q_equiv_ext_c + q_equiv_ext_r;
 *)
+
+	F_total IS_A factor;
+	F_total = SUM[SUM[F[i][j] | j IN s_window] | i IN s_top] / n_top;
 
 	(* for convenience of plotting *)
 	T_window[0..11] IS_A temperature;
@@ -121,15 +107,14 @@ METHOD on_load;
 END on_load;
 METHOD specify;
 	RUN view3d::specify;
-	FIX T_tubes;
+	FIX T_absorber;
 	FREE q[n];
-	FREE T['1','2','3','4'];
 	FIX T_amb;
 	FIX h_sides, h_window, h_top;
 END specify;
 METHOD values;
 	RUN view3d::values;
-	T_tubes := 250 {K} + 273.15 {K};
+	T_absorber := 250 {K} + 273.15 {K};
 
 	T_amb := 290 {K};
 	h_sides := 0.5 {W/m^2/K};
