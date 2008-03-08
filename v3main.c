@@ -14,6 +14,8 @@
 #include <math.h>   /* prototype: sqrt */
 #include <time.h>   /* prototypes: time, localtime, asctime;
                        define: tm, time_t */
+
+#include "config.h"
 #include "types.h"
 #include "view3d.h"
 #include "misc.h"
@@ -37,7 +39,7 @@ void ReportAF( const int nSrf, const int encl, const char *title, char **name,
 /*----------------------------------------------------------------------------*/
 int main( int argc, char **argv ){
   char program[]="View3D";   /* program name */
-  char version[]="3.3";      /* program version */
+  char version[]=V3D_VERSION;      /* program version */
   char inFile[_MAX_PATH]=""; /* input file name */
   char outFile[_MAX_PATH]="";/* output file name */
 #ifndef ANSI
@@ -69,10 +71,10 @@ int main( int argc, char **argv ){
 
   if( argc == 1 || argv[1][0] == '?' ){
     fprintf(stderr,"\n"
-		"VIEW3D - compute view factors for a 3D geometry.\n\n"
+		"VIEW3D - compute view factors for a 3D geometry. Version %s.\n\n"
 		"Usage: %s INFILE.vs3 OUTFILE.txt\n\n"
 		"You may also enter the file names interactively.\n\n"
-		, argv[0]
+		, V3D_VERSION, argv[0]
 	);
     if( argc > 1 )
       exit( 1 );
