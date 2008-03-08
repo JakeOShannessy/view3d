@@ -174,3 +174,10 @@ env.Append(
 tar = env.DistTar("dist/view3d-"+version
         , [env.Dir('#')]
 )
+
+#-----------
+# Default build target
+
+env.Default([prog, prog2d, viewer, viewer2d, 'examples', 'ascend'])
+
+

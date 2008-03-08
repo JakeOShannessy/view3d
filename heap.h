@@ -6,9 +6,9 @@
 /*
 	Allocation of single elements
 */
-void *Alc_E( long length, const char *file, int line );
+V3D_API void *Alc_E( long length, const char *file, int line );
 int Chk_E( void *pm, unsigned, const char *, int );
-void *Fre_E( void *pm, unsigned, const char *, int );
+V3D_API void *Fre_E( void *pm, unsigned, const char *, int );
 
 #define V3D_NEW(TYPE) Alc_E(sizeof(TYPE),__FILE__,__LINE__)
 #define V3D_FREE(TYPE,VAR) Fre_E((void *)(VAR),sizeof(TYPE),__FILE__,__LINE__);
