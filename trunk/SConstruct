@@ -1,5 +1,5 @@
 
-version = '0.20080217'
+version = '3.4'
 
 import os
 if os.environ.get('TERM')=="msys":
@@ -8,7 +8,7 @@ else:
 	deftool = ['default']
 
 env = Environment(
-	tools=deftool + ['disttar','soqt','gtk']
+	tools=deftool + ['disttar','soqt','gtk','substinfile']
 	,toolpath=['scons']
 )
 
@@ -98,6 +98,15 @@ if conf.CheckGcc():
 	conf.env.Append(CCFLAGS=['-Wall'])
 
 conf.Finish()
+
+#------------
+# Create 'config.h'
+
+env.Append(SUBST_DICT={
+	"@V3D_VERSION@":str(version)
+})
+
+config = env.SubstInFile('config.h.in')
 
 #------------
 # Create the program

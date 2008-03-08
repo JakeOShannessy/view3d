@@ -8,6 +8,7 @@
 # define DEBUG 0
 #endif
 
+#include "config.h"
 #include "view2d.h"
 
 #include <stdio.h>
@@ -46,15 +47,15 @@ static float ReportAF(const int nSrf, const int encl, const char *title
 
 void usage(const char *progname){
 	fprintf(stderr,
-		"VIEW2D - compute view factors for a 2D geometry.\n"
+		"VIEW2D - compute view factors for a 2D geometry. Version %s.\n"
 		"Usage: %s INFILE.vs2 OUTFILE.txt\n"
-			, progname
+			, V3D_VERSION, progname
 	);
 }
 
 int main( int argc, char **argv ){
   char program[]="View2D";   /* program name */
-  char version[]="3.3";      /* program version */
+  char version[]=V3D_VERSION;      /* program version */
   char inFile[_MAX_PATH]=""; /* input file name */
   char outFile[_MAX_PATH]="";/* output file name */
   char title[LINELEN];  /* project title */

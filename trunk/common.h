@@ -1,5 +1,5 @@
-#ifndef V3D_CONFIG_H
-#define V3D_CONFIG_H
+#ifndef V3D_COMMON_H
+#define V3D_COMMON_H
 
 #ifdef __WIN32__
 # define V3D_EXPORT __declspec(dllexport)

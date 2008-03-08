@@ -1,0 +1,7 @@
+#ifndef V3D_CONFIG_H
+#define V3D_CONFIG_H
+
+#define V3D_VERSION "@V3D_VERSION@"
+
+#endif
+
