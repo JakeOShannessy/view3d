@@ -96,6 +96,15 @@ int main( int argc, char **argv ){
 	strcpy( inFile, argv[optind++] );
 	strcpy( outFile, argv[optind++] );
 
+	/* check that files exist */
+	FILE *f;
+	f = fopen(inFile,'r');
+	if(f==NULL){
+		fprintf(stderr,"ERROR: failed to open input file '%s' for reading!\n",inFile);
+		exit(1);
+	}
+	fclose(f);
+
 	/* open log file */
 	_ulog = fopen( "View2D.log", "w" );
 	if(_ulog==NULL){
@@ -104,6 +113,7 @@ int main( int argc, char **argv ){
 	}
 
 	fprintf( _ulog, "Program: %s\n", argv[0] );
+	fprintf( _ulog, "Version: %s\n", V3D_VERSION );
 	fprintf( _ulog, "Data file:   %s\n", inFile );
 	fprintf( _ulog, "Output file: %s\n", outFile );
 
@@ -111,6 +121,8 @@ int main( int argc, char **argv ){
 	curtime = localtime(&bintime);
 	fprintf( _ulog, "Time:  %s", asctime(curtime) );
 
+#if 0
+	/* this text has been moved to LICENSE.txt */
   fputs("\n\
   View2D - calculation of view factors between 2-D planar surfaces.\n\
      Provided for review only.\n\
@@ -126,6 +138,7 @@ int main( int argc, char **argv ){
   recipient further agrees not to assert any proprietary rights\n\
   therein or to represent this program to anyone as other than\n\
   a government program.\n", stderr );
+#endif
 
   time0 = CPUtime( 0.0 );
 
