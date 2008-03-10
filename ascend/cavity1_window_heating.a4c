@@ -83,8 +83,9 @@ MODEL cavity1_window_heating REFINES view3d;
 	T_side_avg IS_A temperature;
 	T_side_avg = SUM[T[i] | i IN s_left + s_right] / n_sides;
 
-	A_window IS_A distance;
+	A_window, A_top IS_A distance;
 	A_window = SUM[A[i] | i IN s_window];
+	A_top = SUM[A[i] | i IN s_top];
 
 	q_not_absorbed IS_A energy_rate_per_length;
 	q_not_absorbed = q_total + SUM[q_window_absorb[i] | i IN s_window];
@@ -93,6 +94,9 @@ MODEL cavity1_window_heating REFINES view3d;
 	F_total = SUM[SUM[F[i][j] | j IN s_window] | i IN s_tubes] / n_tubes;
 	F_top = SUM[SUM[F[i][j] | j IN s_top] | i IN s_tubes] / n_tubes;
 	F_total_adj = F_total / (1 - F_top);
+
+	F_rad IS_A factor;
+	q_total / A_top = F_rad / (1./eps_window + 1./eps_tubes - 1) * 1{SIGMA_C} * (T_tubes^4 - T_window_avg^4);
 
 (*
 	F_equiv IS_A factor;
