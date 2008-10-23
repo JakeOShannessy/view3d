@@ -14,7 +14,7 @@
 <li><a href="http://sourceforge.net/projects/view3d">Sourceforge.net Project Page</a>
 <li><a href="http://view3d.svn.sourceforge.net/viewvc/*checkout*/view3d/trunk/README.txt">README.txt</a>
 <li><a href="http://view3d.svn.sourceforge.net/viewvc/*checkout*/view3d/trunk/LICENSE.txt">License</a>
-<li><a href="http://view3d.svn.sourceforge.net/viewvc/*checkout*/view3d/trunk/MANUAL.doc">MANUAL.doc</a> (93k Word document)
+<li><a href="http://view3d.svn.sourceforge.net/viewvc/*checkout*/view3d/trunk/view3d-user-manual.odt">Documentation (108k, OpenOffice format)</a> or in <a href="http://view3d.svn.sourceforge.net/viewvc/*checkout*/view3d/trunk/VIEW3D-USER-MANUAL.pdf">PDF format (702k)</a>. 
 <li><a href="http://view3d.svn.sourceforge.net/viewvc/view3d/trunk/">Browse the code</a>
 </ul>
 
