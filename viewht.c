@@ -39,7 +39,6 @@ float CPUtime(float t1);
 
 FILE *_ulog = NULL; /**< log file */
 FILE *_uout; /**< output file */
-char _string[LINELEN];  /**< buffer for a character string */
 
 /***  main.c  ****************************************************************/
 
@@ -47,9 +46,9 @@ int main( int argc, char **argv ){
   char program[16];     /* program name */
   char version[8];      /* program version */
   int format;          /* view factor file format; 0=text, 1=binary, ... */
-  char inFile[_MAX_PATH]=""; /* input file name */
-  char outFile[_MAX_PATH]=""; /* output file name */
-  char tkFile[_MAX_PATH]=""; /* temperature file name */
+  char inFile[_MAX_PATH + 1]=""; /* input file name */
+  char outFile[_MAX_PATH + 1]=""; /* output file name */
+  char tkFile[_MAX_PATH + 1]=""; /* temperature file name */
   float **VF=NULL;    /* square array of view factors */
   float *TK=NULL;     /* vector of surface temperatures [K] */
   float *T4=NULL;     /* vector of surface temperatures ^ 4 */
@@ -203,10 +202,10 @@ void ReadTK( char *fileName, int nSrf, float *TK ){
 /*  Functions at program initiation  */
 
 void PgmInit( char *program ){
-  char fileName[_MAX_PATH]; /* name of file; _MAX_... in <stdlib.h> */
-  char pgmDrv[_MAX_DRIVE];  /* drive letter for current program */
-  char pgmDir[_MAX_DIR];    /* directory path for current program */
-  char pgmName[_MAX_FNAME]; /* file name for current program */
+  char fileName[_MAX_PATH + 1]; /* name of file; _MAX_... in <stdlib.h> */
+  char pgmDrv[_MAX_DRIVE + 1];  /* drive letter for current program */
+  char pgmDir[_MAX_DIR + 1];    /* directory path for current program */
+  char pgmName[_MAX_FNAME + 1]; /* file name for current program */
   struct tm *curtime; /* time structure */
   time_t bintime;     /* seconds since 00:00:00 GMT, 1/1/70 */
 
@@ -350,7 +349,7 @@ FILE *FileOpen( char *prompt, char *fileName, char *mode, int flag )
         }
       }
     if( !pfile )        /* ask for file name */
-      GetStr( prompt, fileName, sizeof(fileName) );
+      GetStr( prompt, fileName, _MAX_PATH);
     }
 
   if( flag )

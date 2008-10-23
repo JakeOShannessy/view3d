@@ -876,8 +876,13 @@ char *GetStr( char *prompt, char *str, int maxchr )
     fputs( prompt, stderr );
     fputs( ": ", stderr );
     }
-  if( !fgets( str, maxchr, stdin ) )
+  if( !fgets(str, maxchr, stdin) )
     error( 3, __FILE__, __LINE__, "Failed to process input", "" );
+
+  /* replace newline at end with a null */
+  if(str[strlen(str)-1] == '\n'){
+	str[strlen(str)-1] = '\0';
+  }
 
   return str;
 
