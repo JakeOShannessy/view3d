@@ -1,5 +1,5 @@
 
-version = '3.4'
+version = '3.5'
 
 import os
 if os.environ.get('TERM')=="msys":
@@ -181,7 +181,7 @@ env.SConscript('ascend/SConscript','env');
 env['DISTTAR_FORMAT']='bz2'
 env.Append(
 	DISTTAR_EXCLUDEEXTS=['.o','.os','.so','.a','.dll','.cc','.cache','.pyc'
-		,'.cvsignore','.dblite','.log', '.gz', '.bz2', '.zip']
+		,'.cvsignore','.dblite','.log', '.gz', '.bz2', '.zip', '.pdf']
 	,DISTTAR_EXCLUDEDIRS=['CVS','.svn','.sconf_temp', 'dist','build']
 )
 
