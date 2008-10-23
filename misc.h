@@ -5,14 +5,16 @@
 
 V3D_API int error(int severity, const char *file, const int line,...);
 
-void PathMerge(char *fullpath, int szfp, char *drv, char *path, char *name, char *ext);
+V3D_API void PathMerge(char *fullpath, int szfp, char *drv, char *path, char *name, char *ext);
 
-void PathSplit(char *fullpath, char *drv, int szd, char *path, int szp
+V3D_API void PathSplit(char *fullpath, char *drv, int szd, char *path, int szp
 		, char *name, int szn, char *ext, int sze
 );
 
 char *IntStr( long i );
 char *FltStr( double f, int n );
+
+int LongCon( char *str, long *i);
 
 V3D_API float CPUtime(float t1);
 
@@ -33,6 +35,10 @@ char *NxtWord( char *str, int flag, int maxlen );
 float ReadR4( int flag );
 
 const char *sfname(const char* longfilename);
+
+V3D_API char *GetStr( char *prompt, char *str, int maxchar);
+V3D_API int NoYes( char *question );
+
 
 #endif
 
