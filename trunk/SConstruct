@@ -135,6 +135,11 @@ prog = env.Program('view3d', ['v3main.c'], LIBS=['view3d'], LIBPATH=['#'])
 prog2d = env.Program('view2d', ['v2main.c'], LIBS=['view3d'], LIBPATH=['#'])
 
 #------------
+# ViewHT heat transfer calculation program
+
+prog_viewht = env.Program('viewht', ['viewht.c'], LIBS=['view3d'], LIBPATH=['#'])
+
+#------------
 # 3D viewer program
 
 soqt_env = env.Copy()
@@ -187,6 +192,6 @@ tar = env.DistTar("dist/view3d-"+version
 #-----------
 # Default build target
 
-env.Default([prog, prog2d, viewer, viewer2d, 'examples', 'ascend'])
+env.Default([prog, prog2d, viewer, viewer2d, prog_viewht, 'examples', 'ascend'])
 
 

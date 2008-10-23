@@ -270,9 +270,11 @@ long MemNet( char *msg )
   {
   long netBytes=_bytesAllocated-_bytesFreed;
 
+#ifdef XXX
   fprintf( _ulog, "%s: %ld bytes allocated, %ld freed, %ld net\n",
     msg, _bytesAllocated, _bytesFreed, netBytes );
   fflush( _ulog );
+#endif
 
   return netBytes;
 
@@ -287,20 +289,22 @@ void MemList( void )
 #if( MEMTEST > 1 )
   MEMLIST *pml;
 
-  if( _memList )
-    {
+#ifdef XXX
+  if( _memList ){
     fprintf( _ulog, "Heap: loc,   size, line, file\n" );
     for( pml=_memList; pml; pml=pml->next )
       fprintf( _ulog, "[%p] %6d %5d %s\n",
         pml->pam, pml->length, pml->line, pml->file );
-    }
-  else
+  }else{
     fprintf( _ulog, "No unfreed allocations.\n" );
+  }
 #else
-  if( _bytesAllocated - _bytesFreed )
+  if( _bytesAllocated - _bytesFreed ){
     fprintf( _ulog, "Recompile Heap.c to list unfreed allocations.\n" );
+  }
 #endif
   fflush( _ulog );
+#endif /* XXX */
 
   }  // end of MemList
 
@@ -326,22 +330,32 @@ void MemRem( char *msg ){
   switch( heapcheck( ) )
     {
     case _HEAPEMPTY:
+#ifdef XXX
       fprintf( _ulog, "The heap is empty.\n" );
+#endif
       break;
     case _HEAPOK:
+#ifdef XXX
       fprintf( _ulog, "The heap is O.K.\n" );
+#endif
       break;
     case _HEAPCORRUPT:
+#ifdef XXX
       fprintf( _ulog, "The heap is corrupted.\n" );
+#endif
       break;
     }  // end switch
 
+#ifdef XXX
   fprintf( _ulog, "Heap: loc, size, used?\n" );
+#endif
   hp.ptr = NULL;
   while( heapwalk( &hp ) == _HEAPOK )
     {
+#ifdef XXX
     fprintf( _ulog, "[%p]%8lu %s\n",
              hp.ptr, hp.size, hp.in_use ? "used" : "free" );
+#endif
     }
 # endif
 #else

@@ -8,6 +8,7 @@
 /* removed the #defines for U1, R8 etc as they were making the code hard to read */
 
 #define NAMELEN 16
+#define LINELEN 256
 
 #if( __GNUC__ )
 #include <limits.h>  /* define PATH_MAX */

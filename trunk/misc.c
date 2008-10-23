@@ -33,8 +33,6 @@ void PathCWD( char *path, int szp );
 void PgmInit( char *program );
 char *NextArg( const int argc, char **argv );
 
-int LongCon( char *str, long *i );
-
 int HexCon( char *s, unsigned long *i );
 char *HexStr( unsigned long j );
 
@@ -48,8 +46,6 @@ int DatXCon( char *s, long *day_of_year );
 char *DatXStr( int day_of_year );
 
 int GetKey( void );
-char *GetStr( char *prompt, char *str );
-int NoYes( char *question );
 void Pause( void );
 
 void NxtInit( char *file, int line );
@@ -867,4 +863,109 @@ int streqli( char *s1, char *s2 )
     return 0;
 
   }  /* end of streqli */
+
+
+/***  GetStr.c  **************************************************************/
+
+/*  Get a string from the keyboard (user).  */
+
+char *GetStr( char *prompt, char *str, int maxchr )
+  {
+  if( prompt[0] )
+    {
+    fputs( prompt, stderr );
+    fputs( ": ", stderr );
+    }
+  if( !fgets( str, maxchr, stdin ) )
+    error( 3, __FILE__, __LINE__, "Failed to process input", "" );
+
+  return str;
+
+  }  /* end GetStr */
+
+/***  NoYes.c  ***************************************************************/
+
+/*  Obtain n/y response to query.  NO returns 0; YES returns 1.  */
+
+int NoYes( char *question )
+  {
+  int i = -1;
+
+  while( i == -1 )
+    {
+    int response;
+         /* print input prompt */
+    fputs( question, stderr );
+    fputs( "? (y/n)  ", stderr );
+
+         /* get user response */
+    response = GetKey();
+#if( _MSC_VER || __TURBOC__ || __WATCOMC__ )
+    fputc( response, stderr );
+    fputc( '\n', stderr );
+#endif
+
+         /* process user response */
+    switch( response )
+      {
+      case 'y':
+      case 'Y':
+      case '1':
+        i = 1;
+        break;
+      case 'n':
+      case 'N':
+      case '0':
+        i = 0;
+        break;
+      default:
+        fputs( " Valid responses are:  y or Y for yes, n or N for no.\n", stderr);
+      }
+    }  /* end while loop */
+
+  return i;
+
+  }  /*  end NoYes  */
+
+#if( _MSC_VER || __TURBOC__ || __WATCOMC__ )
+#include <conio.h>  /* prototype: _getch(MSC), getch(TC) */
+#endif
+
+#if( _MSC_VER )   /* VISUAL C version */
+/***  GetKey.c  **************************************************************/
+
+int GetKey( void )
+  {
+  int c = _getch();       /* <conio.h> read keystroke */
+  if( !c )               /* function & arrow characters above 127 */
+    c = 128 + _getch();
+
+  return c;
+
+  }  /* end GetKey */
+
+#elif( __TURBOC__ || __WATCOMC__ )
+/***  GetKey.c  **************************************************************/
+
+int GetKey( void )
+  {
+  int c = getch();        /* <conio.h> read keystroke */
+  if( !c )               /* function & arrow characters above 127 */
+    c = 128 + getch();
+
+  return c;
+
+  }  /* end GetKey */
+
+#else
+/***  GetKey.c  **************************************************************/
+
+int GetKey( void )
+  {
+  int c = getchar();  // ANSI, requies ENTER key also
+
+  return c;
+
+  }  /* end GetKey */
+#endif
 

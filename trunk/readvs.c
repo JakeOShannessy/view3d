@@ -3,6 +3,7 @@
 
 #include "getdat.h"
 #include "heap.h"
+/* NOTE: do not add misc.h here, see below */
 
 #include <ctype.h>
 #include <string.h>
