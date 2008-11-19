@@ -142,7 +142,7 @@ prog_viewht = env.Program('viewht', ['viewht.c'], LIBS=['view3d'], LIBPATH=['#']
 #------------
 # 3D viewer program
 
-soqt_env = env.Copy()
+soqt_env = env.Clone()
 soqt_env.Append(
 	CPPPATH = env.get('SOQT_CPPPATH')
 	, LIBS = ['view3d'] + env.get('SOQT_LIBS')
@@ -155,7 +155,7 @@ viewer = soqt_env.Program('viewer',['viewer.cpp','render.cpp'])
 #------------
 # 2D viewer program
 
-gtk_env = env.Copy()
+gtk_env = env.Clone()
 gtk_env.Append(
 	CPPPATH = env.get('GTK_CPPPATH')
 	, LIBS = ['view3d'] + env.get('GTK_LIBS')
