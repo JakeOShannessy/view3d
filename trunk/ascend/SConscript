@@ -1,6 +1,6 @@
 Import('env')
 
-asc_env = env.Copy()
+asc_env = env.Clone()
 
 asc_env.AppendUnique(
 	LIBS = ['view3d']

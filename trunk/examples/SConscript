@@ -1,6 +1,6 @@
 Import('env')
 
-cav_env = env.Copy()
+cav_env = env.Clone()
 cav_env.AppendUnique(
 	LIBS = env.get('SOQT_LIBS')
 	, LIBPATH = env.get('SOQT_LIBPATH')
