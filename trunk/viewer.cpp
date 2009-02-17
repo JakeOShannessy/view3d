@@ -16,7 +16,7 @@
 	Foundation, Inc., 59 Temple Place - Suite 330,
 	Boston, MA 02111-1307, USA.
 *//**@FILE
-	Load and parse View3D data file, then render the 3D geometry using OpenGL 
+	Load and parse View3D data file, then render the 3D geometry using OpenGL
 	in the COIN3D Examiner-Viewer.
 	See http://www.coin3d.org/ as well as http://view3d.sf.net (this project)
 */
@@ -59,6 +59,7 @@ extern "C"{
 #include <sstream>
 #include <stdexcept>
 #include <vector>
+#include <map>
 using namespace std;
 
 const char *defaultsceneoutfile = "view3d.iv";
@@ -72,7 +73,7 @@ void usage(const char *progname){
 			"  -t      Include text in the rendered output.\n"
 			"  OUTFILE Open Inventor file to output (defaults to '%s')\n\n"
 		, progname, defaultsceneoutfile
-	);	
+	);
 }
 
 int main(int argc, char **argv){
@@ -80,8 +81,8 @@ int main(int argc, char **argv){
 	const char *sceneoutfile = NULL;
 	bool highquality = false;
 	bool infotext = false;
-	
-	char c;	
+
+	char c;
 	while((c=getopt(argc,argv,"ho::t"))!=-1){
 		switch(c){
 			case 'h':
@@ -164,7 +165,7 @@ int main(int argc, char **argv){
 	for(int n=nSrf; n; n--)area[n] = (float)srf[n].area;
 	NxtClose();
 
-#if 0 
+#if 0
 	const char *types[]={"rsrf","subs","mask","nuls","obso"};
 
     fprintf(stderr, "Surfaces:\n" );
@@ -213,9 +214,9 @@ int main(int argc, char **argv){
 	SoMaterial *mat = new SoMaterial;
 	mat->diffuseColor.setValue(1,1,0);
 	mat->transparency = 0.5;
-	root->addChild(mat);	
+	root->addChild(mat);
 
-	// vertices 
+	// vertices
 	SoCoordinate3 *coo = new SoCoordinate3;
 	SbVec3f *vcoo = new SbVec3f[CD.nVertices];
 	for(int i=0; i<CD.nVertices; ++i){
@@ -254,7 +255,7 @@ int main(int argc, char **argv){
 			ids.push_back(id-1);
 			//fprintf(stderr,"srf %d: vert %ld = %f, %f, %f (=? %f, %f, %f)\n",i,id,xyz[id].x, xyz[id].y, xyz[id].z, vcoo[id][0], vcoo[id][1], vcoo[id][2]);
 			SbVec3f P(xyz[id].x, xyz[id].y, xyz[id].z);
-			L = L + P;			
+			L = L + P;
 		}
 		L = float(1./srf[i].nv) * L;
 		sfclabels[i] = L;
@@ -262,10 +263,10 @@ int main(int argc, char **argv){
 		nvals += srf[i].nv + 1;
     }
 	fprintf(stderr,"Created %d faces.\n",CD.nAllSrf);
-	
+
 	SoIndexedFaceSet *fset = new SoIndexedFaceSet;
 	fset->coordIndex.setValues(0, nvals, &(ids[0]));
-	root->addChild(fset);	
+	root->addChild(fset);
 
 	// add the surface labels
 
@@ -278,7 +279,7 @@ int main(int argc, char **argv){
 		stringstream ss;
 		ss << name[mi->first] << " (e=" << emitt[mi->first] << ")";
 		root->addChild(text(mi->second,ss.str().c_str(),RED));
-	}		
+	}
 
 	// label the vertices
 	for(int i=0; i<CD.nVertices; ++i){
@@ -311,7 +312,7 @@ int main(int argc, char **argv){
 		eviewer->getGLRenderAction()->setTransparencyType(SoGLRenderAction::SORTED_OBJECT_BLEND);
 		eviewer->setSceneGraph(root);
 		eviewer->show();
-	  
+
 		// Pop up the main window.
 		SoQt::show(mainwin);
 		// Loop until exit.
@@ -320,7 +321,7 @@ int main(int argc, char **argv){
 		// Clean up resources.
 		delete eviewer;
 	}
-	root->unref();	
+	root->unref();
 
 
 }

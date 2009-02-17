@@ -1,8 +1,8 @@
 
 version = '3.5'
 
-import os
-if os.environ.get('TERM')=="msys":
+import os, platform
+if platform.system()=="Windows":
 	deftool = ['mingw']
 else:
 	deftool = ['default']
@@ -161,6 +161,7 @@ gtk_env.Append(
 	, LIBS = ['view3d'] + env.get('GTK_LIBS')
 	, LIBPATH = ['#'] + env.get('GTK_LIBPATH')
 	, CPPDEFINES = env.get('GTK_CPPDEFINES')
+	, CCFLAGS = env.get('GTK_CCFLAGS')
 )
 
 viewer2d = gtk_env.Program('viewer2d',['viewer2d.c'])
