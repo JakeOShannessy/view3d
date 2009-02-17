@@ -11,10 +11,12 @@
 <p>View3D was originally developed by George Walton. The project is now maintained by <a href="http://sourceforge.net/users/jdpipe">John Pye</a> and <a href="http://sourceforge.net/users/georgewalton/">George Walton</a>. New cross-platform 2D and 3D viewer code has been developed to replace the original Windows-only code, and a new build script has been added to automate the job of compiling the program on Linux (GCC) and MinGW (GCC).</p>
 
 <ul>
+<li><a href="https://sourceforge.net/project/platformdownload.php?group_id=217420">Download source code</a>
+<li><a href="https://sourceforge.net/news/?group_id=217420">Project news</a>
 <li><a href="http://sourceforge.net/projects/view3d">Sourceforge.net Project Page</a>
 <li><a href="http://view3d.svn.sourceforge.net/viewvc/*checkout*/view3d/trunk/README.txt">README.txt</a>
 <li><a href="http://view3d.svn.sourceforge.net/viewvc/*checkout*/view3d/trunk/LICENSE.txt">License</a>
-<li><a href="http://view3d.svn.sourceforge.net/viewvc/*checkout*/view3d/trunk/view3d-user-manual.odt">Documentation (108k, OpenOffice format)</a> or in <a href="http://view3d.svn.sourceforge.net/viewvc/*checkout*/view3d/trunk/VIEW3D-USER-MANUAL.pdf">PDF format (702k)</a>. 
+<li><a href="http://view3d.svn.sourceforge.net/viewvc/*checkout*/view3d/trunk/view3d-user-manual.odt">Documentation (108k, OpenOffice format)</a> or in <a href="http://view3d.svn.sourceforge.net/viewvc/*checkout*/view3d/trunk/VIEW3D-USER-MANUAL.pdf">PDF format (560k)</a>. 
 <li><a href="http://view3d.svn.sourceforge.net/viewvc/view3d/trunk/">Browse the code</a>
 </ul>
 
