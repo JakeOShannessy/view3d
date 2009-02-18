@@ -98,7 +98,7 @@ int main( int argc, char **argv ){
 
 	/* check that files exist */
 	FILE *f;
-	f = fopen(inFile,'r');
+	f = fopen(inFile,"r");
 	if(f==NULL){
 		fprintf(stderr,"ERROR: failed to open input file '%s' for reading!\n",inFile);
 		exit(1);
