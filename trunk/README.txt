@@ -53,6 +53,15 @@ Building on Mac should be possible in principle, although it may require
 that you build your own copy of SoQt from source first, if you want to use
 the 3D viewer. Let me know if you have any success on this platform.
 
+To summarise, the steps required to get up and running with View3D are:
+1. install dependencies (SoQt, Coin3D, GTK) including header files
+2. install development tools (gcc compiler, scons, python)
+3. check out the source code from subversion, or download a tarball
+4. unpack the tarball if applicable
+5. enter the 'view3d' subdirectory and type 'scons'.
+6. you should have the executables 'view3d', 'viewer', 'viewht' etc now
+   present in your current directory.
+
 Any problems with the build on any of these platforms, please let me know.
 
 -- 
