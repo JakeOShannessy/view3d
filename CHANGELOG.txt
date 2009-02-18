@@ -1,4 +1,13 @@
 
+Version 3.5.x
+-------------
+18 Feb 2008
+
+ - Fixed compilation on Windows with MSYS/MinGW, SoQt, Coin3d, GTK+.
+ - Fixed detection of GTK+ on Windows using PATH instead of registry.
+ - Added compilation info at end of README.
+
+
 Version 3.5
 -----------
 23 Oct 2008
