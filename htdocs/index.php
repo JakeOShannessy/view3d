@@ -8,7 +8,7 @@
 
 <p><b>View3D</b> is a command-line tool for evaluating radiation view factors for scenes with complex 2D and 3D geometry. It uses an adaptive integration method to calculate the view factors between faces where there is partial obstruction from inbetween faces.</p>
 
-<p>View3D was originally developed by George Walton. The project is now maintained by <a href="http://sourceforge.net/users/jdpipe">John Pye</a> and <a href="http://sourceforge.net/users/georgewalton/">George Walton</a>. New cross-platform 2D and 3D viewer code has been developed to replace the original Windows-only code, and a new build script has been added to automate the job of compiling the program on Linux (GCC) and MinGW (GCC).</p>
+<p>View3D was originally developed by George Walton. The project is now maintained by <a href="http://pye.dyndns.org">John Pye</a> and <a href="http://sourceforge.net/users/georgewalton/">George Walton</a>. New cross-platform 2D and 3D viewer code has been developed to replace the original Windows-only code, and a new build script has been added to automate the job of compiling the program on Linux (GCC) and MinGW (GCC).</p>
 
 <ul>
 <li><a href="https://sourceforge.net/project/platformdownload.php?group_id=217420">Download source code</a>
