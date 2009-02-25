@@ -26,7 +26,7 @@ def generate(env):
 				,GTK_CPPDEFINES = env1.get('CPPDEFINES') or []
 				,GTK_LIBPATH = env1.get('LIBPATH') or []
 				,GTK_LIBS = env1.get('LIBS') or []
-				,GTK_CCFLAGS = ['-mms-bitfields']
+				,GTK_CCFLAGS = env1.get('CCFLAGS') or []
 			)
 		else:
 			cmd = ['pkg-config','gtk+-2.0','--cflags','--libs']
@@ -37,7 +37,7 @@ def generate(env):
 				,GTK_CPPDEFINES = env1.get('CPPDEFINES') or []
 				,GTK_LIBPATH = env1.get('LIBPATH') or []
 				,GTK_LIBS = env1.get('LIBS') or []
-				,GTK_CCFLAGS = []
+				,GTK_CCFLAGS = env1.get('CCFLAGS') or []
 			)
 
 		#print "GTK_LIBS =",env.get('GTK_LIBS')
