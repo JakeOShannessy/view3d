@@ -37,10 +37,12 @@ and unpack the Gtk+ 'bundle' from http://www.gtk.org/download-windows.html
 then add the path to the 'bin' subdirectory therein to your PATH.
 
 In order to use the 3D viewer, you must have the Coin3D and SoQt and Qt
-librariexs and header files installed. On Ubuntu Linux, use
-"sudo apt-get install libsoqt3-dev". On Winows, download and install
-Qt 4.3.3, SoQt and Coin3D from the following web page:
-http://ascendwiki.cheme.cmu.edu/Binary_installers_for_Coin3d_and_SoQt_on_MinGW
+librariexs and header files installed:
+ * On Ubuntu Linux 8.10, use "sudo apt-get install libsoqt3-dev".
+ * On Ubuntu Linux 8.04, use "sudo apt-get install libsoqt-dev".
+ * On Windows, download and install Qt 4.3.3, SoQt and Coin3D from the following 
+   web page:
+ http://ascendwiki.cheme.cmu.edu/Binary_installers_for_Coin3d_and_SoQt_on_MinGW
 
 To build on Windows, you need to have MinGW, MSYS, Python and SCons installed.
 Then, inside the source code directory, type "scons" and the
@@ -62,7 +64,9 @@ To summarise, the steps required to get up and running with View3D are:
 4. unpack the tarball if applicable
 5. enter the 'view3d' subdirectory and type 'scons'.
 6. you should have the executables 'view3d', 'viewer', 'viewht' etc now
-   present in your current directory.
+   present in your current directory. To run them you will need to modify
+   your PATH (Windows) or LD_LIBRARY_PATH (Linux) to include the location
+   of view3d.dll (Windows) or libview3d.so (Linux).
 
 Any problems with the build on any of these platforms, please let me know.
 
