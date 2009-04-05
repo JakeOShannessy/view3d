@@ -3,7 +3,7 @@ version = '3.5'
 
 import os, platform
 if platform.system()=="Windows":
-	deftool = ['mingw']
+	deftool = ['mingw','nsis']
 else:
 	deftool = ['default']
 
@@ -34,6 +34,13 @@ opts.Add(BoolOption(
 	,"Whether to use GCC Visibility features (only applicable if available)"
 	,True
 ))
+
+opts.Add(
+	'WIN_INSTALLER_NAME'
+	,'Windows Installer name'
+	,'view3d-%s.exe' % version
+)
+
 
 opts.Update(env)
 
@@ -108,6 +115,8 @@ env.Append(SUBST_DICT={
 
 config = env.SubstInFile('config.h.in')
 
+env['PROGS'] = []
+
 #------------
 # Create the program
 
@@ -134,10 +143,14 @@ prog = env.Program('view3d', ['v3main.c'], LIBS=['view3d'], LIBPATH=['#'])
 
 prog2d = env.Program('view2d', ['v2main.c'], LIBS=['view3d'], LIBPATH=['#'])
 
+env['PROGS'] += [prog,prog2d]
+
 #------------
 # ViewHT heat transfer calculation program
 
 prog_viewht = env.Program('viewht', ['viewht.c'], LIBS=['view3d'], LIBPATH=['#'])
+
+env['PROGS'].append(prog_viewht)
 
 #------------
 # 3D viewer program
@@ -152,6 +165,8 @@ soqt_env.Append(
 
 viewer = soqt_env.Program('viewer',['viewer.cpp','render.cpp'])
 
+env['PROGS'].append(viewer)
+
 #------------
 # 2D viewer program
 
@@ -165,6 +180,8 @@ gtk_env.Append(
 )
 
 viewer2d = gtk_env.Program('viewer2d',['viewer2d.c'])
+
+env['PROGS'].append(viewer2d)
 
 #------------
 # examples
@@ -191,8 +208,20 @@ tar = env.DistTar("dist/view3d-"+version
 )
 
 #-----------
+# Installer
+
+if platform.system()=="Windows":
+	env.Append(NSISDEFINES={
+		'OUTFILE':"#dist/"+env['WIN_INSTALLER_NAME']
+		,'VERSION':version
+	})
+	
+	installer = env.Installer('nsis/installer.nsi')
+	Depends(installer,env['PROGS'])
+	env.Alias('installer',installer)
+	
+#-----------
 # Default build target
 
 env.Default([prog, prog2d, viewer, viewer2d, prog_viewht, 'examples', 'ascend'])
-
 
