@@ -45,7 +45,7 @@ librariexs and header files installed:
  http://ascendwiki.cheme.cmu.edu/Binary_installers_for_Coin3d_and_SoQt_on_MinGW
 
 To build on Windows, you need to have MinGW, MSYS, Python and SCons installed.
-Then, inside the source code directory, type "scons" and the
+Then, using MSYS, 'cd' to the source code directory, type "scons" and the
 software should compile successfully. SCons version 1.2 or later is recommended,
 because of the need for handling the '-mms-bitfields' option from pkg-config
 for GTK when building the Viewer2D program.
