@@ -107,8 +107,7 @@ def CheckSoQt(context):
 	if not context.env.get("SOQT_LIBS"):		
 		context.Result(False)
 		return False
-	old_env = context.env
-	context.env = old_env.Clone()
+	old_env = context.env.Clone()
 	context.env.Append(
 		CPPPATH = env.get('SOQT_CPPPATH')
 		, LIBS = env.get('SOQT_LIBS')
@@ -117,7 +116,11 @@ def CheckSoQt(context):
 	)
 	res = context.TryLink(soqt_test_code,".cpp")
 	context.Result(res)
-	context.env = old_env
+	for i in ['LIBS','CPPPATH','LIBPATH','CPPDEFINES']:
+		if old_env.get(i) is not None:
+			context.env[i] = old_env[i]
+		else:
+			del context.env[i]
 	return res
 
 gtk_test_code = """
@@ -136,8 +139,7 @@ def CheckGTK(context):
 	if not context.env.get("GTK_LIBS"):
 		context.Result(False)
 		return False
-	old_env = context.env
-	context.env = old_env.Clone()
+	old_env = context.env.Clone()
 	context.env.Append(
 		CPPPATH = env.get('GTK_CPPPATH')
 		, LIBS = env.get('GTK_LIBS')
@@ -146,7 +148,11 @@ def CheckGTK(context):
 	)
 	res = context.TryLink(gtk_test_code,".c")
 	context.Result(res)
-	context.env = old_env
+	for i in ['LIBS','CPPPATH','LIBPATH','CPPDEFINES']:
+		if old_env.get(i) is not None:
+			context.env[i] = old_env[i]
+		else:
+			del context.env[i]
 	return res
 
 conf = Configure(env
