@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 version = '3.5'
 
@@ -89,10 +90,71 @@ def CheckGccVisibility(context):
 	context.Result(is_ok)
 	return is_ok
 
+soqt_test_code = """
+#include <Inventor/Qt/SoQt.h>
+#include <Inventor/Qt/viewers/SoQtExaminerViewer.h>
+#include <Inventor/nodes/SoCube.h>
+
+int main(int argc, char **argv){
+	QWidget * mainwin = SoQt::init(argv[0]);
+	SoCube * cube = new SoCube;
+   return 0;
+}
+"""
+	
+def CheckSoQt(context):
+	context.Message("Checking for SoQt... ")
+	if not context.env.get("SOQT_LIBS"):		
+		context.Result(False)
+		return False
+	old_env = context.env
+	context.env = old_env.Clone()
+	context.env.Append(
+		CPPPATH = env.get('SOQT_CPPPATH')
+		, LIBS = env.get('SOQT_LIBS')
+		, LIBPATH = env.get('SOQT_LIBPATH')
+		, CPPDEFINES = env.get('SOQT_CPPDEFINES')
+	)
+	res = context.TryLink(soqt_test_code,".cpp")
+	context.Result(res)
+	context.env = old_env
+	return res
+
+gtk_test_code = """
+#include <gtk/gtk.h>
+
+int main (int argc, char *argv[]){
+  GtkWidget *window;
+  gtk_init (&argc, &argv);
+  gtk_main ();
+  return 0;
+}
+"""
+
+def CheckGTK(context):
+	context.Message("Checking for GTK+... ")
+	if not context.env.get("GTK_LIBS"):
+		context.Result(False)
+		return False
+	old_env = context.env
+	context.env = old_env.Clone()
+	context.env.Append(
+		CPPPATH = env.get('GTK_CPPPATH')
+		, LIBS = env.get('GTK_LIBS')
+		, LIBPATH = env.get('GTK_LIBPATH')
+		, CPPDEFINES = env.get('GTK_CPPDEFINES')
+	)
+	res = context.TryLink(gtk_test_code,".c")
+	context.Result(res)
+	context.env = old_env
+	return res
+
 conf = Configure(env
 	, custom_tests = { 
 		'CheckGcc' : CheckGcc
 		, 'CheckGccVisibility' : CheckGccVisibility
+		, 'CheckSoQt' : CheckSoQt
+		, 'CheckGTK' : CheckGTK
 	}
 )
 
@@ -103,6 +165,10 @@ if conf.CheckGcc():
 		conf.env.Append(CCFLAGS=['-fvisibility=hidden'])
 		conf.env.Append(CPPDEFINES=['HAVE_GCCVISIBILITY'])
 	conf.env.Append(CCFLAGS=['-Wall'])
+
+conf.env['HAVE_SOQT'] = conf.CheckSoQt()
+
+conf.env['HAVE_GTK'] = conf.CheckGTK()
 
 conf.Finish()
 
@@ -148,40 +214,48 @@ env['PROGS'] += [prog,prog2d]
 #------------
 # ViewHT heat transfer calculation program
 
-prog_viewht = env.Program('viewht', ['viewht.c'], LIBS=['view3d'], LIBPATH=['#'])
+v3d_env = env.Clone()
+v3d_env.Append(
+	LIBS = ['view3d']
+	, LIBPATH = ['#']
+)
+
+prog_viewht = v3d_env.Program('viewht', ['viewht.c'])
 
 env['PROGS'].append(prog_viewht)
 
 #------------
 # 3D viewer program
 
-soqt_env = env.Clone()
-soqt_env.Append(
-	CPPPATH = env.get('SOQT_CPPPATH')
-	, LIBS = ['view3d'] + env.get('SOQT_LIBS')
-	, LIBPATH = ['#'] + env.get('SOQT_LIBPATH')
-	, CPPDEFINES = env.get('SOQT_CPPDEFINES')
-)
+if env['HAVE_SOQT']:
+	soqt_env = v3d_env.Clone()
+	soqt_env.Append(
+		CPPPATH = env.get('SOQT_CPPPATH')
+		, LIBS = env.get('SOQT_LIBS')
+		, LIBPATH = env.get('SOQT_LIBPATH')
+		, CPPDEFINES = env.get('SOQT_CPPDEFINES')
+	)
 
-viewer = soqt_env.Program('viewer',['viewer.cpp','render.cpp'])
+	viewer = soqt_env.Program('viewer',['viewer.cpp','render.cpp'])
 
-env['PROGS'].append(viewer)
+	env['PROGS'].append(viewer)
 
 #------------
 # 2D viewer program
 
-gtk_env = env.Clone()
-gtk_env.Append(
-	CPPPATH = env.get('GTK_CPPPATH')
-	, LIBS = ['view3d'] + env.get('GTK_LIBS')
-	, LIBPATH = ['#'] + env.get('GTK_LIBPATH')
-	, CPPDEFINES = env.get('GTK_CPPDEFINES')
-	, CCFLAGS = env.get('GTK_CCFLAGS')
-)
+if env['HAVE_GTK']:
+	gtk_env = v3d_env.Clone()
+	gtk_env.Append(
+		CPPPATH = env.get('GTK_CPPPATH')
+		, LIBS = env.get('GTK_LIBS')
+		, LIBPATH = env.get('GTK_LIBPATH')
+		, CPPDEFINES = env.get('GTK_CPPDEFINES')
+		, CCFLAGS = env.get('GTK_CCFLAGS')
+	)
 
-viewer2d = gtk_env.Program('viewer2d',['viewer2d.c'])
+	viewer2d = gtk_env.Program('viewer2d',['viewer2d.c'])
 
-env['PROGS'].append(viewer2d)
+	env['PROGS'].append(viewer2d)
 
 #------------
 # examples
@@ -223,5 +297,5 @@ if platform.system()=="Windows":
 #-----------
 # Default build target
 
-env.Default([prog, prog2d, viewer, viewer2d, prog_viewht, 'examples', 'ascend'])
+env.Default(env['PROGS'] + ['ascend'])
 

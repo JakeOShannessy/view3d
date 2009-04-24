@@ -40,9 +40,9 @@ def generate(env):
 				,GTK_CCFLAGS = env1.get('CCFLAGS') or []
 			)
 
-		#print "GTK_LIBS =",env.get('GTK_LIBS')
-		#print "GTK_LIBPATH =",env.get('GTK_LIBPATH')
-		#print "GTK_CPPPATH =",env.get('GTK_CPPPATH')
+		print "GTK_LIBS =",env.get('GTK_LIBS')
+		print "GTK_LIBPATH =",env.get('GTK_LIBPATH')
+		print "GTK_CPPPATH =",env.get('GTK_CPPPATH')
 
 	except Exception,e:
 		print "FAILED TO SET UP GTK (%s)" % str(e)
