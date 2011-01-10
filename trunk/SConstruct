@@ -16,9 +16,9 @@ env = Environment(
 #-------------
 # OPTIONS
 
-opts = Options()
+opts = Variables()
 
-opts.Add(BoolOption(
+opts.Add(BoolVariable(
 	"DEBUG"
 	,"Debugging mode (for gdb symbols, plus extra output)"
 	,1
@@ -30,7 +30,7 @@ opts.Add(
 	,"gcc"
 )
 
-opts.Add(BoolOption(
+opts.Add(BoolVariable(
 	'WITH_GCCVISIBILITY'
 	,"Whether to use GCC Visibility features (only applicable if available)"
 	,True
@@ -44,6 +44,8 @@ opts.Add(
 
 
 opts.Update(env)
+
+Help(opts.GenerateHelpText(env))
 
 #------------
 # Configuration tests
