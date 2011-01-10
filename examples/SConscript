@@ -9,3 +9,5 @@ cav_env.AppendUnique(
 )
 
 cav_env.Program('cavity',['cavity.cpp'])
+
+cav_env.Program('cavity3d',['cavity3d.cpp'])
