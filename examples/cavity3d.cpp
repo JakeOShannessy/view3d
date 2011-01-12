@@ -18,6 +18,7 @@ const double PI = 3.14159265358;
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <vector>
 using namespace std;
 
 
@@ -42,6 +43,8 @@ void write_vec(SbVec3d &v){
 
 /**
 	Add a cylinder to the current scene
+
+	In case of B==P, assume a cone, and collapse vertices accordingly.
 */
 int add_cylinder(map<unsigned,SbVec3d> &vertices
 		, map<string,Surface3D> &surfaces
@@ -64,6 +67,8 @@ int add_cylinder(map<unsigned,SbVec3d> &vertices
 	SbVec3d O1; tr.multVecMatrix(O,O1);
 
 	SbVec3d OP = P - O;
+
+	bool is_cone = (B == P);
 
 	WRITE_VEC(O);
 	WRITE_VEC(P);
@@ -170,11 +175,129 @@ int add_cylinder(map<unsigned,SbVec3d> &vertices
 		}
 	}
 
-	/* FIXME add end-faces for cylinder */
+	/* FIXME optionally add end-faces for cylinder? */
 
 	/* update the starting index for subsequent vertices */
 	n_start = n;
 
+	return 0;
+}
+
+/**
+	Create a pyramid, tetrahedron, etc by creating a 'star' of faces that take
+	form from the edges of a polygon (vertices already added, numbered per
+	'perim') and a new vertex 'A', added here.
+
+	'Pavilion' is a term from diamond-cutting, it's the bottom tapered part
+	of a cut diamond.
+*/
+int add_pavilion(map<unsigned,SbVec3d> &vertices
+		, map<string,Surface3D> &surfaces
+		, SbVec3d A
+		, vector<unsigned> &perim /* already assumed to be added */
+		, unsigned &n_start
+		, string namestem
+		, double emit
+){
+	int n = n_start;
+	vertices[n++] = A;
+
+	for(unsigned i = 0; i < perim.size(); ++i){
+		unsigned v1, v2, v3;
+		if(i == 0){
+			v1 = perim[perim.size()-1];
+		}else{
+			v1 = perim[i - 1];
+		}
+		v2 = perim[i];
+		v3 = n_start;
+
+		stringstream ss;
+		ss << namestem << "_" << i;
+		surfaces[ss.str()] = Surface3D(v1,v2,v3,0, emit);
+	}
+
+	n_start = n;
+	return 0;
+}
+
+/** add a row of quadrilateral elements to a solid of rotation.
+	@param O origin of the solid
+	@param OP axis of the solid around which rotation occurs
+	@param A coordinates of the first new vertex to be added
+	@param perim vertex IDs of the previous row of the solid, these are allowed
+		to be non-contiguous
+	@param n_start starting ID for new vertices being added.
+	@param newperim vertix IDs of the vertices for the newly-created row will be
+		added to this vector, which is assumed to be empty as-given.
+	Added quadrilaterals will be 
+	p0 p1 A'   A
+	p1 p2 A''  A'
+	p3 p4 A''' A''
+	:  :  :    :
+    pn p0 A(n) A(n-1)
+
+	where A, A', A'',... A(n) are the rotated locations of A obtained by
+	divided 2*pi by perim.size(). We assume (but do not check) that the
+	vertices indicated by perim are distributed in the same way.
+*/
+int add_rotrow(map<unsigned,SbVec3d> &vertices
+		, map<string,Surface3D> &surfaces
+		, SbVec3d O, SbVec3d OP, SbVec3d A
+		, vector<unsigned> &perim /* already assumed to be added */
+		, vector<unsigned> &newperim
+		, unsigned &n_start
+		, string namestem
+		, double emit
+){
+	unsigned n = n_start;
+	SbDPMatrix tr1; tr1.setTranslate(-O);
+	SbDPMatrix tr1i = tr1.inverse();
+	unsigned n_sides = perim.size();
+
+	WRITE_VEC(A);
+	SbVec3d A1; tr1.multVecMatrix(A, A1);
+	WRITE_VEC(A1);
+
+	for(unsigned i=0; i<n_sides; ++i){
+		double theta = 2*PI / n_sides * i;
+		SbDPMatrix rot1; rot1.setRotate(SbDPRotation(OP,theta));
+		SbDPMatrix tr = tr1*rot1*tr1i;
+		SbVec3d Adash; tr.multVecMatrix(A, Adash);
+		WRITE_VEC(Adash);
+
+		vertices[n] = Adash;
+		newperim.push_back(n++);
+	}
+
+	for(unsigned i=0; i<n_sides; ++i){
+		unsigned v1, v2, v3, v4;
+		if(i < n_sides - 1){
+			v1 = perim[i];
+			v2 = perim[i+1];
+			v3 = n_start + i + 1;
+			v4 = n_start + i;
+		}else{
+			v1 = perim[i];
+			v2 = perim[0];
+			v3 = n_start;
+			v4 = n_start + i;
+		}
+		stringstream ss;
+		ss << namestem << i;
+		cerr << "Adding surface " << ss.str() << endl;
+		cerr << "v1 = " << v1 << ": ";
+		WRITE_VEC(vertices[v1]);
+		cerr << "v2 = " << v2 << ": ";
+		WRITE_VEC(vertices[v2]);
+		cerr << "v3 = " << v3 << ": ";
+		WRITE_VEC(vertices[v3]);
+		cerr << "v4 = " << v4 << ": ";
+		WRITE_VEC(vertices[v4]);
+		surfaces[ss.str()] = Surface3D(v1,v2,v3,v4, emit);
+	}
+
+	n_start = n;
 	return 0;
 }
 
@@ -192,7 +315,7 @@ int main(int argc, char **argv){
 	double h = 2; /* cavity height */
 	double d1 = 2; /* frustrum base dia */
 	double d2 = 1; /* frustrum apex dia */
-	double a = 0.2; /* aperture dia */
+	double a = 0.6; /* aperture dia */
 
 	unsigned n_tubes = 8;
 	double t = 0.1; /* tube diameter */
@@ -204,22 +327,42 @@ int main(int argc, char **argv){
 
 
 	SbVec3d O(0,0,0);
-	SbVec3d P = O + SbVec3d(0,0,h);
-	SbVec3d A = O + SbVec3d(d1/2., 0, 0);
-	//SbVec3d C(a/2, 0, 0);
-	SbVec3d B = O + SbVec3d(d2/2., 0, h);
+	SbVec3d P(0,0,h);
+	SbVec3d A(d1/2., 0, 0);
+	SbVec3d B(d2/2., 0, h);
+	SbVec3d C(a/2, 0, 0);
 
 	// gridding parameters
 	unsigned r = 8; /* number of rows in cone grid */
 	unsigned c = 20; /* number of columns (circumf) in cone grid */
 
-	unsigned n = 1;
+	unsigned n_cyl_start = 1;
+	unsigned n = n_cyl_start;
 
 	/* main frustum */
 	add_cylinder(vertices, surfaces, O, P, A, B, r, c, n, "wall", emit);
 
-	// test of off-axis cylinder
-	//add_cylinder(vertices, surfaces, SbVec3d(2,0,0), SbVec3d(0,0,2), SbVec3d(3,0,1), SbVec3d(0.5,0,2.5), 2, 6, n, "test", emit);
+	/* top end of cavity */
+	vector<unsigned> topperim;
+	for(unsigned i=0; i < c; ++i){
+		unsigned p = n_cyl_start + r*i + (r - 1);
+		cerr << "p = " << p << endl;
+		topperim.push_back(p);
+	}
+	add_pavilion(vertices, surfaces, P, topperim, n, "top", emit);
+
+	/* bottom end of cavity */
+	vector<unsigned> botperim, newperim;
+	for(unsigned i=0; i < c; ++i){
+		unsigned p = n_cyl_start + r*i;
+		cerr << "p = " << p << endl;
+		botperim.push_back(p);
+	}
+	add_rotrow(vertices, surfaces, O, P - O, C, botperim, newperim, n, "bot", emit);
+
+	cerr << "New perim contains " << newperim.size() << " faces" << endl;
+
+	add_pavilion(vertices, surfaces, O, newperim, n, "apert", emit);
 
 #if 1
 	/* inner pipes */
