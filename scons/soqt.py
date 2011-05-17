@@ -9,17 +9,6 @@ def generate(env):
 		if platform.system()=="Windows":
 			import _winreg
 			x=_winreg.ConnectRegistry(None,_winreg.HKEY_LOCAL_MACHINE)
-			y= _winreg.OpenKey(x,r"SOFTWARE\soqt")
-			LIB,t = _winreg.QueryValueEx(y,"INSTALL_LIB")
-			BIN,t = _winreg.QueryValueEx(y,"INSTALL_BIN")
-			INCLUDE,t = _winreg.QueryValueEx(y,"INSTALL_INCLUDE")
-
-			env['SOQT_CPPPATH'] = [INCLUDE]
-			env['SOQT_LIBPATH'] = [LIB]
-			env['SOQT_LIBS'] = ['SoQt']
-			env['SOQT_CPPDEFINES'] = ['SOQT_DLL']
-			
-			x=_winreg.ConnectRegistry(None,_winreg.HKEY_LOCAL_MACHINE)
 			y= _winreg.OpenKey(x,r"SOFTWARE\coin3d")
 			LIB,t = _winreg.QueryValueEx(y,"INSTALL_LIB")
 			BIN,t = _winreg.QueryValueEx(y,"INSTALL_BIN")
@@ -28,12 +17,12 @@ def generate(env):
 			env.AppendUnique(
 				SOQT_CPPPATH = [INCLUDE]
 				,SOQT_LIBPATH = [LIB]
-				,SOQT_LIBS = ['Coin']
-				,SOQT_CPPDEFINES = ['COIN_DLL']
+				,SOQT_LIBS = ['SoQt', 'Coin']
+				,SOQT_CPPDEFINES = ['COIN_DLL','SOQT_DLL']
 			)
 			
 			env.AppendUnique(
-				QT_PREFIX = r'c:/Qt/4.3.3'
+				QT_PREFIX = r'c:/Qt/2010.05/qt'
 				,SOQT_CPPPATH = ["$QT_PREFIX/include","$QT_PREFIX/include/Qt"]
 				,SOQT_LIBPATH = ["$QT_PREFIX/lib"]
 			)
@@ -52,8 +41,8 @@ def generate(env):
 		print "SOQT_CPPPATH =",env.get('SOQT_CPPPATH')
 		print "SOQT_CPPDEFINES =",env.get('SOQT_CPPDEFINES')
 
-	except:
-		print "FAILED TO SET UP SOQT"
+	except Exception,e:
+		print "FAILED TO SET UP SOQT",str(e)
 		pass
 
 def exists(env):
@@ -64,7 +53,7 @@ def exists(env):
 		try:
 			import _winreg
 			x=_winreg.ConnectRegistry(None,_winreg.HKEY_LOCAL_MACHINE)
-			y= _winreg.OpenKey(x,r"SOFTWARE\soqt")
+			y= _winreg.OpenKey(x,r"SOFTWARE\coin3d")
 			INCLUDE,t = _winreg.QueryValueEx(y,'INSTALL_INCLUDE')
 			return True
 		except:
