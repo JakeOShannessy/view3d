@@ -1,0 +1,79 @@
+
+Version 3.5.x
+-------------
+18 Feb 2008
+
+ - Fixed compilation on Windows with MSYS/MinGW, SoQt, Coin3d, GTK+.
+ - Fixed detection of GTK+ on Windows using PATH instead of registry.
+ - Added compilation info at end of README.
+ - Updated documentation to correct details of the view factor output format.
+
+
+Version 3.5
+-----------
+23 Oct 2008
+
+ - Received code for the simple radiant heat transfer calculator, 'ViewHT'
+   from George Walton, and incorporated it into the code distribution.
+ - Updated build scripts according.
+ - Added test files for ViewHT along with expected output.
+ - Cleanup of user's manual, added notes about new 3D viewer programs, etc.
+
+
+Version 3.4
+-----------
+8 Mar 2008
+
+ - This is the first release via SF.net, by John Pye. (JP)
+ - Build scripts for SCons added.
+ - The View2D code has been merged with the View3D code, although you must run
+   different command-line programs
+ - Ported to Linux
+ - New OpenGL and Cairo based viewers added for basic checking of model
+   geometry.
+ - Added simple little program to convert view factors to the form of an ASCEND
+   (http://ascend.cheme.cmu.edu) model, permitting solution of the radiation
+   thermal equilibrium problem for small (~100 surface) problems based on view
+   factors calculated with View3D or View2D.
+
+Pre SF.net
+==========
+
+Version 3.3
+-----------
+2006?
+
+ - This was the current version number in the code when first recieved from
+   George Walton. (GW)
+
+Version 3.2
+-----------
+2002
+
+ - New controls input for compatibility with anticipated version 4.0 (GW)
+
+Version 3.1
+-----------
+1999
+
+ - Adaptive integration, see NISTIR 6925 (GW)
+
+Version 3
+---------
+1996
+
+ - Search for accurate view factors; split into multiple programs (GW)
+
+Version 2
+---------
+1991
+
+ - Called VLITE for use with HLITE; conversion from Fortran to C (GW)
+
+Version 1
+---------
+1986
+
+ - First version of the program, by George Walton. (GW)
+
+

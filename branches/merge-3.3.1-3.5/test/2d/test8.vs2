@@ -1,0 +1,40 @@
+T  TEST8:  Combine surfaces; Match TEST9
+! encl list eps  maxr emit
+C  0    2  1.e-4  6    0
+G  2
+!    #    x     y
+V    1    .00   .00
+V    2   1.00   .00
+V    3   2.00   .00
+V    4   3.00   .00
+V    5   4.00   .00
+V    6   5.00   .00
+V    7   5.00  1.00
+V    8   5.00  2.00
+V    9   5.00  3.00
+V   10   4.00  3.00
+V   11   3.00  3.00
+V   12   2.00  3.00
+V   13   1.00  3.00
+V   14    .00  3.00
+V   15    .00  2.00
+V   16    .00  1.00
+!    #   v1  v2  obs bas cmb emit  name
+S    1    1   2   0   0   0  0.90  surface_1
+S    2    2   3   0   0   0  0.90  surface_2
+S    3    3   4   0   0   0  0.90  surface_3
+S    4    4   5   0   0   2  0.90  combine_2
+S    5    5   6   0   0   1  0.90  combine_1
+S    6    6   7   0   0   0  0.90  surface_4
+S    7    7   8   0   0   0  0.90  surface_5
+S    8    8   9   0   0   6  0.90  combine_4
+S    9    9  10   0   0   0  0.90  surface_6
+S   10   10  11   0   0   0  0.90  surface_7
+S   11   11  12   0   0   0  0.90  surface_8
+S   12   12  13   0   0  10  0.90  combine_7
+S   13   13  14   0   0   9  0.90  combine_6
+S   14   14  15   0   0   0  0.90  surface_9
+S   15   15  16   0   0   0  0.90  surface_10
+S   16   16   1   0   0  14  0.90  combine_9
+End of data
+

@@ -1,0 +1,20 @@
+
+From George Walton:
+
+The code is public domain paid for by US taxpayers.
+
+From the file V3Main.c,
+
+This program is furnished by the government and is accepted by
+any recipient with the express understanding that the United
+States Government makes no warranty, expressed or implied,
+concerning the accuracy, completeness, reliability, usability,
+or suitability for any particular purpose of the information
+and data contained in this program or furnished in connection
+therewith, and the United States shall be under no liability
+whatsoever to any person by reason of any use made thereof.
+This program belongs to the government.  Therefore, the
+recipient further agrees not to assert any proprietary rights
+therein or to represent this program to anyone as other than
+a government program.
+
