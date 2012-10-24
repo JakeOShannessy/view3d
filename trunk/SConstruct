@@ -190,6 +190,7 @@ env.Append(SUBST_DICT={
 config = env.SubstInFile('config.h.in')
 
 env['PROGS'] = []
+env['SKIPPED'] = []
 
 #------------
 # Create the program
@@ -247,6 +248,8 @@ if env['HAVE_SOQT']:
 	viewer = soqt_env.Program('viewer',['viewer.cpp','render.cpp'])
 
 	env['PROGS'].append(viewer)
+else:
+	env['SKIPPED'].append(('viewer','SoQT not found'))
 
 #------------
 # 2D viewer program
@@ -264,6 +267,8 @@ if env['HAVE_GTK']:
 	viewer2d = gtk_env.Program('viewer2d',['viewer2d.c'])
 
 	env['PROGS'].append(viewer2d)
+else:
+	env['SKIPPED'].append(('viewer2d','GTK+ not found'))
 
 #------------
 # examples
@@ -306,4 +311,11 @@ if platform.system()=="Windows":
 # Default build target
 
 env.Default(env['PROGS'] + ['ascend'])
+
+if len(env['SKIPPED']):
+	print "\nWARNING: Unable to build the following items:"
+	print "  %-20s\t%s" % ("ITEM","REASON")
+	for i in env['SKIPPED']:
+		print "  %-20s\t%s" % (i[0],i[1])
+	print
 

@@ -1,13 +1,17 @@
 Import('env')
 
-cav_env = env.Clone()
-cav_env.AppendUnique(
-	LIBS = env.get('SOQT_LIBS')
-	, LIBPATH = env.get('SOQT_LIBPATH')
-	, CPPPATH = env.get('SOQT_CPPPATH')
-	, CPPDEFINES = env.get('SOQT_CPPDEFINES')
-)
+if env['HAVE_SOQT']:
+	cav_env = env.Clone()
+	cav_env.AppendUnique(
+		LIBS = env.get('SOQT_LIBS')
+		, LIBPATH = env.get('SOQT_LIBPATH')
+		, CPPPATH = env.get('SOQT_CPPPATH')
+		, CPPDEFINES = env.get('SOQT_CPPDEFINES')
+	)
 
-cav_env.Program('cavity',['cavity.cpp'])
+	cav_env.Program('cavity',['cavity.cpp'])
 
-cav_env.Program('cavity3d',['cavity3d.cpp'])
+	cav_env.Program('cavity3d',['cavity3d.cpp'])
+
+else:
+	env['SKIPPED'].append(("examples",'SoQT not found'))

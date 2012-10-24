@@ -42,7 +42,7 @@ def generate(env):
 		print "SOQT_CPPDEFINES =",env.get('SOQT_CPPDEFINES')
 
 	except Exception,e:
-		print "FAILED TO SET UP SOQT",str(e)
+		#print "FAILED TO SET UP SOQT",str(e)
 		pass
 
 def exists(env):
