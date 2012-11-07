@@ -93,28 +93,25 @@ int Combine( const int nSrf, const int *cmbn, float *area, char **name, double *
     area[i] += area[n];
     }
                                  /* report new surface numbers */
-  if( _list>0 )
-    {
+  if( _list>0 ){
     fprintf( _ulog, " New,   Old surface numbers\n" );
-    for( i=0,n=1; n<=nSrf; n++ )
-      {
+    for( i=0,n=1; n<=nSrf; n++ ){
       if( cmbn[n] ) continue;
       fprintf( _ulog,"%4d: %3d", ++i, n );
       for( m=1; m<=nSrf; m++ )
         if( cmbn[m]==n) fprintf( _ulog, " %d", m );
       fprintf( _ulog, "\n" );
-      }
     }
+  }
                                  /* reduce AF array, areas, names */
-  for( i=0,n=1; n<=nSrf; n++ )
-    {
+  for( i=0,n=1; n<=nSrf; n++ ){
     if( cmbn[n] ) continue;
     area[++i] = area[n];
     for( j=0, m=1; m<=n; m++ )
       if( cmbn[m] == 0 )
         AF[i][++j] = AF[n][m];
     strcpy( name[i], name[n] );
-    }
+  }
   fprintf( _ulog, "Number of surfaces reduced to %d.\n", i );
 
   return i;

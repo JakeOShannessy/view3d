@@ -113,7 +113,7 @@ int main( int argc, char **argv ){
   fprintf(_ulog, "Time:  %s", asctime(curtime) );
   fputs("\n"
 	"View3D - calculation of view factors between simple polygons.\n"
-	"         Provided for review only.\n"
+	"\n"
 	"This program is furnished by the government and is accepted by\n"
 	"any recipient with the express understanding that the United\n"
 	"States Government makes no warranty, expressed or implied,\n"
@@ -346,8 +346,11 @@ int main( int argc, char **argv ){
   }
 
   for( n=nSrf; n; n-- ){  /* clear base pointers to OBSO & MASK srfs */
-    if( srf[base[n]].type == OBSO )  /* Base is used for several things. */
+	// FIXME should the following line say 'srf[n]'??
+	if( srf[base[n]].type == OBSO )  /* Base is used for several things. */
       base[n] = 0;                   /* It must be progressively cleared */
+
+	// FIXME should the following line say 'base[n]'??
     if( srf[n].type == MASK )        /* as each use is completed. */
       base[n] = 0;
   }

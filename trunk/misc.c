@@ -398,7 +398,7 @@ void PathCWD( char *path, int szp ){
 
 }  /* end PathCWD */
 
-extern FILE *_unxt;   /* NXT input file */
+extern FILE *_unxt = NULL;   /* NXT input file */
 extern int _echo;      /* if true, echo NXT input file */
 char *_nxtbuf;   /* large buffer for NXT input file */
 

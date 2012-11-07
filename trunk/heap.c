@@ -1,20 +1,14 @@
 /*subfile:  heap.c  **********************************************************/
 
-/*  Functions for heap (memory) processing.
- *  All allocations occur through the Alc_E() function.
- *  Deallocations occur through the corresponding Fre_E() function. 
- *  If MEMTEST > 0, guard bytes will be tested during deallocation.
- *  MemNet() is useful to check that all heap has been deallocated.  */
+/*
+	The custom heat management stuff in here is being switched off because
+	tools exist these days like Valgrind and DMALLOC which do a better job
+	on such tasks, and save us from carrying around all this custom code.
 
-/* MEMTEST: 0 = no tests; 1 = test guard bytes;
- *          2 = test for leaks; 3 = log actions */
-#ifdef _DEBUG
-# define MEMTEST 2
-# define DEBUG 1
-#else
-# define MEMTEST 0
-# define DEBUG 0
-#endif
+	-- JP, 7 Nov 2012
+*/
+
+#define DEBUG 0
 
 #define V3D_BUILD
 #include "heap.h"
@@ -31,21 +25,6 @@ char _heapmsg[256];     // buffer for heap messages
 long _bytesAllocated=0L;  // through Alc_E()
 long _bytesFreed=0L;      // through Fre_E()
 
-#if( MEMTEST > 0 )
-#define MCHECK 0x7E7E7E7EL  // 5A='z'; 7E='~'
-# if( MEMTEST > 1 )
-typedef struct memlist    // record of memory allocation
-  {
-  struct memlist *next;   // pointer to next struct
-  unsigned char *pam;    // pointer to allocated memory
-  unsigned length;  // length of allocated variable
-  int line;    // line in source file
-  char file[1]; // name of source file; allocate for exact length
-  } MEMLIST;
-MEMLIST *_memList=NULL;
-# endif
-#endif
-
 /*------------------------------------------------------------------------------
   ELEMENTS ('E')
 */
@@ -54,92 +33,28 @@ MEMLIST *_memList=NULL;
  *  This may be a single structure or an array. All allocated bytes set to 0.
  *  All memory allocations and de-allocations should go through Alc_E() 
  *  and Fre_E() to allow some useful heap checking options.
- *
- *  Define MEMTEST to activate the following print and test operations. 
- *  Otherwise, they are not available, but the size of the executable 
- *  program is reduced and its speed increased. 
- *  When MEMTEST = 1, 4 guard bytes are added before and after the normal 
- *  heap memory allocation.  These guard bytes help to test for accessing 
- *  beyond the ends of the allocated vector -- especially for off-by-one 
- *  indexing.  They will be tested when the allocation is freed or when
- *  Chk-E() is called. Use MemNet() to see if all allocations have been freed.
- *  This is based on idea & code by Paul Anderson, "Dr. Dobb's C Sourcebook",
- *  Winter 1989/90, pp 62 - 66, 94.
- *  When MEMTEST = 2, every call to Alc_E() creates a record of the 
- *  allocation in the _memList linked list. When the corresponding
- *  Fre_E() is called that record is deleted from the linked list.  
- *  Use MemList() to list all allocations which have not been freed.
- *  When MEMTEST = 3, every call to Alc_E() and Fre_E() is noted in 
- *  the LOG file, _ulog, which is created when the program starts.
- *  The old Turbo C++ compiler has some functions to directly test the
- *  heap integrity. They have been placed in MemRem(). Since it was
- *  a 16-bit compiler, tests exist to check for the element size.
  *  @param length length of element (bytes).
  *  @param file   name of file for originating call.
  *  @param line   line in file.
 */
 void *Alc_E( long length, const char *file, int line ){
   unsigned char *p;     // pointer to allocated memory
-#if( MEMTEST > 0 )
-  unsigned long *pt;    // pointer to heap guard bytes
-# if( MEMTEST > 1 )
-  MEMLIST *pml;
-  const char *fname;
-# endif
-#endif
 
-#ifdef __TURBOC__  //  (16-bit limit: 2^16-1 = 65536 = 16384*4 = 8192*8)
-  if( length > UINT_MAX - 32 )
-    {
-    sprintf( _heapmsg, "Element too large to allocate: %ld bytes\n", length );
-    error( 3, file, line, _heapmsg, "" );
-    }
-#endif
-  if( length < 1 )
-    {
+  if( length < 1 ){
     sprintf( _heapmsg, "Element too small to allocate: %ld bytes\n", length );
     error( 3, file, line, _heapmsg, "" );
-    }
+  }
 
-#if( MEMTEST > 0 )
-  p = (unsigned char *)malloc( length+8 );
-  _bytesAllocated += length+8;
-#else
+  // TODO use 'calloc' instead?
+
   p = (unsigned char *)malloc( length );
   _bytesAllocated += length;
-#endif
 
-#if( MEMTEST > 1 )
-  fname = sfname( file );
-  pml = calloc( sizeof(MEMLIST) + strlen(fname), 1 );  // note:
-  pml->pam = p;            // allocation to store file name;
-  pml->length = length;    // no recursive call to Alc_e().
-  pml->line = line;
-  strcpy( pml->file, fname );
-  if( _memList )
-    pml->next = _memList;  // stack data structure
-  _memList = pml;
-# if( MEMTEST > 2 )
-  fprintf( _ulog, "Allocate %5ld bytes at [%p] at line %d in %s\n",
-    length, p, line, fname );
-  fflush( _ulog );
-# endif
-#endif
-
-  if( p == NULL )
-    {
+  if( p == NULL ){
     MemNet( "Alc_E error" );
     sprintf( _heapmsg, "Memory allocation failed for %ld bytes\n", length );
     error( 3, file, line, _heapmsg, "" );
-    }
-
-#if( MEMTEST > 0 )      // set guard bytes
-  pt = (unsigned long *)p;
-  *pt = MCHECK;
-  p+= 4;
-  pt = (unsigned long *)(p+length);
-  *pt = MCHECK;
-#endif
+  }
 
   memset( p, 0, length );  // zero allocated memory
 
@@ -156,59 +71,8 @@ void *Alc_E( long length, const char *file, int line ){
  *  @param line   line in file.
 */
 int Chk_E( void *pm, unsigned length, const char *file, int line ){
-  int status=0;
-#if( MEMTEST > 0 )   // test guard bytes
-  unsigned char *p;     // pointer to allocated memory
-  unsigned long *pt;    // pointer to guard bytes
-
-  p = (unsigned char *)pm + length;
-  pt = (unsigned long *)p;
-  if( *pt != MCHECK )
-    {
-    error( 2, file, line, "Overrun at end of allocated memory", "" );
-    status = 1;
-    }
-  p = (unsigned char *)pm - 4;
-  pt = (unsigned long *)p;
-  if( *pt != MCHECK )
-    {
-    error( 2, file, line, "Overrun at start of allocated memory", "" );
-    status = 1;
-    }
-  pm = (void *)p;
-#endif
-
-  if( status )
-    {
-#if( MEMTEST > 1 )
-    MEMLIST *pml;
-    for( pml=_memList; pml; pml=pml->next )
-      if( pml->pam == p )  // report allocation data
-        {
-        if( length != pml->length )
-          {
-          sprintf( _heapmsg, "Length error: %d vs. %d originally allocated.",
-            length, pml->length );
-          error( 2, file, line, _heapmsg, "" );
-          }
-        sprintf( _heapmsg, "Memory was allocated at line %d in %s",
-          pml->line, pml->file );
-        error( 0, file, line, _heapmsg, "" );
-        break;
-        }
-    if( !pml )
-      {
-      sprintf( _heapmsg, "Allocation not found at [%p]", p );
-      error( 0, file, line, _heapmsg, "" );
-      }
-#endif
-#if( _MSC_VER )  // Overrun causes crash in MS C++ 
-    error( 3, __FILE__, __LINE__, "Fix memory overrun error", "" );
-#endif
-    }
-
-  return status;
-}  /*  end of Chk_E  */
+ return 0;
+} /*  end of Chk_E  */
 
 /**
 	Free pointer to previously memory allocated by Alc_E().
@@ -220,97 +84,32 @@ int Chk_E( void *pm, unsigned length, const char *file, int line ){
 */
 void *Fre_E( void *pm, unsigned length, const char *file, int line ){
   unsigned char *p=pm;     // pointer to allocated memory
-#if( MEMTEST > 1 )
-  MEMLIST *pml, *pmlt=NULL;
-#endif
-
-#if( MEMTEST > 0 )
-  Chk_E( pm, length, file, line );
-  p -= 4;
-# if( MEMTEST > 1 )
-  for( pml=_memList; pml; pmlt=pml,pml=pml->next )
-    if( pml->pam == p )
-      {
-      if( pmlt )     // remove pml from linked list
-        pmlt->next = pml->next;
-      else
-        _memList = pml->next;
-      free( pml );  // free for reuse
-      break;
-      }
-  if( !pml )
-    {
-    sprintf( _heapmsg, "Failed to find [%p] to free memory", p );
-    error( 2, file, line, _heapmsg, "" );
-    }
-#  if( MEMTEST > 2 )
-  fprintf( _ulog, "    Free %5u bytes at [%p] at line %d in %s\n",
-    length, p, line, sfname(file) );
-  fflush( _ulog );
-#  endif
-# endif
-#endif
-
-#if( MEMTEST > 0 )
-  _bytesFreed += length+8;
-#else
   _bytesFreed += length;
-#endif
   free( p );
-
   return (NULL);
-
-  }  /*  end of Fre_E  */
+}  /*  end of Fre_E  */
 
 /***  MemNet.c  **************************************************************/
 
 /*  Report memory allocated and freed.  */
 
-long MemNet( char *msg )
-  {
+long MemNet( char *msg ){
   long netBytes=_bytesAllocated-_bytesFreed;
-
 #ifdef XXX
   fprintf( _ulog, "%s: %ld bytes allocated, %ld freed, %ld net\n",
     msg, _bytesAllocated, _bytesFreed, netBytes );
   fflush( _ulog );
 #endif
-
   return netBytes;
-
-  }  /* end of MemNet */
+}  /* end of MemNet */
 
 /***  MemList.c  *************************************************************/
 
 /*  Report current allocated memory.  */
 
-void MemList( void )
-  {
-#if( MEMTEST > 1 )
-  MEMLIST *pml;
-
-#ifdef XXX
-  if( _memList ){
-    fprintf( _ulog, "Heap: loc,   size, line, file\n" );
-    for( pml=_memList; pml; pml=pml->next )
-      fprintf( _ulog, "[%p] %6d %5d %s\n",
-        pml->pam, pml->length, pml->line, pml->file );
-  }else{
-    fprintf( _ulog, "No unfreed allocations.\n" );
-  }
-#else
-  if( _bytesAllocated - _bytesFreed ){
-    fprintf( _ulog, "Recompile Heap.c to list unfreed allocations.\n" );
-  }
-#endif
-  fflush( _ulog );
-#endif /* XXX */
-
-  }  // end of MemList
-
-#ifdef __TURBOC__   // using old TURBO C compiler
-# include <alloc.h> // prototype: heapcheck, heapwalk
-#endif
+void MemList( void ){
+	/* nothing here */
+} // end of MemList
 
 /***  MemRem.c  **************************************************************/
 
@@ -320,49 +119,8 @@ void MemList( void )
  *  heapwalk() shows the details.  */
 
 void MemRem( char *msg ){
-#if( __TURBOC__ >= 0x295 )
-  struct heapinfo hp;   // heap information
-  unsigned long bytes = coreleft();
-  fprintf( _ulog, "%s:\n", msg );
-  fprintf( _ulog, "  Unallocated heap memory:  %ld bytes\n", bytes );
-
-# if( MEMTEST > 1 )
-  switch( heapcheck( ) )
-    {
-    case _HEAPEMPTY:
-#ifdef XXX
-      fprintf( _ulog, "The heap is empty.\n" );
-#endif
-      break;
-    case _HEAPOK:
-#ifdef XXX
-      fprintf( _ulog, "The heap is O.K.\n" );
-#endif
-      break;
-    case _HEAPCORRUPT:
-#ifdef XXX
-      fprintf( _ulog, "The heap is corrupted.\n" );
-#endif
-      break;
-    }  // end switch
-
-#ifdef XXX
-  fprintf( _ulog, "Heap: loc, size, used?\n" );
-#endif
-  hp.ptr = NULL;
-  while( heapwalk( &hp ) == _HEAPOK )
-    {
-#ifdef XXX
-    fprintf( _ulog, "[%p]%8lu %s\n",
-             hp.ptr, hp.size, hp.in_use ? "used" : "free" );
-#endif
-    }
-# endif
-#else
   MemNet( msg );  // for non-TurboC code
-#endif
-
-}  /* end of MemRem */
+} /* end of MemRem */
 
 /***  Alc_EC.c  **************************************************************/
 
@@ -398,11 +156,8 @@ void *Alc_EC( char **block, long size, const char *file, int line ){
   }
 
   // Set memory alignment.
-#ifdef __TURBOC__
-  size = (size+3) & 0xFFFC;   // 16 bit; multiple of 4
-#else
   size = (size+7) & 0xFFFFFFF8;   // 32 bit; multiple of 8
-#endif
+
   mb = (void *)*block;
   if( size > mb->blockSize - (long)sizeof(MEMBLOCK) )
     {
@@ -462,57 +217,6 @@ void *Alc_ECI( long size, const char *file, int line )
 
   }  /*  end of Alc_ECI  */
 
-#if( MEMTEST > 0 )
-/***  Chk_EC.c  **************************************************************/
-
-/*  Check data blocks allocated by Alc_EC.  */
-
-void Chk_EC( void *block, const char *file, int line )
-/*  block;  pointer to current (last in list) memory block. */
-  {
-  int status=0;
-  MEMBLOCK *mb=block;
-
-  for( ; mb->prevBlock; mb=mb->prevBlock )
-    ;  // guarantee mb at start of list
-
-  for( ; mb; mb=mb->nextBlock )  // loop to end of list
-    {
-    unsigned char *p = (void *)mb;
-    unsigned long *pt = (unsigned long *)(p + mb->blockSize);
-    if( *pt != MCHECK )
-      {
-      error( 2, file, line, "Overrun at end of data allocation", "" );
-      status = 1;
-      }
-    if( mb->dataOffset < sizeof(MEMBLOCK) ||  // smallest value of offset
-        mb->dataOffset > mb->blockSize )      // largest value of offset
-      {
-      error( 2, file, line, "Overrun before data allocation", "" );
-      status = 1;
-      }
-
-    if( status )
-      {
-# if( MEMTEST > 1 )
-    MEMLIST *pml;
-    for( pml=_memList; pml; pml=pml->next )
-      if( pml->pam == p )  // report allocation data
-        {
-        sprintf( _heapmsg, "Memory was allocated at line %d in file %s.",
-          pml->line, pml->file );
-        error( 0, file, line, _heapmsg, "" );
-        break;
-        }
-# endif
-#if( _MSC_VER )  // Overrun causes crash in MS C++ 
-      error( 3, __FILE__, __LINE__, "Fix memory overrun error", "" );
-#endif
-      }
-    }
-
-  }  /*  end of Chk_EC  */
-#endif
 
 /***  Clr_EC.c  **************************************************************/
 
@@ -524,10 +228,6 @@ void *Clr_EC( void *block, const char *file, int line )
   {
   unsigned char *p;      /* pointer to the block */
   MEMBLOCK *mb=block;
-
-#if( MEMTEST > 0 )
-  Chk_EC( mb, file, line );
-#endif
 
   for( ; mb->nextBlock; mb=mb->nextBlock )
     ;  // guarantee mb at end of list
@@ -553,10 +253,6 @@ void *Fre_EC( void *block, const char *file, int line )
  *  line;   line in file. */
   {
   MEMBLOCK *mb, *nb=block;
-
-#if( MEMTEST > 0 )
-  Chk_EC( nb, file, line );
-#endif
 
   for( mb=nb; mb->nextBlock; mb=mb->nextBlock )
     ;  // guarantee mb at end of list
@@ -615,75 +311,9 @@ void *Alc_V( int min_index, long max_index, int size, const char *file, int line
   p -= min_index * size;
 #endif
 
-#if( MEMTEST > 0 )
-  {
-# ifdef XXX
-  char *p1=p+min_index*size-4;  // start of guard bytes
-# endif
-# if( ANSIOFFSET > 0 )
-  if( min_index > 0 )
-    {
-    unsigned long *pt = (unsigned long *)p1;
-    *pt = MCHECK;  // add guard bytes before v[min_index];
-    }
-# endif
-# ifdef XXX
-  fprintf( _ulog, "Alc_V {" );  // display allocation
-  while( p1<p+(max_index+1)*size+4 )  // end of guard bytes
-    if( *p1 )
-      fprintf( _ulog, "%c", *p1++ );
-    else
-      fprintf( _ulog, ".", *p1++ );
-  fprintf( _ulog, "}\n" );
-  fflush( _ulog );
-# endif
-  }
-#endif
-
   return ((void *)p);
 
   }  /*  end of Alc_V  */
-
-#if( MEMTEST > 0 )
-/***  Chk_V.c  ***************************************************************/
-
-/*  Check a vector allocated by Alc_V().  */
-
-void Chk_V( void *v, int min_index, int max_index, int size, const char *file, int line )
-/*  v;      pointer to allocated vector.
- *  min_index;  minimum vector index.
- *  max_index;  maximum vector index.
- *  size;   size (bytes) of one data element.
- *  name;   name of variable being checked.
- *  file;   name of file for originating call.
- *  line;   line in file. */
-  {
-  char *p=(char *)v;  // pointer to the vector data
-  unsigned length =     // number of bytes in vector data
-    (unsigned)(max_index - min_index + 1) * size;
-
-#if( ANSIOFFSET > 0 )
-  if( min_index > 0 )
-    length += min_index * size;
-  else
-    p += min_index * size;
-#else
-  p += min_index * size;
-#endif
-
-  Chk_E( (void *)p, length, file, line );
-
-#if( ANSIOFFSET > 0 )
-  if( min_index > 0 )
-    {
-    unsigned long *pt = (unsigned long *)(p + min_index* size) - 1;
-    if( *pt != MCHECK ) // check guard bytes before v[min_index];
-      error( 2, file, line, "Overrun before start of vector", "" );
-    }
-#endif
-
-  }  /*  end of Chk_V  */
-#endif
 
 /***  Clr_V.c  ***************************************************************/
 
@@ -699,10 +329,6 @@ void Clr_V( void *v, int min_index, int max_index, int size, const char *file, i
   char *pdata = (char *)v + min_index * size;
   unsigned length = (unsigned)(max_index - min_index + 1) * size;
   memset( pdata, 0, length );
-
-#if( MEMTEST > 0 )
-  Chk_V( v, min_index, max_index, size, file, line );
-#endif
 
   }  /*  end of Clr_V  */
 
@@ -771,7 +397,7 @@ void *Alc_MC( int min_row_index, int max_row_index, int min_col_index,
   // prow - vector of pointers to rows of M
   int nrow = max_row_index - min_row_index + 1;    // number of rows [i]
   long tot_row_index = min_row_index + nrow - 1;    // max prow index
-  char **prow = (char **)Alc_V( min_row_index, tot_row_index, sizeof(char *), file, line );
+  char **prow = (char **)Alc_V( min_row_index, tot_row_index, sizeof(int *), file, line );
 
   // pdata - vector of contiguous A[i][j] data values
   int ncol = max_col_index - min_col_index + 1;    // number of columns [j]
@@ -792,25 +418,6 @@ void *Alc_MC( int min_row_index, int max_row_index, int min_col_index,
 }  /*  end of Alc_MC  */
 
 
-#if( MEMTEST > 0 )
-/** Check a matrix allocated by Alc_MC().  */
-void Chk_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
-             int max_col_index, int size, const char *file, int line 
-){
-  int nrow = max_row_index - min_row_index + 1;
-  int tot_row_index = min_row_index + nrow - 1;
-  char **prow = (char **)m;
-  int ncol = max_col_index - min_col_index + 1;
-  int tot_col_index = min_col_index + nrow*ncol - 1;
-  char *pdata = prow[min_row_index];
-
-  Chk_V( pdata, min_col_index, tot_col_index, size, file, line );
-  Chk_V( prow, min_row_index, tot_row_index, sizeof(char *), file, line );
-
-}  /*  end of Chk_MC  */
-#endif
-
-
 /**
 	Clear (zero all elements of) a matrix created by Alc_MC( ).
 */
@@ -825,12 +432,8 @@ void Clr_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
 
   Clr_V( pdata, min_col_index, tot_col_index, size, file, line );
 
-#if( MEMTEST > 0 )
-  Chk_MC( m, min_row_index, max_row_index,
-    min_col_index, max_col_index, size, file, line );
-#endif
+} /*  end of Clr_MC  */
 
-}  /*  end of Clr_MC  */
 
 /**
 	Free pointer to a matrix allocated by Alc_MC().
@@ -849,8 +452,8 @@ void *Fre_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
   Fre_V( prow, min_row_index, tot_row_index, sizeof(char *), file, line );
 
   return (NULL);
-
 }  /*  end of Fre_MC  */
+
 
 /*------------------------------------------------------------------------------
   SYMMETRIC MATRICES ('MSC')
@@ -896,24 +499,6 @@ void *Alc_MSC( int min_index, int max_index, int size, const char *file, int lin
 }  /*  end of Alc_MSC  */
 
 
-#if( MEMTEST > 0 )
-/**
-	Check a symmetric matrix allocated by Alc_MSC().
-*/
-void Chk_MSC( void *m, int min_index, int max_index, int size, const char *file, int line )
-{
-  int nrow = max_index - min_index + 1;
-  int nval = nrow * (nrow + 1) / 2;
-  int tot_index = min_index + nval - 1;
-  char **prow = (char **)m;
-  char *pdata = prow[min_index];
-
-  Chk_V( pdata, min_index, tot_index, size, file, line );
-  Chk_V( prow, min_index, max_index, sizeof(char *), file, line );
-}  /*  end of Chk_MSC  */
-#endif
-
-
 /**
 	Clear (zero all elements of) a symmetric matrix created by Alc_MSC( ).
 */
@@ -925,10 +510,7 @@ void Clr_MSC( void *m, int min_index, int max_index, int size, const char *file,
   char *pdata = prow[min_index];
 
   Clr_V( pdata, min_index, tot_index, size, file, line );
-
-#if( MEMTEST > 0 )
-  Chk_V( pdata, min_index, tot_index, size, file, line );
-#endif}  /*  end of Clr_MSC  */
+} /*  end of Clr_MSC  */
 
 
 /*
@@ -945,7 +527,9 @@ void *Fre_MSC( void *m, int min_index, int max_index, int size, const char *file
   Fre_V( pdata, min_index, tot_index, size, file, line );
   Fre_V( prow, min_index, max_index, sizeof(char *), file, line );
 
-  return (NULL);}  /*  end of Fre_MSC  */
+  return (NULL);
+} /*  end of Fre_MSC  */
+
 
 /*------------------------------------------------------------------------------
   SYMMETRIC MATRICES ('MSR')
@@ -986,23 +570,8 @@ void *Alc_MSR( int min_index, int max_index, int size, const char *file, int lin
 
   return ((void *)p);
 
-}  /*  end of Alc_MSR  */
+} /*  end of Alc_MSR  */
 
-
-#if( MEMTEST > 0 )
-/*  Check a symmetric matrix allocated by Alc_MSR().  */
-void Chk_MSR(void *m, int min_index, int max_index, int size, const char *file, int line){
-  char **p;  /*  pointer to the array of row pointers  */
-  int i;     /* row number */
-  int j;     /* column number */
-
-  p = (char **)m;
-  for( j=i=min_index; i<=max_index; i++,j++ )
-    Chk_V( p[i], min_index, j, size, file, line );
-  Chk_V( p, min_index, max_index, sizeof(char *), file, line );
-
-}  /*  end of Chk_MSR  */
-#endif
 
 /*  Clear (zero all elements of) a symmetric matrix created by Alc_MSR( ).  */
 void Clr_MSR(void *m, int min_index, int max_index, int size, const char *file, int line){
@@ -1014,9 +583,7 @@ void Clr_MSR(void *m, int min_index, int max_index, int size, const char *file, 
   for( j=i=min_index; i<=max_index; i++,j++ )
     Clr_V( p[i], min_index, j, size, file, line );
 
-#if( MEMTEST > 0 )
-  Chk_MSR( m, min_index, max_index, size, file, line );
-#endif}  /*  end of Clr_MSR  */
+} /*  end of Clr_MSR  */
 
 
 /**
