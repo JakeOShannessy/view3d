@@ -1,4 +1,22 @@
 
+LICENSE INFORMATION FOR VIEW3D
+==============================
+
+The View3D code as a whole should be considered to be licensed under the 
+GNU General Public License (GPL). View3D in its original version was licensed 
+in the public domain, however the code now incorporates GPL code from other
+sources, and there have been new elements added.
+
+In particular, the code for calculation of axisymmetric view factors is
+taken from Elmer FEM. Code was written by Juha Katajamäki with modifications by
+Dr Peter Råback. That code is licensed under the GPL license, see here:
+http://www.csc.fi/english/pages/elmer/faq
+
+Currently, that code isn't full integrated into View3D, we will be working 
+on that over time.
+
+--------------------------------------------------------------------------------
+
 From George Walton:
 
 The code is public domain paid for by US taxpayers.
@@ -17,4 +35,6 @@ This program belongs to the government.  Therefore, the
 recipient further agrees not to assert any proprietary rights
 therein or to represent this program to anyone as other than
 a government program.
+
+
 
