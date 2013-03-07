@@ -1,5 +1,5 @@
 /*  viewfact.cpp: calculation of axisymmetric view factors
-	Copyright (C) 1995 Juha Katajamäki
+	Copyright (C) 1995 Juha KatajamÃ¤ki
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -15,11 +15,13 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *//** @file
 	This subroutine computes the viewfactors for an axisymmetric
-	geometry. The code is written by Juha Katajamäki while
+	geometry. The code is written by Juha KatajamÃ¤ki while
 	working for CSC.
 
 	http://www.csc.fi/english/pages/elmer --- http://www.elmerfem.org/
 */
+
+/* 'TR:' comments are translated from Finnish and need review -- JP */
 
 #include <math.h>
 #include <stdio.h>
@@ -28,17 +30,17 @@
 #include "viewfact.h"
 #include "../../config.h"
  
-static Real r1, r2, z1, z2;     /* Katseltavan pinnan koordinaatit */
-static Real r3, r4, z3, z4;     /* Katselevan pinnan koordinaatit */
-static Real r12, r34, z12, z34; /* Keskilinjojen koordinaatit */
+static Real r1, r2, z1, z2;     /* TR: "Watching" surface coordinates */
+static Real r3, r4, z3, z4;     /* TR: viewing surface coordinates */
+static Real r12, r34, z12, z34; /* TR: Central Line coordinate */
 static Real zd1, zd3, zd;
 static Real rd1, rd3;
 
 static Real g1, g3, d1, d3, t, rratio;
 
 static const Real eps = 1e-7, eps2 = 1.0e-14; /* eps*eps; */
-static const Real delta = 1e-6; /* Suurin kosinien ero, joka aiheuttaa */
-/* integroinnin */
+static const Real delta = 1e-6; /* Maximum kosinien difference, which causes */
+/* Integration */
 static int nsurf,nsurfShade,inode,jnode;
 static Real * coord;
 static int *surfEltop, *surfEltopShade, * shadeParent;
@@ -50,7 +52,7 @@ extern "C" void STDCALLBULL FC_FUNC(viewfactorsaxis,VIEWFACTORSAXIS)
 {
   int i, j, ii, jj,div;
   Real a, sum, viewint, viewint2, vf2, sumdvf;
-  Real c1, c2;    /* Kiertokulman kosinin ylä- ja alaraja */
+  Real c1, c2;    /*  cosine of the rotation angle upper and lower limit  */
   Real _r1, _r2, _r3, _r4, _z1, _z2, _z3, _z4;
   Real ds1,ds2,dp1,dz1,dz2,dr1,dr2,err,maxerr;
   Real epsilon = 1.0e-5;
@@ -358,9 +360,7 @@ extern "C" void STDCALLBULL FC_FUNC(viewfactorsaxis,VIEWFACTORSAXIS)
 	  }	      	    
 
 	  vf[i*nsurf+j] += 4. * viewint;
-	  /* Kerroin 4 koostuu tekijöistä 2 (peilisymmetria), 2pi */
-	  /* (kiertosymmetria) ja 1/pi (integraalin lausekkeessa esiintyvä */
-	  /* vakio) */
+	  /* TR: The factor 4 is composed of two factors (reflective symmetry), 2pi (rotational) and 1/pi (the integral expression the constant) */
 	}
       }
 
@@ -394,11 +394,9 @@ extern "C" void STDCALLBULL FC_FUNC(viewfactorsaxis,VIEWFACTORSAXIS)
 
 BOOL InitialInterval(Real *c1, Real *c2)
 {
-  /* Määrää rajat katseltavan pisteen kiertokulman kosinille ehdosta, että */
-  /* yhdysjanan ja pintojen normaalien välisten kulmien on oltava < pi/2.  */
-  /* Palauta FALSE, jos ratkaisujoukko on tyhjä tai nollamittainen, */
-  /* muutoin TRUE. */
-  /* Funktio olettaa, että r12 ja r34 eivät ole nollia. */ 
+  /* TR: The number of cross-watching point of the rotation angle cos the condition that the line connecting the surfaces and angles between the normal must be < pi/2.
+  Restore FALSE if the solution set is empty or zero-length, otherwise TRUE. 
+  Function assumes that r12 and r34 are non-zero.*/
   
   Real cc1, cc3; 
   
@@ -418,7 +416,7 @@ BOOL InitialInterval(Real *c1, Real *c2)
       if ( sgn(rd3) && sgn(rd3) == -sgn(zd) ) {
 	if (zd1 > 0.) *c1 = cc1;
 	else *c2 = cc1;
-      } else { *c1 = 1.; *c2 = -1.; } /* Joukko tyhjä */
+      } else { *c1 = 1.; *c2 = -1.; } /* TR: Number of items */
     }
   } else {
     if ( fabs(zd3) > eps ) {
@@ -426,15 +424,15 @@ BOOL InitialInterval(Real *c1, Real *c2)
       if ( sgn(rd1) && sgn(rd1) == sgn(zd) ) {
 	if (zd3 > 0.) *c1 = cc3;
 	else *c2 = cc3;
-      } else { *c1 = 1.; *c2 = -1.; } /* Joukko tyhjä */
+      } else { *c1 = 1.; *c2 = -1.; } /* TR: Number of items */
     } else {
       if ( !sgn(rd1) || sgn(rd1) != sgn(zd) || sgn(rd1) != -sgn(rd3) )
-	{ *c1 = 1.; *c2 = -1.; }  /* Muutoin joukko = [-1, 1] */
+	{ *c1 = 1.; *c2 = -1.; }  /* Otherwise number = [-1, 1] */
     }
   }
   
   *c1 = max(-1.+eps, *c1); *c2 = min(1.-eps, *c2);
-  /* Epsilonilla estetään nollalla jako integroinnissa */
+  /* TR: Epsilon prevent division by zero integration */
   if (*c2 - *c1 < eps) return FALSE;
   return TRUE;
 }
@@ -442,16 +440,16 @@ BOOL InitialInterval(Real *c1, Real *c2)
 
 Real ViewIntegral (Real c1, Real c2, int k)
 {
-  /*
-    Tämä funktio laskee view factorin yhdelle elementtiparille.
-    Integrointialuetta rajoitetaan tutkimalla kartiopintojen aiheuttama
-    varjostus. Jos integrointialue jakautuu kahtia, suoritetaan rekursiivinen
-    kutsu molemmille osille. Jos integrointialue kutistuu mitättömäksi
-    tai tyhjäksi, palautetaan nolla.
-    Funktio olettaa globaalit muuttujat r12 ja r34 nollasta poikkeaviksi.
-    */
+/*
+TR: This function calculates the view Factor one element pair.
+The area of â€‹â€‹integration is limited to the examination of the conical surfaces of the induced
+shading. If the integration region is divided into two parts, performed a recursive
+call on both parts. If the integration region shrinks void
+or empty, is returned to zero.
+Function assumes global variables r12 and r34 is non-zero.
+*/
 
-  static Real r5, r6, z5, z6;    /* Varjostavan pinnan reunojen koordinaatit */
+  static Real r5, r6, z5, z6;    /* TR: to shade the edges of the surface coordinates */
   static Real zd5, t1, tt1, t2, tt2, t0;
   Real cc1,cc2;
   rratio = r34/r12;
@@ -482,10 +480,10 @@ Real ViewIntegral (Real c1, Real c2, int k)
 
     zd5 = z5-z6;
     if ( fabs(zd5) < eps ) {
-      /* Varjostava pinta on tasorengas */
+      /*  TR: Shade the surface is flat ring */
       
-      /* Tasorengas ei voi varjostaa itseään */
-      /* Tämä lisäys korjaa alirutiinissa pitkään ollen bugin (P.R. 23.4.2004) */
+      /* TR: Level Ring can not be overshadowed by itself  */
+      /* TR: This appendix addresses the subroutine for a long time, the bug (PR 23/04/2004) */
       if(nsurf == nsurfShade && inode == k-1) continue;
 
       if ( fabs(zd) < eps ) continue;
@@ -502,8 +500,8 @@ Real ViewIntegral (Real c1, Real c2, int k)
       if (cc1 > cc2) { t = cc1; cc1 = cc2; cc2 = t; }
     } 
     else  {
-      /* Varjostava pinta on kartio tai lieriö       */
-      /* Laske yhdysjanasta varjoon jäävä väli z-suunnassa  */
+      /* TR: Shade the surface is a cone or a cylinder */
+      /* TR: Calculate the line connecting the shadow of the intermediate remaining in the z-direction */
 
       if ( fabs(zd) < eps ) {
 	if ( (z12-z5 < eps && z12-z6 > eps) ||
@@ -520,21 +518,21 @@ Real ViewIntegral (Real c1, Real c2, int k)
       tt1 = 1.-t1; 
       tt2 = 1.-t2;
       
-      /* Laske, mitä arvoja kiertokulman kosini saa välillä [t1, t2] */
+      /* TR: Calculate the values â€‹â€‹of cosine of the angle of rotation may be in the interval [t1, t2] */
       cc1 = 1.; cc2 = -1.;
       g1 = (r5 * (z12-z6) - r6 * (z12-z5)) / (r12 * zd5);
       g3 = (r5 * (z34-z6) - r6 * (z34-z5)) / (r34 * zd5);
       d1 = g1*g1 - 1; 
       d3 = g3*g3 - 1;  
-      /* Nämä ilmaisevat, kummalla */
-      /* puolen kartiota ovat katseleva ja katseltava piste */
+      /* TR: These indicate which of the two */
+      /* TR: Side of the cone are watching and watch point */
 
-      /* Tutki välin päätepiste */
+      /* TR: Study interval endpoint */
       ExaminePoint (t1, &cc1, &cc2);
       ExaminePoint (t2, &cc1, &cc2);
 
-      /* Jos kumpikin piste kartion ulkopuolella, tutki derivaatan */
-      /* nollakohta, mikäli se on välillä [t1, t2] */
+      /* TR: If both point outside the cone, to investigate the derivative */
+      /* TR: Zero, if it is in the interval [t1, t2] */
       if (d1 <= -eps && d3 <= -eps) {
 	t0 = 1. / (1. + sqrt(rratio * d3/d1));
 	if (t0 - t1 > eps && t2 - t0 > eps) {
@@ -542,7 +540,7 @@ Real ViewIntegral (Real c1, Real c2, int k)
 	}
       }
       if (cc1 > cc2) {
-	cc1 = cc2; /* Näin voi käydä pyöristysvirheiden takia */
+	cc1 = cc2; /* TR: This can happen due to rounding */
       }
 
     }
@@ -572,9 +570,9 @@ Real ViewIntegral (Real c1, Real c2, int k)
 
 BOOL IntervalIsect(Real x1, Real x2, Real y1, Real y2, Real *z1, Real *z2)
 {
-  /* Laske välien [x1, x2] ja [y1, y2] leikkaus ja palauta FALSE, jos */
-  /* tämä on tyhjä tai mitätön. Input-parametrien järjestyksen on oltava */
-  /* oikea.*/
+  /* TR: Calculate the interval [x1, x2] and [y1, y2] section and return FALSE
+  if this is blank or null and void. Order of the input parameters must be correct.
+  */
   
   *z1 = x1; *z2 = x2;
   if (x2 - y1 < eps) return FALSE;
@@ -605,12 +603,10 @@ void ExaminePoint (Real x, Real *mi, Real *ma)
 
 Real Integrate(Real c1, Real c2)
 {
-  /* c1 ja c2 ovat integrointivälin kulman kosinin rajat. */ 
-  /* Integraali lasketaan ilman nimittäjän pi-tekijää. */
+  /* TR: C1 and c2 are the cosine of the angle of the integration interval boundaries. */ 
+  /* TR: The integral is calculated without the denominator of pi-factor. */
   
-  /* Ensimmäinen ja viimeinen integrointipiste eivät saa olla tasan */
-  /* 0 ja 1, jottei vierekkäisten elementtien tapauksessa tule */
-  /* nollalla jakoa */
+  /* TR: The first and last point of integration can not be exactly 0 and 1, so that adjacent elements in the case of division by zero should not. */
   /*	static const Real qp[] = { 1e-6, .25, .5, .75, 1.-1e-6 }, */
   /*    					w[] = { 1./12., 1./3., 1./6., 1./3., 1./12. }; */
   /*  static const Real qp[] = { 0.211324865, 0.788675134 }, */
@@ -621,8 +617,8 @@ Real Integrate(Real c1, Real c2)
     
   int i;
   Real c = zd1*zd1 + rd1*rd1;
-  if (c < eps2) return 0.; /* Pinta kutistunut ympyränkaareksi; tämä testi */
-  /* tarvitaan nollalla jaon välttämiseksi */
+  if (c < eps2) return 0.; /* TR: Surface shrunk circular arcs, this test */
+  /* TR: Needed to avoid division by zero */
   
   Real z, r, h, hh1, hh2, g1, g2, gg1, gg2, value, integral;
   Real d1, d2, e1, e2, f1, f2;
@@ -630,14 +626,13 @@ Real Integrate(Real c1, Real c2)
   Real a1 = rd3*r1, a2 = rd3*r2;
   Real b1 = zd3*z1, b2 = zd3*z2; 
   Real s1 = sqrt(1. - c1*c1), s2 = sqrt(1. - c2*c2);
-  /* kosineissa ja sineissä indeksit 1 ja 2 toisin päin kuin */
-  /* muissa muuttujissa! */
+  /* TR: machines and articles for the indices 1 and 2 of the other way around as the other variables! */
   Real cs = (1.+c1)*(1.+c2), cd = (1.-c1)*(1.-c2);
 
   
   integral = 0.;
   for (i=0; i<nqp; i++) {
-    z = z3 - qp[i] * zd3;  /* qp on integroimismuuttuja */
+    z = z3 - qp[i] * zd3;  /* TR: qp is the integration of variable */
     r = r3 - qp[i] * rd3;
     e1 = (z1-z)*(z1-z) + r1*r1 + r*r;
     f1 = (z2-z)*(z2-z) + r2*r2 + r*r;
@@ -653,7 +648,7 @@ Real Integrate(Real c1, Real c2)
     gg1 = (g1+c2)*(g1+c1);
     gg2 = (g2+c2)*(g2+c1);
     
-    /* Kaarien osuus: */
+    /* TR: Curves share: */
     value  = (-.5 * (a1 + (h-b1)*g1) / sqrt(g1*g1-1) ) *
       acos( .5 * ( (1.-g1) * sqrt(cd/gg1) - 
 		   (1.+g1) * sqrt(cs/gg1) ) );
@@ -662,7 +657,7 @@ Real Integrate(Real c1, Real c2)
 		   (1.+g2) * sqrt(cs/gg2) ) );
     value += .25 * (b1-b2) * acos(c1*c2 + s1*s2);
 
-    /* Suorien sivujen osuus: */
+    /* TR: Direct proportion pages: */
     gg1 = e1+f1-c; gg2 = e2+f2-c;
     hh1 = 4*e1*f1; hh2 = 4*e2*f2;
     d1 = hh1 - gg1*gg1; d2 = hh2 - gg2*gg2;
@@ -682,4 +677,4 @@ Real Area(Real r1, Real r2, Real z1, Real z2)
         sqrt( (z1-z2)*(z1-z2) + (r1-r2)*(r1-r2) );
 }
 
-
+/* vim: ts=8 et */
