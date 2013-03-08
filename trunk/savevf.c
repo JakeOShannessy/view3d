@@ -26,9 +26,9 @@ static void SaveF0( char *fileName, char *header, int nSrf,
 
   vfout = fopen(fileName, "w");
   fprintf(vfout, "%s", header);
-  fprintf(vfout, "%g", area[1]);
+  fprintf(vfout, "%.20g", area[1]);
   for( n=2; n<=nSrf; n++ ){
-    fprintf(vfout, " %g", area[n]);
+    fprintf(vfout, " %.20g", area[n]);
   }
   fprintf(vfout, "\n");
 
@@ -44,16 +44,16 @@ static void SaveF0( char *fileName, char *header, int nSrf,
       }
     }
     /* write row */
-    fprintf(vfout, "%.6f", F[1]);   
+    fprintf(vfout, "%.20g", F[1]);   
     for(m=2; m<=nSrf; m++){
-      fprintf( vfout, " %.6f", F[m]);
+      fprintf( vfout, " %.20g", F[m]);
     }
     fprintf(vfout, "\n");
   }
 
-  fprintf( vfout, "%.3f", emit[1] );
+  fprintf( vfout, "%.20g", emit[1] );
   for( n=2; n<=nSrf; n++ ){
-    fprintf( vfout, " %.3f", emit[n] );
+    fprintf( vfout, " %.20g", emit[n] );
   }
   fprintf( vfout, "\n" );
   fclose( vfout );
