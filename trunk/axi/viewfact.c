@@ -416,33 +416,36 @@ int InitialInterval(double *c1, double *c2){
   double cc1, cc3; 
   
   *c1 = -1.; *c2 = 1.;
-  if ( fabs(zd1) > eps ) {
+  if(fabs(zd1) > eps){
     cc1 = (- zd * rd1 + r12 * zd1) / (r34 * zd1);        
-    if ( fabs(zd3) > eps ) {
+    if(fabs(zd3) > eps) {
       cc3 = (zd * rd3 + r34 * zd3) / (r12 * zd3);        
-      if (zd1 > 0.) {
-	if (zd3 > 0.) *c1 = max(cc1, cc3);
-	else { *c1 = cc1; *c2 = cc3; }
-      } else {
-	if (zd3 < 0.) *c2 = min(cc1, cc3);
-	else { *c1 = cc3; *c2 = cc1; }
+      if(zd1 > 0.) {
+	if(zd3 > 0.)*c1 = max(cc1, cc3);
+	else{*c1 = cc1; *c2 = cc3;}
+      }else{
+	if(zd3 < 0.)*c2 = min(cc1, cc3);
+	else{*c1 = cc3; *c2 = cc1;}
       }
-    } else {
-      if ( sgn(rd3) && sgn(rd3) == -sgn(zd) ) {
-	if (zd1 > 0.) *c1 = cc1;
+    }else{
+      if(sgn(rd3) && sgn(rd3) == -sgn(zd)){
+	if (zd1 > 0.)*c1 = cc1;
 	else *c2 = cc1;
-      } else { *c1 = 1.; *c2 = -1.; } /* TR: Number of items */
+      }else{
+        *c1 = 1.; *c2 = -1.; /* TR: Number of items */
+      }
     }
-  } else {
-    if ( fabs(zd3) > eps ) {
+  }else{
+    if(fabs(zd3) > eps){
       cc3 = (zd * rd3 + r34 * zd3) / (r12 * zd3);
-      if ( sgn(rd1) && sgn(rd1) == sgn(zd) ) {
-	if (zd3 > 0.) *c1 = cc3;
+      if(sgn(rd1) && sgn(rd1) == sgn(zd)){
+	if(zd3 > 0.)*c1 = cc3;
 	else *c2 = cc3;
-      } else { *c1 = 1.; *c2 = -1.; } /* TR: Number of items */
-    } else {
-      if ( !sgn(rd1) || sgn(rd1) != sgn(zd) || sgn(rd1) != -sgn(rd3) )
-	{ *c1 = 1.; *c2 = -1.; }  /* Otherwise number = [-1, 1] */
+      }else{*c1 = 1.; *c2 = -1.;} /* TR: Number of items */
+    }else{
+      if(!sgn(rd1) || sgn(rd1) != sgn(zd) || sgn(rd1) != -sgn(rd3)){
+        *c1 = 1.; *c2 = -1.; /* Otherwise number = [-1, 1] */
+      }
     }
   }
   
@@ -479,56 +482,57 @@ Function assumes global variables r12 and r34 is non-zero.
     k++;
 
     // either element cannot shade one another
-    if(selfshading) {
+    if(selfshading){
       // Condition for superelements
-      if( nsurf != nsurfShade ) {
-	if( k-1 == shadeParent[inode] || k-1 == shadeParent[jnode]) continue;
+      if(nsurf != nsurfShade){
+	if(k-1 == shadeParent[inode] || k-1 == shadeParent[jnode]) continue;
       }
-      else if( nsurf == nsurfShade ) {
-	if( k-1 == inode || k-1 == jnode) continue;
+      else if(nsurf == nsurfShade){
+	if(k-1 == inode || k-1 == jnode) continue;
       }
     }
 
-    if (r5+r6 < eps) continue;
+    if(r5+r6 < eps) continue;
 
 
     zd5 = z5-z6;
-    if ( fabs(zd5) < eps ) {
+    if(fabs(zd5) < eps){
       /*  TR: Shade the surface is flat ring */
       
       /* TR: Level Ring can not be overshadowed by itself  */
       /* TR: This appendix addresses the subroutine for a long time, the bug (PR 23/04/2004) */
       if(nsurf == nsurfShade && inode == k-1) continue;
 
-      if ( fabs(zd) < eps ) continue;
+      if(fabs(zd) < eps)continue;
 
       t1 = (z12-z5)/zd; 
       tt1 = 1.-t1;
-      if (t1 < eps || tt1 < eps) continue;
+      if(t1 < eps || tt1 < eps) continue;
 
 
       t = rratio * t1/tt1;
       cc1 = .5*(r5*r5/(r12*r34*t1*tt1) - t - 1./t);
       cc2 = .5*(r6*r6/(r12*r34*t1*tt1) - t - 1./t);
 
-      if (cc1 > cc2) { t = cc1; cc1 = cc2; cc2 = t; }
-    } 
-    else  {
+      if(cc1 > cc2){ t = cc1; cc1 = cc2; cc2 = t;}
+    }else{
       /* TR: Shade the surface is a cone or a cylinder */
       /* TR: Calculate the line connecting the shadow of the intermediate remaining in the z-direction */
 
-      if ( fabs(zd) < eps ) {
-	if ( (z12-z5 < eps && z12-z6 > eps) ||
-	     (z12-z5 > eps && z12-z6 < eps) )
-	  { t1 = 0.; t2 = 1; }
-	else continue;
-      } else {
+      if(fabs(zd) < eps ) {
+	if((z12-z5 < eps && z12-z6 > eps) ||
+	     (z12-z5 > eps && z12-z6 < eps) ){
+          t1 = 0.; t2 = 1;
+        }else continue;
+      }else{
 	t1 = (z12-z5)/zd; 
 	t2 = t1 + zd5/zd;
-	if (t1 > t2) { t = t1; t1 = t2; t2 = t; }
+	if(t1 > t2){
+          t = t1; t1 = t2; t2 = t;
+        }
       }
 
-      if (! IntervalIsect(0., 1., t1, t2, &t1, &t2)) continue;
+      if(!IntervalIsect(0., 1., t1, t2, &t1, &t2))continue;
       tt1 = 1.-t1; 
       tt2 = 1.-t2;
       
@@ -547,33 +551,28 @@ Function assumes global variables r12 and r34 is non-zero.
 
       /* TR: If both point outside the cone, to investigate the derivative */
       /* TR: Zero, if it is in the interval [t1, t2] */
-      if (d1 <= -eps && d3 <= -eps) {
+      if(d1 <= -eps && d3 <= -eps) {
 	t0 = 1. / (1. + sqrt(rratio * d3/d1));
-	if (t0 - t1 > eps && t2 - t0 > eps) {
+	if(t0 - t1 > eps && t2 - t0 > eps) {
 	  ExaminePoint(t0, &cc1, &cc2);
 	}
       }
-      if (cc1 > cc2) {
+      if(cc1 > cc2) {
 	cc1 = cc2; /* TR: This can happen due to rounding */
       }
-
     }
 
 
     if (IntervalIsect(c1, c2, cc1, cc2, &cc1, &cc2)) {
-
       if (cc1 - c1 < delta) {
 	if (c2 - cc2 < delta) {
 	  return 0.;
-	}
-	else {
+	}else{
 	  c1 = cc2;
 	}
-      }
-      else if (c2 - cc2 < delta) {
+      }else if (c2 - cc2 < delta) {
 	c2 = cc1;
-      }
-      else {
+      }else{
 	return ViewIntegral(c1, cc1, k) + ViewIntegral(cc2, c2, k);
       }
     }
@@ -598,16 +597,21 @@ int IntervalIsect(double x1, double x2, double y1, double y2, double *z1, double
 
 void ExaminePoint (double x, double *mi, double *ma){
   double y;
-  if (x > eps) {
-    if (1.-x > eps) {
+  if(x > eps) {
+    if(1.-x > eps) {
       t = rratio*x/(1.-x);
       y = .5*(d1/t + d3*t) + g1*g3;
-    } else 
-      if ( fabs(d3) < eps ) y = g1*g3;
-      else y = sgn(d3);
-  } else
-    if ( fabs(d1) < eps ) y = g1*g3;
-    else y = sgn(d1);
+    }else if(fabs(d3) < eps){
+      y = g1*g3;
+    }else{
+      y = sgn(d3);
+    }
+  }else if(fabs(d1) < eps ){
+    y = g1*g3;
+  }else{
+    y = sgn(d1);
+  }
+
   if (y > *ma) *ma = y;
   if (y < *mi) *mi = y;
 }
