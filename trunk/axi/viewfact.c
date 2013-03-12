@@ -27,36 +27,56 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "viewfact.h"
-#include "../../config.h"
- 
-static Real r1, r2, z1, z2;     /* TR: "Watching" surface coordinates */
-static Real r3, r4, z3, z4;     /* TR: viewing surface coordinates */
-static Real r12, r34, z12, z34; /* TR: Central Line coordinate */
-static Real zd1, zd3, zd;
-static Real rd1, rd3;
+// #define abs(x) (((x) >= 0) ? (x) : (-(x)))
+#define min(x, y) ( ((x) < (y)) ? (x) : (y) )
+#define max(x, y) ( ((x) > (y)) ? (x) : (y) )
+#define sgn(x) ( ((x) < 0.) ? (-1.) : (((x) > 0.) ? (1.) : 0.) )
+#define TRUE 1
+#define FALSE 0
 
-static Real g1, g3, d1, d3, t, rratio;
+// forward definitions
 
-static const Real eps = 1e-7, eps2 = 1.0e-14; /* eps*eps; */
-static const Real delta = 1e-6; /* Maximum kosinien difference, which causes */
-/* Integration */
+void Viewfactor(const int **surfEltop, const double *coord,double **vf, int div);
+int InitialInterval(double *c1, double *c2);
+double ViewIntegral (double c1, double c2, int k);
+int IntervalIsect(double x1, double x2, double y1, double y2, double *z1, double *z2);
+void ExaminePoint (double x, double *mi, double *ma);
+double Integrate(double c1, double c2);
+double Area(double r1, double r2, double z1, double z2);
+
+
+// lots of nasty, naughty global variables
+
+static double r1, r2, z1, z2;     /* TR: "Watching" surface coordinates */
+static double r3, r4, z3, z4;     /* TR: viewing surface coordinates */
+static double r12, r34, z12, z34; /* TR: Central Line coordinate */
+static double zd1, zd3, zd;
+static double rd1, rd3;
+
+static double g1, g3, d1, d3, t, rratio;
+
+static const double eps = 1e-7, eps2 = 1.0e-14; /* eps^2 */
+static const double delta = 1e-6; /* Maximum cosine (TR?) difference which causes integration */
+
 static int nsurf,nsurfShade,inode,jnode;
-static Real * coord;
-static int *surfEltop, *surfEltopShade, * shadeParent;
+static double *coord;
+static int *surfEltop, *surfEltopShade, *shadeParent;
 
 static int compact = 1, verify = 0, selfshading = 1;
 
-extern "C" void STDCALLBULL FC_FUNC(viewfactorsaxis,VIEWFACTORSAXIS) 
-  (int *n,int *surf, Real *crd, Real *vf, int *idiv, int *fast)
-{
+/*----------------------------------------------------------------------------*/
+/*
+        Main entry point... see header file for argument description.
+*/
+void viewfactorsaxi(int *n,int *surf, double *crd, double *vf, int *idiv, int *fast){
   int i, j, ii, jj,div;
-  Real a, sum, viewint, viewint2, vf2, sumdvf;
-  Real c1, c2;    /*  cosine of the rotation angle upper and lower limit  */
-  Real _r1, _r2, _r3, _r4, _z1, _z2, _z3, _z4;
-  Real ds1,ds2,dp1,dz1,dz2,dr1,dr2,err,maxerr;
-  Real epsilon = 1.0e-5;
+  double a, sum, viewint, viewint2, vf2, sumdvf;
+  double c1, c2;    /*  cosine of the rotation angle upper and lower limit  */
+  double _r1, _r2, _r3, _r4, _z1, _z2, _z3, _z4;
+  double ds1,ds2,dp1,dz1,dz2,dr1,dr2,err,maxerr;
+  double epsilon = 1.0e-5;
 
+  /* store the geometry in some global variables for access from the other functions */
   nsurf = *n;
   coord = crd;
   surfEltop = surf; 
@@ -73,7 +93,7 @@ extern "C" void STDCALLBULL FC_FUNC(viewfactorsaxis,VIEWFACTORSAXIS)
 
   if(compact) {
     int *nodehits,*nodetable;
-    Real _r0, _z0;
+    double _r0, _z0;
     int ind0,ind1,ind2;
 
     printf("Combining original boundary elements for shading\n");
@@ -266,11 +286,6 @@ extern "C" void STDCALLBULL FC_FUNC(viewfactorsaxis,VIEWFACTORSAXIS)
     }
     if(parents != nsurf) printf("Inconsistent number of parents found %d (vs. %d)\n",parents,nsurf);
     
-
-
-
-
-
     // delete [] nodetable;
     // delete [] nodehits;
   }
@@ -339,7 +354,6 @@ extern "C" void STDCALLBULL FC_FUNC(viewfactorsaxis,VIEWFACTORSAXIS)
 	  if (!InitialInterval(&c1, &c2)) continue;	  
 	  viewint = ViewIntegral(c1, c2, 0);
 
-	  
 	  // Code for verification
 	  if(verify) {
 	    int *surfEltopTmp;
@@ -391,14 +405,15 @@ extern "C" void STDCALLBULL FC_FUNC(viewfactorsaxis,VIEWFACTORSAXIS)
 
 }
 
+/** 
+        TR: The number of cross-watching point of the rotation angle cos the condition that the line connecting the surfaces and angles between the normal must be < pi/2.
+        Function assumes that r12 and r34 are non-zero.
 
-BOOL InitialInterval(Real *c1, Real *c2)
-{
-  /* TR: The number of cross-watching point of the rotation angle cos the condition that the line connecting the surfaces and angles between the normal must be < pi/2.
-  Restore FALSE if the solution set is empty or zero-length, otherwise TRUE. 
-  Function assumes that r12 and r34 are non-zero.*/
-  
-  Real cc1, cc3; 
+        @return FALSE if the solution set is empty or zero-length, otherwise TRUE. 
+*/
+int InitialInterval(double *c1, double *c2){
+
+  double cc1, cc3; 
   
   *c1 = -1.; *c2 = 1.;
   if ( fabs(zd1) > eps ) {
@@ -438,9 +453,8 @@ BOOL InitialInterval(Real *c1, Real *c2)
 }
 
 
-Real ViewIntegral (Real c1, Real c2, int k)
-{
-/*
+double ViewIntegral (double c1, double c2, int k){
+/**<
 TR: This function calculates the view Factor one element pair.
 The area of ​​integration is limited to the examination of the conical surfaces of the induced
 shading. If the integration region is divided into two parts, performed a recursive
@@ -449,9 +463,9 @@ or empty, is returned to zero.
 Function assumes global variables r12 and r34 is non-zero.
 */
 
-  static Real r5, r6, z5, z6;    /* TR: to shade the edges of the surface coordinates */
-  static Real zd5, t1, tt1, t2, tt2, t0;
-  Real cc1,cc2;
+  static double r5, r6, z5, z6;    /* TR: to shade the edges of the surface coordinates */
+  static double zd5, t1, tt1, t2, tt2, t0;
+  double cc1,cc2;
   rratio = r34/r12;
 
   while (k < nsurfShade) {
@@ -568,8 +582,7 @@ Function assumes global variables r12 and r34 is non-zero.
 }
 
 
-BOOL IntervalIsect(Real x1, Real x2, Real y1, Real y2, Real *z1, Real *z2)
-{
+int IntervalIsect(double x1, double x2, double y1, double y2, double *z1, double *z2){
   /* TR: Calculate the interval [x1, x2] and [y1, y2] section and return FALSE
   if this is blank or null and void. Order of the input parameters must be correct.
   */
@@ -583,9 +596,8 @@ BOOL IntervalIsect(Real x1, Real x2, Real y1, Real y2, Real *z1, Real *z2)
 }
 
 
-void ExaminePoint (Real x, Real *mi, Real *ma)
-{
-  Real y;
+void ExaminePoint (double x, double *mi, double *ma){
+  double y;
   if (x > eps) {
     if (1.-x > eps) {
       t = rratio*x/(1.-x);
@@ -601,33 +613,32 @@ void ExaminePoint (Real x, Real *mi, Real *ma)
 }
 
 
-Real Integrate(Real c1, Real c2)
-{
+double Integrate(double c1, double c2){
   /* TR: C1 and c2 are the cosine of the angle of the integration interval boundaries. */ 
   /* TR: The integral is calculated without the denominator of pi-factor. */
   
   /* TR: The first and last point of integration can not be exactly 0 and 1, so that adjacent elements in the case of division by zero should not. */
-  /*	static const Real qp[] = { 1e-6, .25, .5, .75, 1.-1e-6 }, */
+  /*	static const double qp[] = { 1e-6, .25, .5, .75, 1.-1e-6 }, */
   /*    					w[] = { 1./12., 1./3., 1./6., 1./3., 1./12. }; */
-  /*  static const Real qp[] = { 0.211324865, 0.788675134 }, */
+  /*  static const double qp[] = { 0.211324865, 0.788675134 }, */
   /*	    w[] = { .5, .5 }; */
-  static const Real qp[] = { 0.112701665, 0.5, 0.887298334 },
+  static const double qp[] = { 0.112701665, 0.5, 0.887298334 },
 			     w[] = { 0.277777777, 0.444444444, 0.277777777 };
   static const int nqp = 3;
     
   int i;
-  Real c = zd1*zd1 + rd1*rd1;
+  double c = zd1*zd1 + rd1*rd1;
   if (c < eps2) return 0.; /* TR: Surface shrunk circular arcs, this test */
   /* TR: Needed to avoid division by zero */
   
-  Real z, r, h, hh1, hh2, g1, g2, gg1, gg2, value, integral;
-  Real d1, d2, e1, e2, f1, f2;
-  Real zrd = r2*z1-r1*z2;
-  Real a1 = rd3*r1, a2 = rd3*r2;
-  Real b1 = zd3*z1, b2 = zd3*z2; 
-  Real s1 = sqrt(1. - c1*c1), s2 = sqrt(1. - c2*c2);
+  double z, r, h, hh1, hh2, g1, g2, gg1, gg2, value, integral;
+  double d1, d2, e1, e2, f1, f2;
+  double zrd = r2*z1-r1*z2;
+  double a1 = rd3*r1, a2 = rd3*r2;
+  double b1 = zd3*z1, b2 = zd3*z2; 
+  double s1 = sqrt(1. - c1*c1), s2 = sqrt(1. - c2*c2);
   /* TR: machines and articles for the indices 1 and 2 of the other way around as the other variables! */
-  Real cs = (1.+c1)*(1.+c2), cd = (1.-c1)*(1.-c2);
+  double cs = (1.+c1)*(1.+c2), cd = (1.-c1)*(1.-c2);
 
   
   integral = 0.;
@@ -671,8 +682,8 @@ Real Integrate(Real c1, Real c2)
   return integral;
 }
 
-Real Area(Real r1, Real r2, Real z1, Real z2)
-{
+
+double Area(double r1, double r2, double z1, double z2){
     return 3.1415926535 * (r1+r2) *
         sqrt( (z1-z2)*(z1-z2) + (r1-r2)*(r1-r2) );
 }

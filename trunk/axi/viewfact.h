@@ -16,23 +16,23 @@
 */
 // http://www.csc.fi/english/pages/elmer --- http://www.elmerfem.org/
 
-// #define abs(x) (((x) >= 0) ? (x) : (-(x)))
-#define min(x, y) ( ((x) < (y)) ? (x) : (y) )
-#define max(x, y) ( ((x) > (y)) ? (x) : (y) )
-#define sgn(x) ( ((x) < 0.) ? (-1.) : (((x) > 0.) ? (1.) : 0.) )
-#define TRUE 1
-#define FALSE 0
+/**
+	Calculate view factors for axisymmetric geometry.
 
+	The function uses global variables to store the geometry, and so is not
+	thread-safe.
 
-typedef int BOOL;
-typedef double Real;
+	@param n number of surface elements
+	@param surf[2*n] facets (a,b,..), stored as pairs like i1_a, i2_a, i1_b, i2_b,... where i1 and i2 are indices into the list of pairs 'crd'.
+	@param crd[2*n] coordinates, as pairs like r0, z0, r1, z1, r2, z2,...
 
-void Viewfactor(const int **surfEltop, const Real *coord,
-				Real **vf, int div);
-BOOL InitialInterval(Real *c1, Real *c2);
-Real ViewIntegral (Real c1, Real c2, int k);
-BOOL IntervalIsect(Real x1, Real x2, Real y1, Real y2, Real *z1, Real *z2);
-void ExaminePoint (Real x, Real *mi, Real *ma);
-Real Integrate(Real c1, Real c2);
-Real Area(Real r1, Real r2, Real z1, Real z2);
+	Each facet is described by an index pair (i1,i2), which are indices into the
+	crd array (the '0', '1' etc in the pairs example).
+
+	TODO wouldn't it be easier to use some structs for this lot?
+
+	@param *fast boolean int value (shouldn't be a pointer?), if non-zero, combine original boundary elements for shading calculation. if zero, don't combine.
+	@param *idiv int value (shouldn't be a pointer?), looks like a number of subdivision of the specified surfaces, not sure what it's being used for yet.
+*/
+void viewfactorsaxi(int *n,int *surf, double *crd, double *vf, int *idiv, int *fast);
 

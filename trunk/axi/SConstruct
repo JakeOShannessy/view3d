@@ -1,0 +1,37 @@
+
+import os, platform
+if platform.system()=="Windows":
+	deftool = ['mingw','nsis']
+else:
+	deftool = ['default']
+
+env = Environment(
+	tools=deftool
+	,toolpath=['scons']
+)
+
+opts = Variables()
+
+opts.Add(BoolVariable(
+	"DEBUG"
+	,"Debugging mode (for gdb symbols, plus extra output)"
+	,1
+))
+
+opts.Add(
+	"CC"
+	,"C Compiler"
+	,"gcc"
+)
+
+opts.Update(env)
+
+Help(opts.GenerateHelpText(env))
+
+if env.get('DEBUG'):
+	env.Append(CPPFLAGS=['-g'])
+
+env.Program("viewax",['viewfact.c','main.c']
+	,LIBS=['m']
+)
+
