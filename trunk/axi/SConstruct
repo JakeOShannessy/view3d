@@ -1,3 +1,4 @@
+# build script for use with 'SCons' build tool, see www.scons.org
 
 import os, platform
 if platform.system()=="Windows":

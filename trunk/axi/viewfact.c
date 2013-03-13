@@ -1,5 +1,6 @@
 /*  viewfact.cpp: calculation of axisymmetric view factors
 	Copyright (C) 1995 Juha Katajamäki
+	Copyright (C) 2013 John Pye
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -68,7 +69,7 @@ static int compact = 1, verify = 0, selfshading = 1;
 /*
         Main entry point... see header file for argument description.
 */
-void viewfactorsaxi(int *n,int *surf, double *crd, double *vf, int *idiv, int *fast){
+void viewfactorsaxi(int surf[], int n, double crd[], double *vf, int idiv, int fast){
   int i, j, ii, jj,div;
   double a, sum, viewint, viewint2, vf2, sumdvf;
   double c1, c2;    /*  cosine of the rotation angle upper and lower limit  */
@@ -77,12 +78,12 @@ void viewfactorsaxi(int *n,int *surf, double *crd, double *vf, int *idiv, int *f
   double epsilon = 1.0e-5;
 
   /* store the geometry in some global variables for access from the other functions */
-  nsurf = *n;
+  nsurf = n;
   coord = crd;
   surfEltop = surf; 
   
-  div = *idiv;
-  compact = *fast;
+  div = idiv;
+  compact = fast;
 
 
   if(!compact) {
