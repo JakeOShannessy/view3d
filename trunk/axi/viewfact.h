@@ -43,5 +43,5 @@
 
 	@return Returns the values vf by writing to the vf array.
 */
-void viewfactorsaxi(int surf[], int nsurf, double crd[], double *vf, int idiv, int fast);
+void viewfactorsaxi(int nsurf, int surf[], double crd[], double *vf, int idiv, int fast);
 

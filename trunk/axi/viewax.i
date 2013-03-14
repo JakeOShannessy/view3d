@@ -1,4 +1,4 @@
-/*  viewfact.cpp: calculation of axisymmetric view factors
+/*  View3D: calculation of axisymmetric view factors
 	Copyright (C) 2013 John Pye
 
 	This program is free software; you can redistribute it and/or modify
@@ -27,9 +27,12 @@ for information on the implementation details.
 
 John Pye, 14 Mar 2013
 */
+%feature("autodoc", "1");
+%module viewax
+
 %{
 #define SWIG_FILE_WITH_INIT
-#include "rms.h"
+#include "viewfact_np.h"
 %}
 
 %include "numpy.i"
@@ -38,7 +41,10 @@ John Pye, 14 Mar 2013
 import_array();
 %}
 
-%apply (double* IN_ARRAY1, int DIM1) {(double* seq, int n)};
-%include "rms.h"
+%apply (int IN_ARRAY2[], int DIM1, int DIM2) {(int *surf, int nsurf, int nvert)};
+%apply (double IN_ARRAY2[], int DIM1, int DIM2) {(double *coord, int npoint, int ndim)};
+%apply (double* INPLACE_ARRAY2, int DIM1, int DIM2 ) {(double *vf, int nsurf1, int nsurf2)};
+%rename(viewax)viewfactorsaxi_np;
 
+%include "viewfact_np.h"
 

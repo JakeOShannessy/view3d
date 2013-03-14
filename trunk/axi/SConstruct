@@ -2,14 +2,21 @@
 
 import os, platform
 if platform.system()=="Windows":
-	deftool = ['mingw','nsis']
+	deftool = ['mingw','nsis','swig']
+	pyver_dot = ""
+	pyshlib_suffix = ".pyd"
 else:
-	deftool = ['default']
+	deftool = ['default','swig']
+	pyver_dot = "."
+	pyshlib_suffix = ".so"
 
 env = Environment(
 	tools=deftool
 	,toolpath=['scons']
 )
+
+#-------------------------------------------------------------------------------
+# USER-PROVIDED CONFIGURATION OPTIONS
 
 opts = Variables()
 
@@ -29,10 +36,74 @@ opts.Update(env)
 
 Help(opts.GenerateHelpText(env))
 
+
+#-------------------------------------------------------------------------------
+# AUTOMATICALLY-DETECTED CONFIGURATION
+
+import distutils.sysconfig
+
+conf = env.Configure()
+
+# check for 'fprintf'
+
+if not conf.CheckFunc('fprintf'):
+	print "Function 'fprintf' not found; your compiler and/or environment is probably not correctly configured (see config.log for details)"
+	Exit(1)
+
+# check for 'Python.h'
+
+without_python_reason = "Python header 'Python.h' not found"
+env['HAVE_PYTHON'] = False
+pyinc = os.path.join(distutils.sysconfig.get_python_inc(),"Python.h")
+_havepy = conf.CheckHeader(pyinc)
+if _havepy:
+	env['HAVE_PYTHON'] = True
+
+conf.Finish()
+
+#-------------------------------------------------------------------------------
+# THE ACTUAL STUFF
+
+
 if env.get('DEBUG'):
 	env.Append(CPPFLAGS=['-g'])
+
+# THE MAIN PROGRAM
 
 env.Program("viewax",['viewfact.c','main.c']
 	,LIBS=['m']
 )
+
+# PYTHON WRAPPER VIA SWIG
+
+if env.get('HAVE_PYTHON'):
+	python_env = env.Clone()
+
+	python_env.Append(
+		CPPPATH=['#']
+		,LIBPATH=['#']
+	)
+
+	import distutils.sysconfig, platform, os, sys
+
+	python_lib = "python%s%s%s"%(sys.version_info[0],pyver_dot,sys.version_info[1])
+
+	python_env.Append(
+		CPPPATH = [distutils.sysconfig.get_python_inc()]
+		,LIBPATH = [distutils.sysconfig.PREFIX+"/libs"]
+		, LIBS = [python_lib]
+		, SWIGFLAGS=['-python']
+		, SWIGPATH=["/usr/lib/python%s.%s/dist-packages/instant/swig/" % (sys.version_info[0],sys.version_info[1])]
+	)
+
+	python_env['SHLIBSUFFIX']=pyshlib_suffix
+
+	# specific lib path for Mac OSX, need to check this.
+	if platform.system()=="Darwin":
+		python_env.AppendUnique(LIBPATH=[distutils.sysconfig.PREFIX+"/lib"])
+
+	swiglib = python_env.SharedLibrary("viewax",['viewax.i','viewfact_np.c','viewfact.c']
+		, SHLIBPREFIX = '_'
+	)
+
 

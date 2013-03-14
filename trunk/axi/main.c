@@ -1,4 +1,4 @@
-/*  viewfact.h: calculation of axisymmetric view factors
+/*  View3D: calculation of axisymmetric view factors
 	Copyright (C) 2013 John Pye
 
 	This program is free software; you can redistribute it and/or modify
@@ -54,7 +54,7 @@ int main(void){
 	idiv = 10;
 	fast = 0;
 	
-	viewfactorsaxi(srf, ns, crd, vf, idiv, fast);
+	viewfactorsaxi(ns, srf, crd, vf, idiv, fast);
 
 	int i,j;
 	fprintf(stderr,"%3s | ","");

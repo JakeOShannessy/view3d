@@ -69,7 +69,7 @@ static int compact = 1, verify = 0, selfshading = 1;
 /*
         Main entry point... see header file for argument description.
 */
-void viewfactorsaxi(int surf[], int n, double crd[], double *vf, int idiv, int fast){
+void viewfactorsaxi(int n, int surf[], double crd[], double *vf, int idiv, int fast){
   int i, j, ii, jj,div;
   double a, sum, viewint, viewint2, vf2, sumdvf;
   double c1, c2;    /*  cosine of the rotation angle upper and lower limit  */
