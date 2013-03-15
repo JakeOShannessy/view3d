@@ -32,7 +32,7 @@ John Pye, 14 Mar 2013
 
 %{
 #define SWIG_FILE_WITH_INIT
-#include "viewfact_np.h"
+#include "viewfact.h"
 %}
 
 %include "numpy.i"
@@ -41,10 +41,28 @@ John Pye, 14 Mar 2013
 import_array();
 %}
 
-%apply (int IN_ARRAY2[], int DIM1, int DIM2) {(int *surf, int nsurf, int nvert)};
-%apply (double IN_ARRAY2[], int DIM1, int DIM2) {(double *coord, int npoint, int ndim)};
+%apply (int IN_ARRAY2[], int DIM1, int DIM2) {(int *surf, int nsurf, int nvert), (double *coord, int npoint, int ndim)};
 %apply (double* INPLACE_ARRAY2, int DIM1, int DIM2 ) {(double *vf, int nsurf1, int nsurf2)};
 %rename(viewax)viewfactorsaxi_np;
 
-%include "viewfact_np.h"
+%inline %{
+int viewfactorsaxi_np(
+	int *surf, int nsurf, int nvert
+	, double *coord, int npoint, int ndim
+	, double *vf, int nsurf1, int nsurf2
+	, int idiv, int fast
+){
+	if(nsurf<=1)return 3;
+	if(nsurf1!=nsurf)return 1;
+	if(nsurf2!=nsurf)return 2;
+	if(nvert!=2)return 4;
+	if(ndim!=2)return 5;
+	if(idiv<1)return 6;
 
+	/* TODO check that npoint agrees with surf contents? */
+	
+	viewfactorsaxi(nsurf, surf, coord, vf, idiv, fast);
+	return 0;
+}
+
+%}

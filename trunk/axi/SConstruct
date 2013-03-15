@@ -102,7 +102,7 @@ if env.get('HAVE_PYTHON'):
 	if platform.system()=="Darwin":
 		python_env.AppendUnique(LIBPATH=[distutils.sysconfig.PREFIX+"/lib"])
 
-	swiglib = python_env.SharedLibrary("viewax",['viewax.i','viewfact_np.c','viewfact.c']
+	swiglib = python_env.SharedLibrary("viewax",['viewax.i','viewfact.c']
 		, SHLIBPREFIX = '_'
 	)
 
