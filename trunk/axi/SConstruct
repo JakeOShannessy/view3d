@@ -2,7 +2,7 @@
 
 import os, platform
 if platform.system()=="Windows":
-	deftool = ['mingw','nsis','swig']
+	deftool = ['mingw','swig']
 	pyver_dot = ""
 	pyshlib_suffix = ".pyd"
 else:
@@ -11,8 +11,8 @@ else:
 	pyshlib_suffix = ".so"
 
 env = Environment(
-	tools=deftool
-	,toolpath=['scons']
+	ENV=os.environ
+	,tools=deftool
 )
 
 #-------------------------------------------------------------------------------
@@ -30,6 +30,12 @@ opts.Add(
 	"CC"
 	,"C Compiler"
 	,"gcc"
+)
+
+opts.Add(
+	'SWIG'
+	,"Name of your swig executable"
+	,'swig'
 )
 
 opts.Update(env)
@@ -68,6 +74,7 @@ conf.Finish()
 if env.get('DEBUG'):
 	env.Append(CPPFLAGS=['-g'])
 
+
 # THE MAIN PROGRAM
 
 env.Program("viewax",['viewfact.c','main.c']
@@ -87,13 +94,16 @@ if env.get('HAVE_PYTHON'):
 	import distutils.sysconfig, platform, os, sys
 
 	python_lib = "python%s%s%s"%(sys.version_info[0],pyver_dot,sys.version_info[1])
+	
+	numpyinclude = []
+	if platform.system()=="Windows":
+		numpyinclude = [distutils.sysconfig.PREFIX+"/Lib/site-packages/numpy/core/include"]
 
 	python_env.Append(
-		CPPPATH = [distutils.sysconfig.get_python_inc()]
+		CPPPATH = [distutils.sysconfig.get_python_inc()] + numpyinclude
 		,LIBPATH = [distutils.sysconfig.PREFIX+"/libs"]
 		, LIBS = [python_lib]
 		, SWIGFLAGS=['-python']
-		, SWIGPATH=["/usr/lib/python%s.%s/dist-packages/instant/swig/" % (sys.version_info[0],sys.version_info[1])]
 	)
 
 	python_env['SHLIBSUFFIX']=pyshlib_suffix
