@@ -35,7 +35,7 @@ srf = np.array([
 # TODO wrap this function with an extra layer that also checks the return code
 # for errors.
 vf = np.zeros((srf.shape[0],srf.shape[0]))
-viewax.viewfactorsaxi_np(srf,crd,vf,20,0)
+viewax.viewfactorsaxi_np(srf,crd,vf,50,1)
 
 print vf
 

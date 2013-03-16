@@ -1,5 +1,8 @@
 # build script for use with 'SCons' build tool, see www.scons.org
 
+import SCons.Warnings
+SCons.Warnings.suppressWarningClass(SCons.Warnings.VisualCMissingWarning)
+
 import os, platform
 if platform.system()=="Windows":
 	deftool = ['mingw','swig']
@@ -75,9 +78,11 @@ if env.get('DEBUG'):
 	env.Append(CPPFLAGS=['-g'])
 
 
+obj = env.SharedObject(source=['viewfact.c'])
+
 # THE MAIN PROGRAM
 
-env.Program("viewax",['viewfact.c','main.c']
+env.Program("viewax",['main.c'] + obj
 	,LIBS=['m']
 )
 
@@ -112,8 +117,6 @@ if env.get('HAVE_PYTHON'):
 	if platform.system()=="Darwin":
 		python_env.AppendUnique(LIBPATH=[distutils.sysconfig.PREFIX+"/lib"])
 
-	swiglib = python_env.SharedLibrary("viewax",['viewax.i','viewfact.c']
+	swiglib = python_env.SharedLibrary("viewax",['viewax.i'] + obj
 		, SHLIBPREFIX = '_'
 	)
-
-
