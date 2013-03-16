@@ -30,8 +30,25 @@ srf = np.array([
 	, [2,3]
 ], dtype=np.int)
 
-vf = np.zeros((3,3))
+# in the current wrapping we need to allocate the returned array, and then 
+# the values are returned by in-place modification of the array by our function.
+# TODO wrap this function with an extra layer that also checks the return code
+# for errors.
+vf = np.zeros((srf.shape[0],srf.shape[0]))
 viewax.viewfactorsaxi_np(srf,crd,vf,20,0)
 
 print vf
+
+
+# plot the geometry
+import pylab as pl
+pl.figure()
+for i in range(srf.shape[0]):
+	s = srf[i]
+	r = (crd[s[0],0], crd[s[1],0])
+	z = (crd[s[0],1], crd[s[1],1])
+	pl.plot(z,r,'-bo')
+	pl.text(np.mean(z),np.mean(r),'%d'%i)
+pl.axes().set_aspect('equal','datalim')
+pl.show()
 
