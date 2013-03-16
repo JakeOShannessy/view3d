@@ -1,6 +1,8 @@
 from math import pi, tan
 import numpy as np
-from viewax import viewax
+import viewax
+
+aaa = [1,10,100];
 
 # specified geometry
 d = 0.6;
@@ -28,7 +30,8 @@ srf = np.array([
 	, [2,3]
 ], dtype=np.int)
 
-vf = viewax(srf,crd,10,0)
+vf = np.zeros((3,3))
+viewax.viewfactorsaxi_np(srf,crd,vf,20,0)
 
 print vf
 

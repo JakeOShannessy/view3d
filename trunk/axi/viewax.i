@@ -41,9 +41,14 @@ John Pye, 14 Mar 2013
 import_array();
 %}
 
-%apply (int IN_ARRAY2[], int DIM1, int DIM2) {(int *surf, int nsurf, int nvert), (double *coord, int npoint, int ndim)};
-%apply (double* INPLACE_ARRAY2, int DIM1, int DIM2 ) {(double *vf, int nsurf1, int nsurf2)};
-%rename(viewax)viewfactorsaxi_np;
+%apply (int *IN_ARRAY2, int DIM1, int DIM2)
+      {(int *surf, int nsurf, int nvert)};
+
+%apply (double *IN_ARRAY2, int DIM1, int DIM2)
+      {(double *coord, int npoint, int ndim)};
+
+%apply (double* INPLACE_ARRAY2, int DIM1, int DIM2 )
+      {(double *vf, int nsurf1, int nsurf2)};
 
 %inline %{
 int viewfactorsaxi_np(
