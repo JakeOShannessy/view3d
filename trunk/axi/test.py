@@ -22,19 +22,19 @@ crd = np.array([
 	,[0, h]
 	,[r2, h1]
 	,[d/2, 0]
-], dtype=np.float)
+], dtype=np.float64)
 
 srf = np.array([
 	[3,0] 
 	, [1,2]
 	, [2,3]
-], dtype=np.int)
+], dtype=np.int32)
 
 # in the current wrapping we need to allocate the returned array, and then 
 # the values are returned by in-place modification of the array by our function.
 # TODO wrap this function with an extra layer that also checks the return code
 # for errors.
-vf = np.zeros((srf.shape[0],srf.shape[0]))
+vf = np.zeros((srf.shape[0],srf.shape[0]),dtype=np.float64)
 viewax.viewfactorsaxi_np(srf,crd,vf,50,1)
 
 print vf
