@@ -106,8 +106,8 @@ int main( int argc, char **argv ){
   fprintf( _ulog, "     enclosure designator: %3d\n", encl );
   fprintf( _ulog, "     emittance designator: %3d\n\n", didemit );
 
-  VF = Alc_MC( 0, nSrf, 0, nSrf, sizeof(double), __FILE__, __LINE__ );
-  TK = Alc_V( 1, nSrf, sizeof(float), __FILE__, __LINE__ );
+  VF = Alc_MC( 0, nSrf, 0, nSrf, sizeof(double), __FILE__, __LINE__ ); 	// Allocation of matrix of elements.
+  TK = Alc_V( 1, nSrf, sizeof(float), __FILE__, __LINE__ );				// Allocation of arrays of elements.
   T4 = Alc_V( 1, nSrf, sizeof(float), __FILE__, __LINE__ );
   area = Alc_V( 1, nSrf, sizeof(float), __FILE__, __LINE__ );
   emit = Alc_V( 1, nSrf, sizeof(float), __FILE__, __LINE__ );

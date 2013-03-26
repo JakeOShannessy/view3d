@@ -83,9 +83,10 @@ void GetCtrl( char *str, View3DControlData *vfCtrl){
       else
         if( i ) vfCtrl->enclosure = 1;
     }else if( streqli( p, "emit" )){
-      p = strtok( NULL, "= ," );
+      p = strtok( NULL, "= ,\t" );
+	  fprintf(stderr,"GOT STRING: '%s'\n",p);
       if( IntCon( p, &i ) )
-        error( 2, __FILE__, __LINE__, "Bad integer value: ", p, "" );
+        error( 2, __FILE__, __LINE__, "Bad EMIT integer value: ", p, "" );
       else
         if( i ) vfCtrl->emittances = 1;
     }else if( streqli( p, "maxU" ) ){

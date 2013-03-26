@@ -122,6 +122,11 @@ void ReadVF(const char *fileName, char *program, char *version,
 		float *area, float *emit, double **AF, float **F
 		, const int init, const int shape
 ){
+  /* if(non-zero number) - it appears that (non-zero number = true) and therefore 
+  the if statement will be executed. However
+	 if(0) - (0 = false) and hence the if statement will NOT be executed.
+	 http://www.cplusplus.com/forum/articles/3483/
+  */
   if(init){
     char header[36];
     FILE *vfin = fopen( fileName, "r" );

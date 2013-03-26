@@ -766,7 +766,7 @@ int IntCon( char *str, int *i )
   if( LongCon( str, &value ) ) eflag = 1;
   if( value > SHRT_MAX ) eflag = 1;
   if( value < SHRT_MIN ) eflag = 1;
-
+  fprintf(stderr,"VALUE=%ld\n",value);
   if( eflag )
     *i = 0;
   else

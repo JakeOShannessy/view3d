@@ -317,7 +317,7 @@ int main(int argc, char **argv){
 	double d2 = 1; /* frustrum apex dia */
 	double a = 0.6; /* aperture dia */
 
-	unsigned n_tubes = 8;
+	unsigned n_tubes = 20;
 	double t = 0.1; /* tube diameter */
 
 	double f = t * 2; /* distance along wall to base end of tube */
@@ -333,8 +333,8 @@ int main(int argc, char **argv){
 	SbVec3d C(a/2, 0, 0);
 
 	// gridding parameters
-	unsigned r = 8; /* number of rows in cone grid */
-	unsigned c = 20; /* number of columns (circumf) in cone grid */
+	unsigned r = 5; /* number of rows in cone grid */
+	unsigned c = 8; /* number of columns (circumf) in cone grid */
 
 	unsigned n_cyl_start = 1;
 	unsigned n = n_cyl_start;
