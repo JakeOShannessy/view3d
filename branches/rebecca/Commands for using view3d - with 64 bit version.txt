@@ -1,0 +1,85 @@
+# To run view3d, type these commands into MinGW shell........
+# See notebook 6 notes from 6/9/2011 and 8/11/2011.
+--------------------------------------b-----------------------------
+# First open the ....cavity3d.cpp code in the view3d-32/examples folder  
+# alter number of tubes, rows, cols, other geometric features, then
+# save. See notebook 6 notes from 17/5/2011 (centrefold).
+-------------------------------------------------------------------
+# Go down a directory level into the view3d-32 folder
+cd view3d-32
+
+# Build/compile the cpp code using the 32-bit coin 3d etc.
+# First check you have saved the file in this folder, not just in # rebecca/view3d files!!
+# Also check the SConscript file has a line something like:
+# cav_env.Program('17-5deg_cavity3d',['17-5deg_cavity3d.cpp'])
+# And make sure the end of the file name is .exe because this is what you # are asking it to make. 
+scons examples/cavity3d.exe
+scons examples/17-5deg_cavity3d.exe
+scons examples/20side_7surface_cavity3d.exe
+
+
+# Or if you want to compile everything in that folder:
+scons examples
+
+# Run the cpp program, creating the text input file mycone.vs3
+# NOTE - .vs3 file will be placed in whatever folder you have cd'd to - # view3d-32 in this case).
+examples/cavity3d.exe
+
+# View the resulting geometry
+# Adding "-t" at the end of these commands adds tags in the image.
+# NOTE - Had to comment out the line "C emit 0", hence the # new file suffix "_for_viewer.vs3" probably due to updating # viewer on 8th March 2013.
+viewer mycone.vs3
+viewer 17-5deg.vs3
+viewer examples/Seven_surface/Seven_surface_for_viewer.vs3
+viewer examples/Seven_surface/Seven_surface.vs3
+viewer 17-5deg_two-rows_FEperp.vs3
+viewer examples/Seven_surface/20side_7surface.vs3
+
+# Or if the vs3 file is not in the view3d-32 folder:
+# NB must still be in the view3d-32 folder to view this, but ~ references home folder.
+viewer ~/view3d/Four_surface_LD_receiver.vs3
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Change to 64-bit folder to compute view factors.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ 
+# Go up a level in your directories/folders.
+cd ..
+
+# Go down a directory level to view3d folder (has 64-bit compiled 
+# view3d executable which will run without memory error).
+cd view3d
+
+# Calculate view factors using the mycone.vs3 file that you
+# created in the view3d-32 folder.
+view3d ~/view3d-32/mycone.vs3 output.txt
+view3d ~/view3d-32/examples/Seven_surface/Seven_surface_grey_ordered.vs3 Seven_surface_grey_ordered_output(_2).txt
+(The output gets put in view3d folder.)
+
+view3d ~/view3d-32/examples/Seven_surface/Seven_surface_geomVF_emit0.vs3 Seven_surface_geomVF_output.txt
+view3d ~/view3d-32/examples/Seven_surface/Seven_surface_greyVF_emit1.vs3 Seven_surface_greyVF_output.txt
+view3d ~/view3d-32/examples/Seven_surface/42_surface_geomVF_emit0.vs3 42_surface_geomVF_output.txt
+
+NB: make sure your input file is saved with extension .vs3 from Notepad ++, otherwise will come up with .vs3.txt
+
+-----------------------------------------------------------------
+Grey/Script F View Factors
+-----------------------------------------------------------------
+Remove header line in ...output.txt and use this file (minus header) as input to Matlab file (in the folder rebecca/view3d files)
+find_scriptF.m
+
+Paste the header back in and use ...greyVF_output_with_header.txt as input to viewht as described below
+
+-----------------------------------------------------------------
+To compute radiation transfer rates
+-----------------------------------------------------------------
+# Check view factor (with header) and surface temperature files are in msys view3d folder.
+cd view3d
+
+# viewht <view factor file> <surface temperature file> <heat flux output file>
+viewht Seven_surface_output.txt Seven_surface_temps_10thFeb_67-6.txt Seven_surface_10thFeb_67-6_rad_output.txt
+
+viewht Seven_surface_greyVF_output_m2.txt Seven_surface_temps_10thFeb_67-6.txt Seven_surface_greyVF_10thFeb_67-6_rad_output.txt
+
+viewht 42_surface_greyVF_output_m2_with_header.txt 42_surface_temps_10thFeb_67-6.txt 42_surface_10thFeb_67-6_rad_output.txt

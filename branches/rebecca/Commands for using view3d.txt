@@ -1,0 +1,19 @@
+# to build the program
+
+scons examples/cavity3d.exe
+
+# to run the program, creating output mycone.vs3
+
+examples/cavity3d.exe
+
+# to view the resulting
+# ./ just says start in current directory. Can omit.
+
+./viewer mycone.vs3
+
+# to calculate the view factors
+
+./view3d mycone.vs3 output.txt
+
+
+
