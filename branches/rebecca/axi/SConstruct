@@ -1,0 +1,122 @@
+# build script for use with 'SCons' build tool, see www.scons.org
+
+import SCons.Warnings
+SCons.Warnings.suppressWarningClass(SCons.Warnings.VisualCMissingWarning)
+
+import os, platform
+if platform.system()=="Windows":
+	deftool = ['mingw','swig']
+	pyver_dot = ""
+	pyshlib_suffix = ".pyd"
+else:
+	deftool = ['default','swig']
+	pyver_dot = "."
+	pyshlib_suffix = ".so"
+
+env = Environment(
+	ENV=os.environ
+	,tools=deftool
+)
+
+#-------------------------------------------------------------------------------
+# USER-PROVIDED CONFIGURATION OPTIONS
+
+opts = Variables()
+
+opts.Add(BoolVariable(
+	"DEBUG"
+	,"Debugging mode (for gdb symbols, plus extra output)"
+	,1
+))
+
+opts.Add(
+	"CC"
+	,"C Compiler"
+	,"gcc"
+)
+
+opts.Add(
+	'SWIG'
+	,"Name of your swig executable"
+	,'swig'
+)
+
+opts.Update(env)
+
+Help(opts.GenerateHelpText(env))
+
+
+#-------------------------------------------------------------------------------
+# AUTOMATICALLY-DETECTED CONFIGURATION
+
+import distutils.sysconfig
+
+conf = env.Configure()
+
+# check for 'fprintf'
+
+if not conf.CheckFunc('fprintf'):
+	print "Function 'fprintf' not found; your compiler and/or environment is probably not correctly configured (see config.log for details)"
+	Exit(1)
+
+# check for 'Python.h'
+
+without_python_reason = "Python header 'Python.h' not found"
+env['HAVE_PYTHON'] = False
+pyinc = os.path.join(distutils.sysconfig.get_python_inc(),"Python.h")
+_havepy = conf.CheckHeader(pyinc)
+if _havepy:
+	env['HAVE_PYTHON'] = True
+
+conf.Finish()
+
+#-------------------------------------------------------------------------------
+# THE ACTUAL STUFF
+
+
+if env.get('DEBUG'):
+	env.Append(CPPFLAGS=['-g'])
+
+
+obj = env.SharedObject(source=['viewfact.c'])
+
+# THE MAIN PROGRAM
+
+env.Program("viewax",['main.c'] + obj
+	,LIBS=['m']
+)
+
+# PYTHON WRAPPER VIA SWIG
+
+if env.get('HAVE_PYTHON'):
+	python_env = env.Clone()
+
+	python_env.Append(
+		CPPPATH=['#']
+		,LIBPATH=['#']
+	)
+
+	import distutils.sysconfig, platform, os, sys
+
+	python_lib = "python%s%s%s"%(sys.version_info[0],pyver_dot,sys.version_info[1])
+	
+	numpyinclude = []
+	if platform.system()=="Windows":
+		numpyinclude = [distutils.sysconfig.PREFIX+"/Lib/site-packages/numpy/core/include"]
+
+	python_env.Append(
+		CPPPATH = [distutils.sysconfig.get_python_inc()] + numpyinclude
+		,LIBPATH = [distutils.sysconfig.PREFIX+"/libs"]
+		, LIBS = [python_lib]
+		, SWIGFLAGS=['-python']
+	)
+
+	python_env['SHLIBSUFFIX']=pyshlib_suffix
+
+	# specific lib path for Mac OSX, need to check this.
+	if platform.system()=="Darwin":
+		python_env.AppendUnique(LIBPATH=[distutils.sysconfig.PREFIX+"/lib"])
+
+	swiglib = python_env.SharedLibrary("viewax",['viewax.i'] + obj
+		, SHLIBPREFIX = '_'
+	)

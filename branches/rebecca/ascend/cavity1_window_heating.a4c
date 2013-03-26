@@ -1,0 +1,175 @@
+REQUIRE "view3d.a4c";
+IMPORT "johnpye/extpy/extpy";
+IMPORT "ascend/plottemps";
+(*
+	The same as cavity1.a4c, but with absorptive heating of the cavity window.
+	
+	To estimate the absorptive heating of the window, we assume transmittance of
+	the glass at solar wavelengths equal to 0.92. Assuming uniform heat flux
+	through the glass for an intensity ratio of 27 at the absorber, and a width 
+	ratio from top to bottom of 575 mm (top) to 575 mm + 2 * 200 mm / tan(32°) =
+	1215 mm (so ratio = 0.4732). Hence the intensity ratio at the glass is 12.78
+	and at I = 1000 W/m², the glass will be absorbing 1000 * (1-0.92) * 12.78
+	W/m²  = 1022 W/m². 
+
+	This heat flux must be added to the boundary conditions for the cavity
+	cover. 
+
+	Interestingly, we expect this will decrease the
+	absorber losses significantly, because the radiative loss forcing due to the
+	cool window will be much reducted.
+*)
+MODEL cavity1_window_heating REFINES view3d;
+	h_window, h_sides, h_top IS_A heat_transfer_coefficient;
+	T_amb IS_A temperature;
+	T_tubes IS_A temperature;
+	s_tubes IS_A set OF symbol_constant;
+
+	s_top, s_left, s_right, s_window IS_A set OF symbol_constant;
+	s_top :== ['AB0','AB1','AB2','AB3','AB4','AB5','AB6','AB7','AB8','AB9','AB10','AB11'];
+	s_left :== ['BC0','BC1','BC2','BC3'];
+	s_window :== ['CD0','CD1','CD2','CD3','CD4','CD5','CD6','CD7','CD8','CD9','CD10','CD11'];
+	s_right :== ['DA0','DA1','DA2','DA3'];
+
+	n_top, n_sides, n_window IS_A integer_constant;
+	n_top :== CARD[s_top];
+	n_sides :== CARD[s_left] + CARD[s_right];
+	n_window :== CARD[s_window];
+
+	eps_window ALIASES eps['CD0'];
+	eps_tubes ALIASES eps['p0s0'];
+	eps_top ALIASES eps['AB0'];
+	eps_sides ALIASES eps['BC0'];
+
+	s_tubes :== n - s_top - s_left - s_window - s_right;
+	T[s_tubes], T_tubes ARE_THE_SAME;
+
+	n_tubes IS_A integer_constant;
+	n_tubes :== CARD[s_tubes];
+
+	q_window_rad[s_window] IS_A energy_rate_per_length;
+	q_window_conv[s_window] IS_A energy_rate_per_length;
+	q_window_absorb[s_window] IS_A energy_rate_per_length;
+	
+	(* concentrated solar flux at the cavity window *)
+	q_solar IS_A energy_flux;
+	(* total transmittance of the cavity window for solar spectrum *)
+	tr_window IS_A fraction;
+
+	q_total IS_A energy_rate_per_length;
+	q_total = SUM[q[i] | i IN s_tubes];
+
+	FOR i IN s_window CREATE
+		q_window_conv[i] = h_window * A[i] * (T[i] - T_amb);
+		q_window_rad[i] = A[i] * eps[i] * 1{SIGMA_C} * (T[i]^4 - T_amb^4);
+		q_window_absorb[i] = (1 - tr_window) * A[i] * q_solar;
+		q[i] = q_window_absorb[i] - q_window_rad[i] - q_window_conv[i];
+	END FOR;
+
+	FOR i IN s_left + s_right CREATE
+		-q[i] = h_sides * A[i] * (T[i] - T_amb);
+	END FOR;
+
+	FOR i IN s_top CREATE
+		-q[i] = h_top * A[i] * (T[i] - T_amb);
+	END FOR;
+
+	T_window_avg IS_A temperature;
+	T_window_avg = SUM[T[i] | i IN s_window] / n_window	;
+
+	T_top_avg IS_A temperature;
+	T_top_avg = SUM[T[i] | i IN s_top] / n_top;
+
+	T_side_avg IS_A temperature;
+	T_side_avg = SUM[T[i] | i IN s_left + s_right] / n_sides;
+
+	A_window, A_top IS_A distance;
+	A_window = SUM[A[i] | i IN s_window];
+	A_top = SUM[A[i] | i IN s_top];
+
+	q_not_absorbed IS_A energy_rate_per_length;
+	q_not_absorbed = q_total + SUM[q_window_absorb[i] | i IN s_window];
+
+	F_total, F_top, F_total_adj IS_A factor;
+	F_total = SUM[SUM[F[i][j] | j IN s_window] | i IN s_tubes] / n_tubes;
+	F_top = SUM[SUM[F[i][j] | j IN s_top] | i IN s_tubes] / n_tubes;
+	F_total_adj = F_total / (1 - F_top);
+
+	F_rad IS_A factor;
+	q_total / A_top = F_rad / (1./eps_window + 1./eps_tubes - 1) * 1{SIGMA_C} * (T_tubes^4 - T_window_avg^4);
+
+(*
+	F_equiv IS_A factor;
+	q_equiv_int, q_equiv_ext_c, q_equiv_ext_r IS_A energy_rate_per_length;
+	q_equiv_int = F_equiv / (1./eps_window + 1./eps_tubes - 1) * 1{SIGMA_C} * (T_tubes^4 - T_window_avg^4);
+	
+	q_equiv_ext_c = h_window * A_window * ( T_window_avg - T_amb);
+	q_equiv_ext_r = A_window * eps_window * 1{SIGMA_C} * (T_window_avg^4 - T_amb^4);
+
+	q_equiv_int = q_equiv_ext_c + q_equiv_ext_r;
+*)
+
+	(* for convenience of plotting *)
+	T_window[0..11] IS_A temperature;
+	T_window[0], T['CD0'] ARE_THE_SAME;
+	T_window[1], T['CD1'] ARE_THE_SAME;
+	T_window[2], T['CD2'] ARE_THE_SAME;
+	T_window[3], T['CD3'] ARE_THE_SAME;
+	T_window[4], T['CD4'] ARE_THE_SAME;
+	T_window[5], T['CD5'] ARE_THE_SAME;
+	T_window[6], T['CD6'] ARE_THE_SAME;
+	T_window[7], T['CD7'] ARE_THE_SAME;
+	T_window[8], T['CD8'] ARE_THE_SAME;
+	T_window[9], T['CD9'] ARE_THE_SAME;
+	T_window[10], T['CD10'] ARE_THE_SAME;
+	T_window[11], T['CD11'] ARE_THE_SAME;
+
+	T_top[0..11] IS_A temperature;
+	T_top[0], T['AB0'] ARE_THE_SAME;
+	T_top[1], T['AB1'] ARE_THE_SAME;
+	T_top[2], T['AB2'] ARE_THE_SAME;
+	T_top[3], T['AB3'] ARE_THE_SAME;
+	T_top[4], T['AB4'] ARE_THE_SAME;
+	T_top[5], T['AB5'] ARE_THE_SAME;
+	T_top[6], T['AB6'] ARE_THE_SAME;
+	T_top[7], T['AB7'] ARE_THE_SAME;
+	T_top[8], T['AB8'] ARE_THE_SAME;
+	T_top[9], T['AB9'] ARE_THE_SAME;
+	T_top[10], T['AB10'] ARE_THE_SAME;
+	T_top[11], T['AB11'] ARE_THE_SAME;
+
+METHODS
+METHOD on_load;
+	RUN reset;
+	RUN values;
+END on_load;
+METHOD specify;
+	RUN view3d::specify;
+	FIX T_tubes;
+	FREE q[n];
+	FREE T['1','2','3','4'];
+	FIX T_amb;
+	FIX h_sides, h_window, h_top;
+	FIX q_solar;
+	FIX tr_window;
+END specify;
+METHOD values;
+	RUN view3d::values;
+	T_tubes := 250 {K} + 273.15 {K};
+
+	T_amb := 290 {K};
+	h_sides := 0.5 {W/m^2/K};
+	h_top := 0.5 {W/m^2/K};
+	h_window := 10 {W/m^2/K};
+
+	q_solar := 12776.37 {W/m^2};
+	tr_window := 0.92;
+END values;
+METHOD plot;
+	EXTERNAL plotwindowtemps(SELF);
+END plot;
+METHOD plot_top;
+	EXTERNAL plottoptemps(SELF);
+END plot_top;
+END cavity1_window_heating;
+

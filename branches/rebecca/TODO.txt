@@ -1,0 +1,4 @@
+Max Tillberg comments that the 'out=1' settings seems to result in a binary
+rather than a text output file.
+
+This is confirmed to be true; the documentation has been updated accordingly.

@@ -1,0 +1,11 @@
+Import('env')
+
+asc_env = env.Clone()
+
+asc_env.AppendUnique(
+	LIBS = ['view3d']
+	,LIBPATH = ['#']
+	,CPPPATH = ['#']
+)
+
+asc_env.Program('vf2asc',['vf2asc.c'])

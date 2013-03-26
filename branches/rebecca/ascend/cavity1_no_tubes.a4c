@@ -1,0 +1,131 @@
+REQUIRE "view3d_no_tubes.a4c";
+IMPORT "johnpye/extpy/extpy";
+IMPORT "ascend/plottemps";
+(*
+	As for 'cavity1.a4c' except that this time we have no tubes in the
+	cavity, and the top surface is constrained equal to T_tubes.
+*)
+MODEL cavity1_no_tubes REFINES view3d;
+	h_window, h_sides, h_top IS_A heat_transfer_coefficient;
+	T_amb IS_A temperature;
+	T_absorber IS_A temperature;
+
+	s_top, s_left, s_right, s_window IS_A set OF symbol_constant;
+	s_top :== ['AB0','AB1','AB2','AB3','AB4','AB5','AB6','AB7','AB8','AB9','AB10','AB11'];
+	s_left :== ['BC0','BC1','BC2','BC3'];
+	s_window :== ['CD0','CD1','CD2','CD3','CD4','CD5','CD6','CD7','CD8','CD9','CD10','CD11'];
+	s_right :== ['DA0','DA1','DA2','DA3'];
+
+	n_top, n_sides, n_window IS_A integer_constant;
+	n_top :== CARD[s_top];
+	n_sides :== CARD[s_left] + CARD[s_right];
+	n_window :== CARD[s_window];
+
+	eps_window ALIASES eps['CD0'];
+	eps_absorber ALIASES eps['AB0'];
+	eps_sides ALIASES eps['BC0'];
+
+	T[s_top], T_absorber ARE_THE_SAME;
+
+	q_window_rad[s_window] IS_A energy_rate_per_length;
+	q_window_conv[s_window] IS_A energy_rate_per_length;
+
+	FOR i IN s_window CREATE
+		q_window_conv[i] = h_window * A[i] * (T[i] - T_amb);
+		q_window_rad[i] = A[i] * eps[i] * 1{SIGMA_C} * (T[i]^4 - T_amb^4);
+		-q[i] = q_window_rad[i] + q_window_conv[i];
+	END FOR;
+
+	FOR i IN s_left + s_right CREATE
+		-q[i] = h_sides * A[i] * (T[i] - T_amb);
+	END FOR;
+
+	q_top_loss[s_top] IS_A energy_rate_per_length;
+	FOR i IN s_top CREATE
+		q_top_loss[i] = h_top * A[i] * (T[i] - T_amb);
+	END FOR;
+
+	T_window_avg IS_A temperature;
+	T_window_avg = SUM[T[i] | i IN s_window] / n_window	;
+
+	T_side_avg IS_A temperature;
+	T_side_avg = SUM[T[i] | i IN s_left + s_right] / n_sides;
+
+	q_total IS_A energy_rate_per_length;
+	q_total = SUM[q[i] + q_top_loss[i] | i IN s_top];
+
+	A_window IS_A distance;
+	A_window = SUM[A[i] | i IN s_window];
+
+(*
+	F_equiv IS_A factor;
+	q_equiv_int, q_equiv_ext_c, q_equiv_ext_r IS_A energy_rate_per_length;
+	q_equiv_int = F_equiv / (1./eps_window + 1./eps_absorber - 1) * 1{SIGMA_C} * (T_absorber^4 - T_window_avg^4);
+
+	q_equiv_ext_c = h_window * A_window * ( T_window_avg - T_amb);
+	q_equiv_ext_r = A_window * eps_window * 1{SIGMA_C} * (T_window_avg^4 - T_amb^4);
+
+	q_equiv_int = q_equiv_ext_c + q_equiv_ext_r;
+*)
+
+	F_total IS_A factor;
+	F_total = SUM[SUM[F[i][j] | j IN s_window] | i IN s_top] / n_top;
+
+	(* for convenience of plotting *)
+	T_window[0..11] IS_A temperature;
+	T_window[0], T['CD0'] ARE_THE_SAME;
+	T_window[1], T['CD1'] ARE_THE_SAME;
+	T_window[2], T['CD2'] ARE_THE_SAME;
+	T_window[3], T['CD3'] ARE_THE_SAME;
+	T_window[4], T['CD4'] ARE_THE_SAME;
+	T_window[5], T['CD5'] ARE_THE_SAME;
+	T_window[6], T['CD6'] ARE_THE_SAME;
+	T_window[7], T['CD7'] ARE_THE_SAME;
+	T_window[8], T['CD8'] ARE_THE_SAME;
+	T_window[9], T['CD9'] ARE_THE_SAME;
+	T_window[10], T['CD10'] ARE_THE_SAME;
+	T_window[11], T['CD11'] ARE_THE_SAME;
+
+	T_top[0..11] IS_A temperature;
+	T_top[0], T['AB0'] ARE_THE_SAME;
+	T_top[1], T['AB1'] ARE_THE_SAME;
+	T_top[2], T['AB2'] ARE_THE_SAME;
+	T_top[3], T['AB3'] ARE_THE_SAME;
+	T_top[4], T['AB4'] ARE_THE_SAME;
+	T_top[5], T['AB5'] ARE_THE_SAME;
+	T_top[6], T['AB6'] ARE_THE_SAME;
+	T_top[7], T['AB7'] ARE_THE_SAME;
+	T_top[8], T['AB8'] ARE_THE_SAME;
+	T_top[9], T['AB9'] ARE_THE_SAME;
+	T_top[10], T['AB10'] ARE_THE_SAME;
+	T_top[11], T['AB11'] ARE_THE_SAME;
+
+METHODS
+METHOD on_load;
+	RUN reset;
+	RUN values;
+END on_load;
+METHOD specify;
+	RUN view3d::specify;
+	FIX T_absorber;
+	FREE q[n];
+	FIX T_amb;
+	FIX h_sides, h_window, h_top;
+END specify;
+METHOD values;
+	RUN view3d::values;
+	T_absorber := 250 {K} + 273.15 {K};
+
+	T_amb := 290 {K};
+	h_sides := 0.5 {W/m^2/K};
+	h_top := 0.5 {W/m^2/K};
+	h_window := 10 {W/m^2/K};
+END values;
+METHOD plot;
+	EXTERNAL plotwindowtemps(SELF);
+END plot;
+METHOD plot_top;
+	EXTERNAL plottoptemps(SELF);
+END plot_top;
+END cavity1;
+
