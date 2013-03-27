@@ -81,10 +81,10 @@ int main(int argc, char **argv){
 	const char *sceneoutfile = NULL;
 	bool highquality = false;
 	bool infotext = false;
-	bool verticetext = false;
+	bool vertextext = false;
 	
 	char c;
-	while((c=getopt(argc,argv,"ho::t"))!=-1){
+	while((c=getopt(argc,argv,"ho::tv"))!=-1){
 		switch(c){
 			case 'h':
 				highquality = 1;
@@ -96,7 +96,7 @@ int main(int argc, char **argv){
 				infotext = true;
 				break;
 			case 'v':
-				verticetext = true;
+				vertextext = true;
 				break;
 			case '?':
 				usage(argv[0]);
@@ -285,7 +285,9 @@ int main(int argc, char **argv){
 			ss << name[mi->first] << " (e=" << emitt[mi->first] << ")";
 			root->addChild(text(mi->second,ss.str().c_str(),RED));
 		}
-
+	}
+	
+	if(vertextext){
 		// label the vertices
 		for(int i=0; i<CD.nVertices; ++i){
 			SbVec3f P(xyz[i+1].x, xyz[i+1].y, xyz[i+1].z);
@@ -294,19 +296,9 @@ int main(int argc, char **argv){
 			root->addChild(text(P,ss.str().c_str(),CYAN));
 		}
 	}
-	
-	if(verticetext){
-	// label the vertices
-		for(int i=0; i<CD.nVertices; ++i){
-			SbVec3f P(xyz[i+1].x, xyz[i+1].y, xyz[i+1].z);
-			stringstream ss;
-			ss << (i+1) << endl;
-			root->addChild(text(P,ss.str().c_str(),CYAN));
-		}
-	}
-	
+		
 	// add axes
-	root->addChild(axes());
+	//root->addChild(axes(0.1));
 
 	if(sceneoutfile){
 		// output the scene to a file that can be viewed later
