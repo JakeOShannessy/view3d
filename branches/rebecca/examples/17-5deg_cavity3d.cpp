@@ -169,6 +169,15 @@ int add_cylinder(map<unsigned,SbVec3d> &vertices
 				v3 = v2 + 1;
 			}
 
+			/* This string gives the surface name that will appear at the end of 
+			each line in the .vs3 file. 
+			--It also serves as the INDEX for each surface in array surfaces[]--
+			So in the final lines of code with title /* output to View3D format 
+			the surfaces are written in alpha-numeric order according to this 
+			string. Previously c came before r in the string, but having r first 
+			means that all of the first row are printed together, e.g. r0c0, 
+			r0c1, r0c2 etc, which simplifies the temperature input file.
+			*/
 			stringstream ss;
 			ss << namestem  << "r" << j << "c" << i;
 
@@ -315,7 +324,16 @@ int add_cylinder_walls(map<unsigned,SbVec3d> &vertices
 				v4 = n_start + j;
 				v3 = v4 + 1;
 			}
-
+			
+			/* This string gives the surface name that will appear at the end of each 
+			line in the .vs3 file. 
+			--It also serves as the INDEX for each surface in the array "surfaces[]".--
+			So in the final lines of code with "title" /* output to View3D format... hopefully 
+			the surfaces are written in alpha-numeric order according to this string.
+			Previously c came before r in the string, but having r first means that all of the 
+			first row are printed together, e.g. r0c0, r0c1, r0c2 etc, which simplifies the 
+			temperature input file.
+			*/
 			stringstream ss;
 			ss << namestem  << "r" << j << "c" << i;
 
