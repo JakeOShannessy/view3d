@@ -13,5 +13,9 @@ if env['HAVE_SOQT']:
 
 	cav_env.Program('cavity3d',['cavity3d.cpp'])
 
+	cav_env.Program('17-5deg_cavity3d',['17-5deg_cavity3d.cpp'])
+
+	cav_env.Program('20side_7surface_cavity3d',['20side_7surface_cavity3d.cpp'])
+
 else:
 	env['SKIPPED'].append(("examples",'SoQT not found'))

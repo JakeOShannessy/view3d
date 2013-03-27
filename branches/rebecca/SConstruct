@@ -14,8 +14,8 @@ env = Environment(
 )
 
 # Cheat to get mingw-w64 to work
-env.PrependENVPath('PATH', 'C:\\mingw-w64\\bin')
-env.PrependENVPath('LIB', 'C:\\mingw-w64\\lib')
+#env.PrependENVPath('PATH', 'C:\\mingw-w64\\bin')
+#env.PrependENVPath('LIB', 'C:\\mingw-w64\\lib')
 
 #-------------
 # OPTIONS

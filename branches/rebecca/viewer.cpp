@@ -81,7 +81,8 @@ int main(int argc, char **argv){
 	const char *sceneoutfile = NULL;
 	bool highquality = false;
 	bool infotext = false;
-
+	bool verticetext = false;
+	
 	char c;
 	while((c=getopt(argc,argv,"ho::t"))!=-1){
 		switch(c){
@@ -93,6 +94,9 @@ int main(int argc, char **argv){
 				break;
 			case 't':
 				infotext = true;
+				break;
+			case 'v':
+				verticetext = true;
 				break;
 			case '?':
 				usage(argv[0]);
@@ -268,27 +272,39 @@ int main(int argc, char **argv){
 	fset->coordIndex.setValues(0, nvals, &(ids[0]));
 	root->addChild(fset);
 
-	// add the surface labels
+	if(infotext){
+		// add the surface labels
+		fprintf(stderr,"OUTPUT SURFACE LABELS\n");
+		SoMaterial *textcolor = new SoMaterial;
+		textcolor->diffuseColor.setValue(1,0,0);
+		root->addChild(textcolor);
 
-	SoMaterial *textcolor = new SoMaterial;
-	textcolor->diffuseColor.setValue(1,0,0);
-	root->addChild(textcolor);
+		// label the faces, and give their emissivities
+		for(map<int,SbVec3f>::const_iterator mi=sfclabels.begin(); mi!=sfclabels.end(); ++mi){
+			stringstream ss;
+			ss << name[mi->first] << " (e=" << emitt[mi->first] << ")";
+			root->addChild(text(mi->second,ss.str().c_str(),RED));
+		}
 
-	// label the faces, and give their emissivities
-	for(map<int,SbVec3f>::const_iterator mi=sfclabels.begin(); mi!=sfclabels.end(); ++mi){
-		stringstream ss;
-		ss << name[mi->first] << " (e=" << emitt[mi->first] << ")";
-		root->addChild(text(mi->second,ss.str().c_str(),RED));
+		// label the vertices
+		for(int i=0; i<CD.nVertices; ++i){
+			SbVec3f P(xyz[i+1].x, xyz[i+1].y, xyz[i+1].z);
+			stringstream ss;
+			ss << (i+1) << endl;
+			root->addChild(text(P,ss.str().c_str(),CYAN));
+		}
 	}
-
+	
+	if(verticetext){
 	// label the vertices
-	for(int i=0; i<CD.nVertices; ++i){
-		SbVec3f P(xyz[i+1].x, xyz[i+1].y, xyz[i+1].z);
-		stringstream ss;
-		ss << (i+1) << endl;
-		root->addChild(text(P,ss.str().c_str(),CYAN));
+		for(int i=0; i<CD.nVertices; ++i){
+			SbVec3f P(xyz[i+1].x, xyz[i+1].y, xyz[i+1].z);
+			stringstream ss;
+			ss << (i+1) << endl;
+			root->addChild(text(P,ss.str().c_str(),CYAN));
+		}
 	}
-
+	
 	// add axes
 	root->addChild(axes());
 

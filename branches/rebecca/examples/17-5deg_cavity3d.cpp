@@ -44,7 +44,7 @@ void write_vec(SbVec3d &v){
 /**
 	Add a reactor tube cylinder to the current scene
 	(Reactor tube surfaces face "outwards" towards the rest of the cavity interior.)
-
+	
 	In case of B==P, assume a cone, and collapse vertices accordingly.
 */
 int add_cylinder(map<unsigned,SbVec3d> &vertices
@@ -170,7 +170,7 @@ int add_cylinder(map<unsigned,SbVec3d> &vertices
 			}
 
 			stringstream ss;
-			ss << namestem << "c" << i << "r" << j;
+			ss << namestem  << "r" << j << "c" << i;
 
 			surfaces[ss.str()] = Surface3D(v1,v2,v3,v4, emit);
 		}
@@ -185,11 +185,11 @@ int add_cylinder(map<unsigned,SbVec3d> &vertices
 }
 
 /**
-	Add a ring of cavity wall (cylinder) to the current scene. 
+	Add a ring of cavity wall (cylinder) to the current scene
 	This is very similar to the add_cylinder function above that creates the 
 	reactor tubes, except that the cavity walls need to point into the cavity, 
 	whereas the reactor tubes need to point "outwards".
-
+	
 	In case of B==P, assume a cone, and collapse vertices accordingly.
 */
 
@@ -317,7 +317,7 @@ int add_cylinder_walls(map<unsigned,SbVec3d> &vertices
 			}
 
 			stringstream ss;
-			ss << namestem << "c" << i << "r" << j;
+			ss << namestem  << "r" << j << "c" << i;
 
 			surfaces[ss.str()] = Surface3D(v1,v2,v3,v4, emit);
 		}
@@ -370,7 +370,8 @@ int add_pavilion(map<unsigned,SbVec3d> &vertices
 }
 
 /** Create the top of the cavity.
-	This is very similar to the "add_pavilion" function except that top faces now face into the cavity in the right-hand rule sense.
+	This is very similar to the "add_pavilion" function except that top 
+	surfaces now face into the cavity in the right-hand rule sense.
 */
 
 int add_pavilion_top(map<unsigned,SbVec3d> &vertices
@@ -445,7 +446,7 @@ int add_rotrow(map<unsigned,SbVec3d> &vertices
 		double theta = 2*PI / n_sides * i;
 		SbDPMatrix rot1; rot1.setRotate(SbDPRotation(OP,theta));
 		SbDPMatrix tr = tr1*rot1*tr1i;
-		SbVec3d Adash; tr.multVecMatrix(A, Adash);
+		SbVec3d Adash; tr.multVecMatrix(A, Adash); /* as in A' in quadrilaterals listed above in comments */
 		WRITE_VEC(Adash);
 
 		vertices[n] = Adash;
@@ -460,7 +461,7 @@ int add_rotrow(map<unsigned,SbVec3d> &vertices
 			v3 = n_start + i + 1;
 			v4 = n_start + i;
 		}else{
-			v1 = perim[i];
+			v1 = perim[i]; /* accounts for getting back around to start of circle/octagon etc. */
 			v2 = perim[0];
 			v3 = n_start;
 			v4 = n_start + i;
@@ -485,7 +486,8 @@ int add_rotrow(map<unsigned,SbVec3d> &vertices
 
 int main(int argc, char **argv){
 
-	const char outfilename[] = "mycone.vs3";
+	const char outfilename[] = "17-5deg_--g_is_38mm.vs3";
+	// const char outfilename[] = "17-5deg_two-rows_FEperp.vs3";
 
 	cerr << "Creating cone..." << endl;
 
@@ -498,18 +500,20 @@ int main(int argc, char **argv){
 	double emit_top = 0.58; /* emissivity - accounts for inconel manifold & "white" insulation. */
 	double emit_bot = 0.4; /* emissivity */
 
-	double h = 2; /* cavity height */
-	double d1 = 2; /* frustrum base dia */
-	double d2 = 1; /* frustrum apex dia */
-	double a = 0.6; /* aperture dia */
+	double h =  0.570; /* cavity height in m*/
+	double d1 = 0.480; /* frustrum base dia in m */
+	double d2 = 0.300; /* frustrum apex dia in m*/
+	double a =  0.195; /* aperture dia in m */
 
 	unsigned n_tubes = 20;
-	double t = 0.1; /* tube diameter */
+	double t = 0.013; /* tube diameter in m*/
 
-	double f = t * 2; /* distance along wall to base end of tube */
-	double g = t * 2; /* distance normal from wall to base end centreline of tube */
-	double u = f; /* distance along wall to apex end of tube */
-	double v = g; /* distance along wall to apex end centreline of tube */
+	// See "Diagram of fguv_ BAperp etc.pdf" in C:\Users\rebecca\Desktop\rebecca\View3d files
+	// See also definition of SbVec3d F and SbVec3d E below.
+	double f = 0.030; /* distance along cavity wall BA to base end of tube E in m. */
+	double g = 0.038; /* distance normal from cavity wall BA to base end centreline of tube E in m. */
+	double u = 0.033; /* distance along cavity wall BA to apex end of tube F in m. */
+	double v = 0.112; /* distance normal from cavity wall BA to apex end centreline of tube F in m. */
 
 
 	SbVec3d O(0,0,0);
@@ -519,8 +523,11 @@ int main(int argc, char **argv){
 	SbVec3d C(a/2, 0, 0);
 
 	// gridding parameters
-	unsigned r = 5; /* number of rows in cone grid */
-	unsigned c = 8; /* number of columns (circumf) in cone grid */
+	unsigned r = 5; /* number of rows in cone grid for walls (4 segments +1)*/
+	unsigned c = 20; /* number of columns (circumf) in cone grid for walls*/
+	
+	unsigned tube_rows = 5; /* number of rows in cone grid for reactor tubes (4 segments +1) */
+	unsigned tube_cols = 6; /* number of columns (circumf) in cone grid for reactor tubes */
 
 	unsigned n_cyl_start = 1;
 	unsigned n = n_cyl_start;
@@ -560,8 +567,14 @@ int main(int argc, char **argv){
 	SbVec3d F = B + BAhat * u + BAperp * v;
 	WRITE_VEC(F);
 	SbVec3d E = A - BAhat * f + BAperp * g;
-	SbVec3d E1 = E - t/2. * BAperp;
-	SbVec3d F1 = F - t/2. * BAperp;
+	SbVec3d FEhat = (E - F); FEhat.normalize();
+	/* unit vector normal to FE */
+	SbVec3d FEperp = PBtan.cross(FEhat);
+	SbVec3d E1 = E + t/2. * FEperp; // first edge to "sweep out" tube suface.
+	SbVec3d F1 = F + t/2. * FEperp;
+	/* The sweep using BAperp only worked when FE was parallel to BA. */
+	//SbVec3d E1 = E - t/2. * BAperp;
+	//SbVec3d F1 = F - t/2. * BAperp;
 	WRITE_VEC(E);
 	WRITE_VEC(E1);
 	WRITE_VEC(F1);
@@ -581,14 +594,14 @@ int main(int argc, char **argv){
 		stringstream ss;
 		ss << "cyl" << i << "_";
 		cerr << "Adding tube " << i << endl;
-		add_cylinder(vertices, surfaces, E2, F2, E12, F12, 4, 6, n, ss.str(), emit_tubes);
+		add_cylinder(vertices, surfaces, E2, F2, E12, F12, tube_rows, tube_cols, n, ss.str(), emit_tubes);
 	}
 #endif
 
 	/* output to View3D format... hopefully */
 	cerr << "Writing '" << outfilename << "'..." << endl;
 	ofstream fs(outfilename);
-	fs << "T Frustum for ANU little dish study" << endl;
+	fs << "T 17.5 deg frustum and cavity for ANU little dish study" << endl;
 	fs << "C  list=0 out=0 emit=0 encl=0 eps=1.e-6" << endl;
 	fs << "F 3" << endl;
 	fs.precision(15);
