@@ -71,7 +71,8 @@ void usage(const char *progname){
 			"  -h      Render using higher quality graphics (slower).\n"
 			"  INFILE  View3D .vs3 file to render (eg 'sample.vs3')\n"
 			"  -t      Include text in the rendered output.\n"
-			"  OUTFILE Open Inventor file to output (defaults to '%s')\n\n"
+			"  OUTFILE Open Inventor file to output (defaults to '%s')\n"
+			"  -v      Display vertex labels.\n\n"
 		, progname, defaultsceneoutfile
 	);
 }
