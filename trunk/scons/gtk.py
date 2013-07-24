@@ -1,24 +1,42 @@
 import os, platform,sys
 from SCons.Script import *
 
+try:
+	# if we have access to GetShortPathName, we'll use it...
+	import win32api
+	def munge1(s):
+		s1 = s
+		try:
+			# we can only munge the path if it actually exists
+			s1 = win32api.GetShortPathName(s)
+		except:
+			# if it doesn't exist, we just return the un-munged path
+			pass
+		return s1
+	munge = munge1 
+except:
+	pass
+
 def generate(env):
 	"""
 	Detect GTK+ settings and add them to the environment.
 	"""
 	try:
 		if platform.system()=="Windows":
+			# TODO can we use 'env.WhereIs(...)' instead??
 			pathsep = os.environ['PATH'].split(";")
 			pp = [os.path.abspath(os.path.join(os.path.expanduser(p),"pkg-config.exe")) for p in pathsep]
-			Path = None
+			p1 = None
 			for p in pp:
 				if os.path.exists(p):
 					#print "pkg-config at",p
-					Path = p
-			if not Path:
+					p1 = munge(p)
+					#p1 = "pkg-config.exe"
+			if not p1:
 				raise RuntimeError("Could not find 'pkg-config.exe' in your PATH")
 				
-			#print "PATH =",Path
-			cmd = [Path,'gtk+-2.0','--cflags','--libs']
+			print "PATH =",p1
+			cmd = [p1,'gtk+-2.0','--cflags','--libs']
 			env1 = env.Clone()
 			env1.ParseConfig(cmd)
 			env.Append(
@@ -45,7 +63,7 @@ def generate(env):
 		#print "GTK_CPPPATH =",env.get('GTK_CPPPATH')
 
 	except Exception,e:
-		print "FAILED TO SET UP GTK (%s)" % str(e)
+		print "Failed to set up GTK+ (%s)" % str(e)
 		pass
 
 def exists(env):

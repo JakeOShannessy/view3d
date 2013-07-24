@@ -2,7 +2,9 @@
 
 version = '3.5'
 
-import os, platform
+import os, platform, SCons.Warnings
+SCons.Warnings.suppressWarningClass(SCons.Warnings.VisualCMissingWarning)
+
 if platform.system()=="Windows":
 	deftool = ['mingw','nsis']
 else:
@@ -11,6 +13,7 @@ else:
 env = Environment(
 	tools=deftool + ['disttar','soqt','gtk','substinfile']
 	,toolpath=['scons']
+	,ENV={"PATH":os.environ['PATH']}
 )
 
 #-------------
@@ -298,14 +301,17 @@ tar = env.DistTar("dist/view3d-"+version
 # Installer
 
 if platform.system()=="Windows":
-	env.Append(NSISDEFINES={
-		'OUTFILE':"#dist/"+env['WIN_INSTALLER_NAME']
-		,'VERSION':version
-	})
+	if not env['NSIS']:
+		env['SKIPPED'].append(('installer',"NSIS not found"))
+	else:
+		env.Append(NSISDEFINES={
+			'OUTFILE':"#dist/"+env['WIN_INSTALLER_NAME']
+			,'VERSION':version
+		})
 	
-	installer = env.Installer('nsis/installer.nsi')
-	Depends(installer,env['PROGS'])
-	env.Alias('installer',installer)
+		installer = env.Installer('nsis/installer.nsi')
+		Depends(installer,env['PROGS'])
+		env.Alias('installer',installer)
 	
 #-----------
 # Default build target

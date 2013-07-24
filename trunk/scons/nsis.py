@@ -2,7 +2,6 @@
 # Written by Mike Elkins, January 2004
 # Provided 'as-is', it works for me!
 
-
 """
 This tool provides SCons support for the Nullsoft Scriptable Install System
 a windows installer builder available at http://nsis.sourceforge.net/home
@@ -18,8 +17,6 @@ equal to the filename you specified in foobar.nsi.  Wildcards are handled correc
 In addition, if you set NSISDEFINES to a dictionary, those variables will be passed
 to NSIS.
 """
-
-
 
 import SCons.Builder
 import SCons.Util
