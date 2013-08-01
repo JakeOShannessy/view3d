@@ -28,7 +28,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// enable floating point errors to trip code, need to catch exceptions in Python!
+#include <fenv.h>
+
 // #define abs(x) (((x) >= 0) ? (x) : (-(x)))
+#define SQ(x) ((x)*(x))
 #define min(x, y) ( ((x) < (y)) ? (x) : (y) )
 #define max(x, y) ( ((x) > (y)) ? (x) : (y) )
 #define sgn(x) ( ((x) < 0.) ? (-1.) : (((x) > 0.) ? (1.) : 0.) )
@@ -76,6 +80,8 @@ void viewfactorsaxi(int n, int surf[], double crd[], double *vf, int idiv, int f
   double _r1, _r2, _r3, _r4, _z1, _z2, _z3, _z4;
   double ds1,ds2,dp1,dz1,dz2,dr1,dr2,err,maxerr;
   double epsilon = 1.0e-5;
+
+  feenableexcept(-1);
 
   /* store the geometry in some global variables for access from the other functions */
   nsurf = n;
@@ -689,8 +695,14 @@ double Integrate(double c1, double c2){
 
 
 double Area(double r1, double r2, double z1, double z2){
-    return 3.1415926535 * (r1+r2) *
-        sqrt( (z1-z2)*(z1-z2) + (r1-r2)*(r1-r2) );
+  if(z1==z2){
+    if(r1==r2)return 0;
+    if(r1==0) return M_PI*(double)r2*(double)r2;
+    else if(r2==0)return M_PI*SQ(r1);
+    else return M_PI * fabs(SQ(r2) - SQ(r1));
+  }else{
+    return M_PI * (r1+r2) * sqrt(SQ(z1-z2) + SQ(r1-r2));
+  }
 }
 
 /* vim: ts=8 et */

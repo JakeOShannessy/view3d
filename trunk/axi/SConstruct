@@ -73,6 +73,7 @@ conf.Finish()
 #-------------------------------------------------------------------------------
 # THE ACTUAL STUFF
 
+#env.Append(CFLAGS=['-O2'])
 
 if env.get('DEBUG'):
 	env.Append(CPPFLAGS=['-g'])
