@@ -18,9 +18,17 @@
 #include <stdio.h>
 #include <math.h>
 
+// enable floating point errors to trip code, need to catch exceptions in Python!
+#define _GNU_SOURCE
+#define __USE_GNU     // gives us feenableexcept on newer gcc's
+#include <fenv.h>
+
 int main(void){
 
 	double d, h, theta, phi;
+
+    feenableexcept(FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW);
+
 
 	// specified geometry
 	d = 0.6;

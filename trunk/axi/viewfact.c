@@ -28,9 +28,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// enable floating point errors to trip code, need to catch exceptions in Python!
-#include <fenv.h>
-
 // #define abs(x) (((x) >= 0) ? (x) : (-(x)))
 #define SQ(x) ((x)*(x))
 #define min(x, y) ( ((x) < (y)) ? (x) : (y) )
@@ -81,31 +78,28 @@ void viewfactorsaxi(int n, int surf[], double crd[], double *vf, int idiv, int f
   double ds1,ds2,dp1,dz1,dz2,dr1,dr2,err,maxerr;
   double epsilon = 1.0e-5;
 
-  feenableexcept(-1);
 
   /* store the geometry in some global variables for access from the other functions */
   nsurf = n;
   coord = crd;
-  surfEltop = surf; 
+  surfEltop = surf;
   
   div = idiv;
   compact = fast;
 
 
   if(!compact) {
-    printf("Using original set of boundary elements for shading\n");
+    //printf("Using original set of boundary elements for shading\n");
     nsurfShade = nsurf;
-    surfEltopShade = surfEltop;
-  }
+    surfEltopShade = surfEltop;  
+  }else{//compact==1
+    //printf("Combining original boundary elements for shading\n");
 
-  if(compact) {
     int *nodehits,*nodetable;
     double _r0, _z0;
     int ind0,ind1,ind2;
-
-    printf("Combining original boundary elements for shading\n");
-
     int maxind = 0;
+
     for (i=0; i<2*nsurf; i++) 
       if(maxind < surfEltop[i]) maxind = surfEltop[i];
     // printf("Maximum node index is %d\n",maxind);
@@ -258,8 +252,8 @@ void viewfactorsaxi(int n, int surf[], double crd[], double *vf, int idiv, int f
 	  
 	  ind0 = surfEltop[2*j+k];
 	  
-	  // if node is joined, it is still a good candidate
-	  // this check avoids also singularity at division
+	  /* if node is joined, it is still a good candidate
+	     this check avoids also singularity at division */
 	  if(ind0 == ind1 || ind0 == ind1) continue;
 	  
 	  _r3 = coord[2 * ind0];
@@ -269,16 +263,16 @@ void viewfactorsaxi(int n, int surf[], double crd[], double *vf, int idiv, int f
 	  dr2 = _r3 - _r1;
 	  ds2 = sqrt(dz2*dz2 + dr2*dr2);
 	  
-	  // Dot product of the superelement and the candidate-node element
+	  /* Dot product of the superelement and the candidate-node element */
 	  dp1 = dz1*dz2 + dr1*dr2;
 	  
-	  // check that the node is on the line defined by the superelement
+	  /* check that the node is on the line defined by the superelement */
 	  if( dp1 / ds2 < 1-epsilon ) {
 	    hit = 0;
 	    break;
 	  }
 	  
-	  // check that node is within the segment of the superelement
+	  /* check that node is within the segment of the superelement */
 	  if( dp1 / ds1 > 1+epsilon  || dp1 / ds1 < -epsilon) {
 	    hit = 0;
 	    break;
@@ -293,25 +287,26 @@ void viewfactorsaxi(int n, int surf[], double crd[], double *vf, int idiv, int f
     }
     if(parents != nsurf) printf("Inconsistent number of parents found %d (vs. %d)\n",parents,nsurf);
     
-    // delete [] nodetable;
-    // delete [] nodehits;
+    /* delete [] nodetable; */
+    /* delete [] nodehits; */
   }
 
+  //feenableexcept(FE_ALL_EXCEPT);
 
-  // ************************************************************
-  // The main N^2*M loop where M is the size of the shading table  
+  /**************************************************************
+   The main N^2*M loop where M is the size of the shading table */
   for (i=0; i<nsurf; i++) {
-
     inode = i;    
     sum = 0.;
     sumdvf = 0.;
+
+    //fprintf(stderr,"%s:%d: i=%d\n",__func__,__LINE__,i);
 
     _r3 = coord[2 * surfEltop[2*i+1]];
     _r4 = coord[2 * surfEltop[2*i+0]];
     
     _z3 = coord[2 * surfEltop[2*i+1]+1];
     _z4 = coord[2 * surfEltop[2*i+0]+1];
-
     
     a = Area(_r3, _r4, _z3, _z4);
 
@@ -330,93 +325,91 @@ void viewfactorsaxi(int n, int surf[], double crd[], double *vf, int idiv, int f
       if (a < eps) continue;
 
       for (ii=0; ii<div; ii++) {
-	r3 = _r3 * (div - ii)/div + _r4 * ii/div;
-	r4 = _r3 * (div - ii - 1)/div + _r4 * (ii + 1)/div;
-	z3 = _z3 * (div - ii)/div + _z4 * ii/div;
-	z4 = _z3 * (div - ii - 1)/div + _z4 * (ii + 1)/div;
+        r3 = _r3 * (div - ii)/div + _r4 * ii/div;
+        r4 = _r3 * (div - ii - 1)/div + _r4 * (ii + 1)/div;
+        z3 = _z3 * (div - ii)/div + _z4 * ii/div;
+        z4 = _z3 * (div - ii - 1)/div + _z4 * (ii + 1)/div;
 
-	r34 = .5*(r3+r4);
-	z34 = .5*(z3+z4);
-	zd3=z3-z4;
-	rd3=r3-r4;
+        r34 = .5*(r3+r4);
+        z34 = .5*(z3+z4);
+        zd3=z3-z4;
+        rd3=r3-r4;
 	
-	for (jj=0; jj<div; jj++) {
-	  r1 = _r1 * (div - jj)/div + _r2 * jj/div;
-	  r2 = _r1 * (div - jj - 1)/div + _r2 * (jj + 1)/div;
-	  z1 = _z1 * (div - jj)/div + _z2 * jj/div;
-	  z2 = _z1 * (div - jj - 1)/div + _z2 * (jj + 1)/div;
-	  r12 = .5*(r1+r2);
-	  if ( r12 < eps || r34 < eps) continue;
+        for (jj=0; jj<div; jj++) {
+          r1 = _r1 * (div - jj)/div + _r2 * jj/div;
+          r2 = _r1 * (div - jj - 1)/div + _r2 * (jj + 1)/div;
+          z1 = _z1 * (div - jj)/div + _z2 * jj/div;
+          z2 = _z1 * (div - jj - 1)/div + _z2 * (jj + 1)/div;
+          r12 = .5*(r1+r2);
+          if ( r12 < eps || r34 < eps) continue;
 
-	  if (r1 < eps) r1 = eps;
-	  if (r2 < eps) r2 = eps;
-	  if (r3 < eps) r3 = eps;
-	  if (r4 < eps) r4 = eps;
+          if (r1 < eps) r1 = eps;
+          if (r2 < eps) r2 = eps;
+          if (r3 < eps) r3 = eps;
+          if (r4 < eps) r4 = eps;
 	  
-	  zd1=z1-z2;
-	  rd1=r1-r2; 
-	  z12 = .5*(z1+z2);
-	  zd = z12-z34;
+          zd1=z1-z2;
+          rd1=r1-r2; 
+          z12 = .5*(z1+z2);
+          zd = z12-z34;
 	  
-	  if (!InitialInterval(&c1, &c2)) continue;	  
-	  viewint = ViewIntegral(c1, c2, 0);
+          if (!InitialInterval(&c1, &c2)) continue;	  
+          viewint = ViewIntegral(c1, c2, 0);
 
-	  // Code for verification
-	  if(verify) {
-	    int *surfEltopTmp;
-	    int nsurfTmp;
-	    
-	    surfEltopTmp = surfEltopShade;
-	    nsurfTmp = nsurfShade;	    
-	    
-	    surfEltopShade = surfEltop;
-	    nsurfShade = nsurf;
+          /* Code for verification */
+          if(verify) {
+            int *surfEltopTmp;
+            int nsurfTmp;
+            
+            surfEltopTmp = surfEltopShade;
+            nsurfTmp = nsurfShade;	    
+            
+            surfEltopShade = surfEltop;
+            nsurfShade = nsurf;
 	    	    
-	    if (!InitialInterval(&c1, &c2)) continue;	  
-	    viewint2 = ViewIntegral(c1, c2, 0);	    
-	    vf2 = vf2 + 4. * viewint2;
+            if (!InitialInterval(&c1, &c2)) continue;	  
+            viewint2 = ViewIntegral(c1, c2, 0);	    
+            vf2 = vf2 + 4. * viewint2;
 
-	    surfEltopShade = surfEltopTmp;
-	    nsurfShade = nsurfTmp;
-	  }	      	    
+            surfEltopShade = surfEltopTmp;
+            nsurfShade = nsurfTmp;
+          }	      	    
 
-	  vf[i*nsurf+j] += 4. * viewint;
-	  /* TR: The factor 4 is composed of two factors (reflective symmetry), 2pi (rotational) and 1/pi (the integral expression the constant) */
-	}
+          vf[i*nsurf+j] += 4. * viewint;
+          /* TR: The factor 4 is composed of two factors (reflective symmetry), 2pi (rotational) and 1/pi (the integral expression the constant) */
+        }
       }
 
       vf[i*nsurf+j] /= a;
       sum += vf[i*nsurf+j];
 
       if(verify) {
-	vf2 /= a;
-	sumdvf += ( fabs(vf[i*nsurf+j]-vf2 ) / a);
+        vf2 /= a;
+        sumdvf += ( fabs(vf[i*nsurf+j]-vf2 ) / a);
       }
     }
 
     if(verify) {
       if(sumdvf > maxerr) maxerr = sumdvf;    
       printf("Line sum: %d %g %g %g\n", i, sum, sumdvf, maxerr);
-    }
-    else {
-      //      printf("Line sum: %d %g\n", i, sum );      
+    }else{
+      /* printf("Line sum: %d %g\n", i, sum ); */
     }
   }
 
 
-  // Deallocate stuff
+  /* Deallocate stuff */
   if(compact) {
     free((char*)(surfEltopShade));
     free((char*)(shadeParent));
   }
-
 }
 
 /** 
-        TR: The number of cross-watching point of the rotation angle cos the condition that the line connecting the surfaces and angles between the normal must be < pi/2.
-        Function assumes that r12 and r34 are non-zero.
-
-        @return FALSE if the solution set is empty or zero-length, otherwise TRUE. 
+  TR: The number of cross-watching point of the rotation angle cos the condition that the line connecting the surfaces and angles between the normal must be < pi/2.
+  Function assumes that r12 and r34 are non-zero.
+  
+  @return FALSE if the solution set is empty or zero-length, otherwise TRUE. 
 */
 int InitialInterval(double *c1, double *c2){
 
@@ -465,15 +458,15 @@ int InitialInterval(double *c1, double *c2){
 
 double ViewIntegral (double c1, double c2, int k){
 /**<
-TR: This function calculates the view Factor one element pair.
-The area of ​​integration is limited to the examination of the conical surfaces of the induced
-shading. If the integration region is divided into two parts, performed a recursive
-call on both parts. If the integration region shrinks void
-or empty, is returned to zero.
-Function assumes global variables r12 and r34 is non-zero.
+  TR: This function calculates the view Factor one element pair.
+  The area of ​​integration is limited to the examination of the conical surfaces of the induced
+  shading. If the integration region is divided into two parts, performed a recursive
+  call on both parts. If the integration region shrinks void
+  or empty, is returned to zero.
+  Function assumes global variables r12 and r34 is non-zero.
 */
 
-  static double r5, r6, z5, z6;    /* TR: to shade the edges of the surface coordinates */
+  static double r5, r6, z5, z6; /* TR: to shade the edges of the surface coordinates */
   static double zd5, t1, tt1, t2, tt2, t0;
   double cc1,cc2;
   rratio = r34/r12;
@@ -488,14 +481,13 @@ Function assumes global variables r12 and r34 is non-zero.
 
     k++;
 
-    // either element cannot shade one another
+    /* either element cannot shade one another */
     if(selfshading){
-      // Condition for superelements
+      /* Condition for superelements */
       if(nsurf != nsurfShade){
-	if(k-1 == shadeParent[inode] || k-1 == shadeParent[jnode]) continue;
-      }
-      else if(nsurf == nsurfShade){
-	if(k-1 == inode || k-1 == jnode) continue;
+        if(k-1 == shadeParent[inode] || k-1 == shadeParent[jnode]) continue;
+      }else if(nsurf == nsurfShade){
+        if(k-1 == inode || k-1 == jnode) continue;
       }
     }
 
@@ -504,7 +496,7 @@ Function assumes global variables r12 and r34 is non-zero.
 
     zd5 = z5-z6;
     if(fabs(zd5) < eps){
-      /*  TR: Shade the surface is flat ring */
+      /* TR: Shade the surface is flat ring */
       
       /* TR: Level Ring can not be overshadowed by itself  */
       /* TR: This appendix addresses the subroutine for a long time, the bug (PR 23/04/2004) */
@@ -516,7 +508,6 @@ Function assumes global variables r12 and r34 is non-zero.
       tt1 = 1.-t1;
       if(t1 < eps || tt1 < eps) continue;
 
-
       t = rratio * t1/tt1;
       cc1 = .5*(r5*r5/(r12*r34*t1*tt1) - t - 1./t);
       cc2 = .5*(r6*r6/(r12*r34*t1*tt1) - t - 1./t);
@@ -527,14 +518,14 @@ Function assumes global variables r12 and r34 is non-zero.
       /* TR: Calculate the line connecting the shadow of the intermediate remaining in the z-direction */
 
       if(fabs(zd) < eps ) {
-	if((z12-z5 < eps && z12-z6 > eps) ||
+        if((z12-z5 < eps && z12-z6 > eps) ||
 	     (z12-z5 > eps && z12-z6 < eps) ){
           t1 = 0.; t2 = 1;
         }else continue;
       }else{
-	t1 = (z12-z5)/zd; 
-	t2 = t1 + zd5/zd;
-	if(t1 > t2){
+        t1 = (z12-z5)/zd; 
+        t2 = t1 + zd5/zd;
+        if(t1 > t2){
           t = t1; t1 = t2; t2 = t;
         }
       }
@@ -559,28 +550,28 @@ Function assumes global variables r12 and r34 is non-zero.
       /* TR: If both point outside the cone, to investigate the derivative */
       /* TR: Zero, if it is in the interval [t1, t2] */
       if(d1 <= -eps && d3 <= -eps) {
-	t0 = 1. / (1. + sqrt(rratio * d3/d1));
-	if(t0 - t1 > eps && t2 - t0 > eps) {
-	  ExaminePoint(t0, &cc1, &cc2);
-	}
+        t0 = 1. / (1. + sqrt(rratio * d3/d1));
+        if(t0 - t1 > eps && t2 - t0 > eps) {
+          ExaminePoint(t0, &cc1, &cc2);
+        }
       }
       if(cc1 > cc2) {
-	cc1 = cc2; /* TR: This can happen due to rounding */
+        cc1 = cc2; /* TR: This can happen due to rounding */
       }
     }
 
 
     if (IntervalIsect(c1, c2, cc1, cc2, &cc1, &cc2)) {
       if (cc1 - c1 < delta) {
-	if (c2 - cc2 < delta) {
-	  return 0.;
+        if (c2 - cc2 < delta) {
+          return 0.;
 	}else{
 	  c1 = cc2;
 	}
       }else if (c2 - cc2 < delta) {
-	c2 = cc1;
+        c2 = cc1;
       }else{
-	return ViewIntegral(c1, cc1, k) + ViewIntegral(cc2, c2, k);
+        return ViewIntegral(c1, cc1, k) + ViewIntegral(cc2, c2, k);
       }
     }
   }
@@ -625,6 +616,7 @@ void ExaminePoint (double x, double *mi, double *ma){
 
 
 double Integrate(double c1, double c2){
+  //fprintf(stderr,"Integrate(c1=%f,c2=%f)\n",c1,c2);
   /* TR: C1 and c2 are the cosine of the angle of the integration interval boundaries. */ 
   /* TR: The integral is calculated without the denominator of pi-factor. */
   
@@ -650,7 +642,6 @@ double Integrate(double c1, double c2){
   double s1 = sqrt(1. - c1*c1), s2 = sqrt(1. - c2*c2);
   /* TR: machines and articles for the indices 1 and 2 of the other way around as the other variables! */
   double cs = (1.+c1)*(1.+c2), cd = (1.-c1)*(1.-c2);
-
   
   integral = 0.;
   for (i=0; i<nqp; i++) {
@@ -671,10 +662,10 @@ double Integrate(double c1, double c2){
     gg2 = (g2+c2)*(g2+c1);
     
     /* TR: Curves share: */
-    value  = (-.5 * (a1 + (h-b1)*g1) / sqrt(g1*g1-1) ) *
+    value  = (-.5 * (a1 + (h-b1)*g1) / sqrt(g1*g1-1.) ) *
       acos( .5 * ( (1.-g1) * sqrt(cd/gg1) - 
 		   (1.+g1) * sqrt(cs/gg1) ) );
-    value -= (-.5 * (a2 + (h-b2)*g2) / sqrt(g2*g2-1) ) *
+    value -= (-.5 * (a2 + (h-b2)*g2) / sqrt(g2*g2-1.) ) *
       acos( .5 * ( (1.-g2) * sqrt(cd/gg2) - 
 		   (1.+g2) * sqrt(cs/gg2) ) );
     value += .25 * (b1-b2) * acos(c1*c2 + s1*s2);
@@ -695,14 +686,7 @@ double Integrate(double c1, double c2){
 
 
 double Area(double r1, double r2, double z1, double z2){
-  if(z1==z2){
-    if(r1==r2)return 0;
-    if(r1==0) return M_PI*(double)r2*(double)r2;
-    else if(r2==0)return M_PI*SQ(r1);
-    else return M_PI * fabs(SQ(r2) - SQ(r1));
-  }else{
-    return M_PI * (r1+r2) * sqrt(SQ(z1-z2) + SQ(r1-r2));
-  }
+  return M_PI * (r1+r2) * sqrt(SQ(z1-z2) + SQ(r1-r2));
 }
 
 /* vim: ts=8 et */
