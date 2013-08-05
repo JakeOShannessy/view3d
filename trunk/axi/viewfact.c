@@ -27,6 +27,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 // #define abs(x) (((x) >= 0) ? (x) : (-(x)))
 #define SQ(x) ((x)*(x))
@@ -35,6 +36,15 @@
 #define sgn(x) ( ((x) < 0.) ? (-1.) : (((x) > 0.) ? (1.) : 0.) )
 #define TRUE 1
 #define FALSE 0
+
+// enable floating point errors to trip code, need to catch exceptions in Python!
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE
+#endif
+#ifndef __USE_GNU
+# define __USE_GNU     // gives us feenableexcept on newer gcc's
+#endif
+#include <fenv.h>
 
 // forward definitions
 
@@ -662,13 +672,9 @@ double Integrate(double c1, double c2){
     gg2 = (g2+c2)*(g2+c1);
     
     /* TR: Curves share: */
-    value  = (-.5 * (a1 + (h-b1)*g1) / sqrt(g1*g1-1.) ) *
-      acos( .5 * ( (1.-g1) * sqrt(cd/gg1) - 
-		   (1.+g1) * sqrt(cs/gg1) ) );
-    value -= (-.5 * (a2 + (h-b2)*g2) / sqrt(g2*g2-1.) ) *
-      acos( .5 * ( (1.-g2) * sqrt(cd/gg2) - 
-		   (1.+g2) * sqrt(cs/gg2) ) );
-    value += .25 * (b1-b2) * acos(c1*c2 + s1*s2);
+    value  = (-.5*(a1 + (h-b1)*g1)/sqrt(g1*g1-1.)) * acos(.5*((1.-g1)*sqrt(cd/gg1) - (1.+g1)*sqrt(cs/gg1)) );
+    value -= (-.5*(a2 + (h-b2)*g2)/sqrt(g2*g2-1.)) * acos(.5*((1.-g2)*sqrt(cd/gg2) - (1.+g2)*sqrt(cs/gg2)) );
+    value += .25*(b1-b2) * acos(c1*c2 + s1*s2);
 
     /* TR: Direct proportion pages: */
     gg1 = e1+f1-c; gg2 = e2+f2-c;
@@ -676,6 +682,8 @@ double Integrate(double c1, double c2){
     d1 = hh1 - gg1*gg1; d2 = hh2 - gg2*gg2;
     h = r * (rd1*h + zrd*zd3);
     value -= h * (s1 / sqrt(d2)) * acos( gg2 / sqrt(hh2) );
+    assert(d1 != 0);
+    assert(hh1 != 0);
     value += h * (s2 / sqrt(d1)) * acos( gg1 / sqrt(hh1) );
 
     integral += w[i] * value;
