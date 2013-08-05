@@ -33,6 +33,15 @@ John Pye, 14 Mar 2013
 %{
 #define SWIG_FILE_WITH_INIT
 #include "viewfact.h"
+
+// enable floating point errors to trip code, need to catch exceptions in Python!
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE
+#endif
+#ifndef __USE_GNU
+# define __USE_GNU     // gives us feenableexcept on newer gcc's
+#endif
+#include <fenv.h>
 %}
 
 %include "numpy.i"
@@ -65,8 +74,13 @@ int viewfactorsaxi_np(
 	if(idiv<1)return 6;
 
 	/* TODO check that npoint agrees with surf contents? */
+
+	int ex = fegetexcept();
+    feenableexcept(FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW);
 	
 	viewfactorsaxi(nsurf, surf, coord, vf, idiv, fast);
+
+	feenableexcept(ex);
 	return 0;
 }
 

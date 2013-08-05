@@ -29,7 +29,6 @@ int main(void){
 
     feenableexcept(FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW);
 
-
 	// specified geometry
 	d = 0.6;
 	h = 1;
