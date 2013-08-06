@@ -624,9 +624,32 @@ void ExaminePoint (double x, double *mi, double *ma){
   if (y < *mi) *mi = y;
 }
 
+/**
+  This function appears to integrate the expression (31) from Juha Katajamaki's
+  thesis, page 49 (sect 5.5, text in Finnish). The method being used is
+  Gaussian Quadrature, with 3 points (in the range -1..+1, these would be
+  {-sqrt(3/5), 0, +sqrt(3/5)}. These values have been scaled to the range 0..1.
+  http://en.wikipedia.org/wiki/Gaussian_quadrature
 
+       /'phi2  a1 cos(phi) + a0              
+  I =  \      ----------------- dphi
+      ,/ phi1  b1 cos(phi) + b0
+
+  The code may be using cos(phi1) and cos(phi2) as the inputs to the function,
+  rather than phi1 and phi2.
+
+  The function appears to be making use of global variables to define the
+  constants a1, a0, b1, b0 in the equation. These look to be coordinates
+  relating to two different facets in axisymmetric space, but that needs to be
+  checked.
+  
+     zd1 rd1
+     r1 r2 z1 z2
+     rd3 zd3
+
+  TRANSLATED TEXT FROM KATAJAMAKI'S THESIS is included as thesis.txt.  
+*/
 double Integrate(double c1, double c2){
-  //fprintf(stderr,"Integrate(c1=%f,c2=%f)\n",c1,c2);
   /* TR: C1 and c2 are the cosine of the angle of the integration interval boundaries. */ 
   /* TR: The integral is calculated without the denominator of pi-factor. */
   

@@ -1,0 +1,54 @@
+Section 5.5
+-----------
+
+Kun kulmaväli on määrätty edellä kuvatulla tavalla, laskettavana on yhtälön (22) mukainen kolminkertainen integraali. Tässä ohjelmassa sisimmän integraalin esittämä pintaintegraali muunnetaan Stokesin lauseen avulla viivaintegraaliksi, tämä lasketaan analyyttisesti, ja jäävä yksiulotteinen integraali lasketaan numeerisesti Gaussin kvadratuuria käyttäen.
+
+Integraalin (22) kaksi sisintä integraalia esittävät yksittäisen katselupisteen ja kartiopinnan (tai tason tai lieriön) palasen SS välistä näkyvyystekijää, joka voidaan Stokesin lausetta käyttäen muuntaa viivaintegraaliksi pinnan reunan yki  [19, s. 128-130]. Stokesin lause on
+
+....
+
+Käyttämällä tätä oikealta vasemmalle voidaan (22) saattaaa muotoon
+
+I = ...
+
+jossa reunakäyrän suun-nastus on sellainen, että (dl_2 × n_2) osoittaa pinnasta poispäin. Reunakäyrä koostuu kahdesta janasta ja kahdesta ympyränkaaresta. jana osuuksilla päädytään muotoa
+
+I jana = ...
+
+olevaan integralliin, kun yhtälöön (29) sijoitetaan (24) ja (25) ja kun janaa parametroidaan 0:sta 1:een kulkevalla muuttujalla B. Kertomet a_i ja b_i riippuvat katselevasta pisteestä x_1 sekä kulmasta phi_1 tau phi_2. Kaariosuuksilla puolestaan laskettavana on integrali,
+
+I kaari =...
+
+jossa a_i ja b_i riippuvat katselevasta pisteestä x_1 sekä kaaren z-koordinaatista z_2_1 tai z_2_2. Sekä (30) että (31) voidaan integroida alkeisfunktioiden avulla. Jäljelle jää yksiulotteinen integrointi l_1:n yli kaavassa (22), mikä suoritetaan numeerisesti käyttäen esimerkiksi Gaussin kolmen pisteen kvadratuuria [esim. 9., s. 133-134].
+
+Integraalien lausekkeissa voi tietyissä tilanteissa esiintyä nollalla jakamisia. Jo määritelmästä (18) nähdään, että integrandi on singulaarinen laskettaessa koveran pinnan kahden vierekkäisen elementin välistä näkyvyystekijää tai koveran pinnan näkyvyystekijää itesnsä kanssa. Lisäksi voidaan osoittaa, että I_jana:lle saatava yleinen analyyttinen lauseke on sellaisenaan evaluoitavissa vain, jos katselupiste x_1 ei sijaitse integroimis janan  määräämällä suoralla.   Näiden tapausten käsittelyyn integraalien numeerisessa laskennassa ei toistaiseksi ole kiinnitetty paljon huomiota, vaan asia on ratkaistu siten, että integroinnin kulmavälin ei sallita ulottua aivan tarkalleen arvoihin 0 ja (pi). Lisäksi z-akselille ulottuvat elementit katkaistaan pienen positiivisen etäisyyden päähän akselista, mikä vaadittiinkin jo yhtälön (27) tarkastelussa edellä. Koska katseltava pinnan osa ei tällöin leikkaa x-z-tasoa ja toisaalta katseleva piste on aina x-z-tasossa, ei nollalla jakamisia esiinny.
+
+
+-----
+
+Section 5.5
+-----------
+
+When the angle range is determined as described above, is being calculated by Equation (22) is a triple integral. In this program, the innermost integral by the surface integral is converted to Stokes' theorem, line integrals, this is calculated analytically, and the remaining one-dimensional integral is calculated numerically using the Gaussian quadrature.
+
+The integral (22) with two integral of the innermost show a single viewing point, and the cone (or cylinder or level) between the SS fragment visibility factor, which may be the Stokes' theorem to convert the surface integrals Yki edge [19, p 128-130]. Stokes' theorem is
+
+....
+
+Use of this right to the left to (22) to adjust the shape
+
+L = ...
+
+in which the edge direction of costs paid curve is such that (dl_2 × n_2) shows away from the surface. The curve consists of two edge line segment and two circular arc. sections of a line segment leads to the form
+
+I segment = ...
+
+the integral, as in equation (29) in (24) and (25), and the parameters for the line segment from 0 to 1 at passing a variable to tell B. a_i and b_i depend on the view from a point x_1, as well as the corner table phi_1 phi_2. Arc of route, in turn, is being calculated integral,
+
+I arch = ...
+
+where a_i and b_i depend on the view from a point x_1, as well as the arc of the z-coordinate of z_2_1 or z_2_2. Both (30) and (31) can be integrated in elementary form. What remains is a one-dimensional integration l_1 of over formula (22), which is performed numerically using, for example a three-point Gaussian Quadrature [e.g. 9, pp. 133-134].
+
+The integrals in expressions can occur in certain situations, division by zero. Even the definition of (18) we see that the integrand is singular in calculating the concave surface between two adjacent element between the visibility of the author or the concave surface of the visibility factor must make their own now. In addition, it can be shown that the I_jana for be a general analytical expression is as evaluable only if the viewing point x_1 is not located in a segment of lower integration determined by a straight line. In these cases, treatment of integrals, numerical calculation has so far not received much attention, but the matter has been resolved in such a way that the angle of the integration interval is not allowed to extend beyond just exactly the values ​​0 and (pi). In addition to the z-axis elements which extend off a small positive distance from the shaft, which is already required by equation (27) above analysis. Since the viewable surface of the part is then cut in the xz level and on the other hand watch point is the xz-plane, no division by zero occurs.
+
+
