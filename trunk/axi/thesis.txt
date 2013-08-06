@@ -1,5 +1,8 @@
-Section 5.5
------------
+(English translation from Google Translate included below)
+
+
+5.5 Integraalin laskeminen
+--------------------------
 
 Kun kulmaväli on määrätty edellä kuvatulla tavalla, laskettavana on yhtälön (22) mukainen kolminkertainen integraali. Tässä ohjelmassa sisimmän integraalin esittämä pintaintegraali muunnetaan Stokesin lauseen avulla viivaintegraaliksi, tämä lasketaan analyyttisesti, ja jäävä yksiulotteinen integraali lasketaan numeerisesti Gaussin kvadratuuria käyttäen.
 
@@ -24,10 +27,13 @@ jossa a_i ja b_i riippuvat katselevasta pisteestä x_1 sekä kaaren z-koordinaat
 Integraalien lausekkeissa voi tietyissä tilanteissa esiintyä nollalla jakamisia. Jo määritelmästä (18) nähdään, että integrandi on singulaarinen laskettaessa koveran pinnan kahden vierekkäisen elementin välistä näkyvyystekijää tai koveran pinnan näkyvyystekijää itesnsä kanssa. Lisäksi voidaan osoittaa, että I_jana:lle saatava yleinen analyyttinen lauseke on sellaisenaan evaluoitavissa vain, jos katselupiste x_1 ei sijaitse integroimis janan  määräämällä suoralla.   Näiden tapausten käsittelyyn integraalien numeerisessa laskennassa ei toistaiseksi ole kiinnitetty paljon huomiota, vaan asia on ratkaistu siten, että integroinnin kulmavälin ei sallita ulottua aivan tarkalleen arvoihin 0 ja (pi). Lisäksi z-akselille ulottuvat elementit katkaistaan pienen positiivisen etäisyyden päähän akselista, mikä vaadittiinkin jo yhtälön (27) tarkastelussa edellä. Koska katseltava pinnan osa ei tällöin leikkaa x-z-tasoa ja toisaalta katseleva piste on aina x-z-tasossa, ei nollalla jakamisia esiinny.
 
 
+
 -----
 
-Section 5.5
------------
+
+
+5.5 Calculation of the integral
+-------------------------------
 
 When the angle range is determined as described above, is being calculated by Equation (22) is a triple integral. In this program, the innermost integral by the surface integral is converted to Stokes' theorem, line integrals, this is calculated analytically, and the remaining one-dimensional integral is calculated numerically using the Gaussian quadrature.
 
