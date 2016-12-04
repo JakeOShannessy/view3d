@@ -217,9 +217,9 @@ if env.get('DEBUG'):
 
 lib = env.SharedLibrary('view3d',srcs)
 
-prog = env.Program('view3d', ['v3main.c'], LIBS=['view3d'], LIBPATH=['#'])
+prog = env.Program('view3d', ['v3main.c'], LIBS=['view3d','m'], LIBPATH=['#'])
 
-prog2d = env.Program('view2d', ['v2main.c'], LIBS=['view3d'], LIBPATH=['#'])
+prog2d = env.Program('view2d', ['v2main.c'], LIBS=['view3d','m'], LIBPATH=['#'])
 
 env['PROGS'] += [prog,prog2d]
 

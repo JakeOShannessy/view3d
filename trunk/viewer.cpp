@@ -68,9 +68,9 @@ void usage(const char *progname){
 	fprintf(stderr,
 			"Usage: %s [-o [OUTFILE]] [-h] [-t] INFILE\n"
 			"Load and parse a View3D file and render using Coin3D/OpenGL\n"
-			"  -h      Render using higher quality graphics (slower).\n"
+//			"  -h      Render using higher quality graphics (slower).\n"
 			"  INFILE  View3D .vs3 file to render (eg 'sample.vs3')\n"
-			"  -t      Include text in the rendered output.\n"
+//			"  -t      Include text in the rendered output.\n"
 			"  OUTFILE Open Inventor file to output (defaults to '%s')\n\n"
 		, progname, defaultsceneoutfile
 	);
@@ -79,21 +79,21 @@ void usage(const char *progname){
 int main(int argc, char **argv){
 
 	const char *sceneoutfile = NULL;
-	bool highquality = false;
-	bool infotext = false;
+	//bool highquality = false;
+	//bool infotext = false;
 
 	char c;
 	while((c=getopt(argc,argv,"ho::t"))!=-1){
 		switch(c){
-			case 'h':
+			/*case 'h':
 				highquality = 1;
-				break;
+				break;*/
 			case 'o':
 				sceneoutfile = (optarg ? optarg : defaultsceneoutfile);
 				break;
-			case 't':
+			/*case 't':
 				infotext = true;
-				break;
+				break;*/
 			case '?':
 				usage(argv[0]);
 				exit(1);

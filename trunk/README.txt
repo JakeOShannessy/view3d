@@ -38,6 +38,7 @@ then add the path to the 'bin' subdirectory therein to your PATH.
 
 In order to use the 3D viewer, you must have the Coin3D and SoQt and Qt
 librariexs and header files installed:
+ * On Ubuntu 16.04, use "sudo apt install libsoqt4-dev"
  * On Ubuntu Linux 8.10, use "sudo apt-get install libsoqt3-dev".
  * On Ubuntu Linux 8.04, use "sudo apt-get install libsoqt-dev".
  * On Windows, download and install Qt 4.3.3, SoQt and Coin3D from the following 

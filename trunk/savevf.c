@@ -24,13 +24,12 @@ static void SaveF0( char *fileName, char *header, int nSrf,
 
   fprintf(stderr,"Saving view factors to file '%s' in format '0' (square array, area, emit)...\n",fileName);
 
-  vfout = fopen(fileName, "w");
-  fprintf(vfout, "%s", header);
-  fprintf(vfout, "%.20g", area[1]);
-  for( n=2; n<=nSrf; n++ ){
-    fprintf(vfout, " %.20g", area[n]);
-  }
-  fprintf(vfout, "\n");
+  vfout = fopen( fileName, "w" );
+  fprintf( vfout, "%s", header );
+  fprintf( vfout, "%g", area[1] );
+  for( n=2; n<=nSrf; n++ )
+    fprintf( vfout, " %g", area[n] );
+  fprintf( vfout, "\n" );
 
   for(n=1; n<=nSrf; n++){
     /* process AF values for row n */  
@@ -44,16 +43,16 @@ static void SaveF0( char *fileName, char *header, int nSrf,
       }
     }
     /* write row */
-    fprintf(vfout, "%.20g", F[1]);   
+    fprintf(vfout, "%.6f", F[1]);   
     for(m=2; m<=nSrf; m++){
-      fprintf( vfout, " %.20g", F[m]);
+      fprintf( vfout, " %.6f", F[m]);
     }
     fprintf(vfout, "\n");
   }
 
-  fprintf( vfout, "%.20g", emit[1] );
+  fprintf( vfout, "%.6f", emit[1] );
   for( n=2; n<=nSrf; n++ ){
-    fprintf( vfout, " %.20g", emit[n] );
+    fprintf( vfout, " %.6f", emit[n] );
   }
   fprintf( vfout, "\n" );
   fclose( vfout );
