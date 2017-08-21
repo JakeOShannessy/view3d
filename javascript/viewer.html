@@ -1,0 +1,126 @@
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>View3D Viewer</title>
+        <script src="./InputParser.js" type="text/javascript"></script>
+        <style>
+            body { margin: 0; padding: 0px }
+            canvas { width: 100%; height: 100%; margin:0px; padding:0px; display: block; }
+        </style>
+    </head>
+    <body>
+        <div id="container" style="overflow:hidden;"></div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.js" type="text/javascript"></script>
+        <script async type="text/javascript">
+            // Set the scene size.
+            const WIDTH = window.innerWidth;
+            const HEIGHT = window.innerHeight;
+
+            // Set some camera attributes.
+            const VIEW_ANGLE = 45;
+            const ASPECT = WIDTH / HEIGHT;
+            const NEAR = 0.1;
+            const FAR = 10000;
+
+            // Get the DOM element to attach to
+            const container =
+                document.querySelector("#container");
+            // Create a WebGL renderer, camera
+            // and a scene
+            const renderer = new THREE.WebGLRenderer();
+            const camera =
+                new THREE.PerspectiveCamera(
+                    VIEW_ANGLE,
+                    ASPECT,
+                    NEAR,
+                    FAR
+                );
+
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x393939);
+            // Add the camera to the scene.
+            scene.add(camera);
+
+            // Start the renderer.
+            renderer.setSize(WIDTH, HEIGHT);
+            let resized = true;
+            window.addEventListener("resize",()=>{
+                resized = true;
+            })
+
+            // Attach the webgl dom element.
+            container.appendChild(renderer.domElement);
+
+            // TODO: create a generator to cycle through colours.
+            const baseMaterial = new THREE.MeshLambertMaterial(
+                {
+                    color: 0xCC0000
+                });
+
+            function createPlane(v1,v2,v3,v4) {
+                const geom = new THREE.Geometry();
+                
+                geom.vertices.push(
+                    new THREE.Vector3(v1.x,  v1.y, v1.z),
+                    new THREE.Vector3(v2.x,  v2.y, v2.z),
+                    new THREE.Vector3(v3.x,  v3.y, v3.z),
+                    new THREE.Vector3(v4.x,  v4.y, v4.z)
+                );
+                geom.faces.push( new THREE.Face3( 0, 1, 2 ),
+                                 new THREE.Face3( 2, 3, 0 )
+                );
+                geom.computeBoundingSphere();
+                const mesh = new THREE.Mesh(geom, baseMaterial);
+                mesh.material.side = THREE.DoubleSide;
+                return mesh;
+            }
+            function addSurface(inputData,surface) {
+                const v1 = inputData.vertices.get(surface.v1);
+                const v2 = inputData.vertices.get(surface.v2);
+                const v3 = inputData.vertices.get(surface.v3);
+                const v4 = inputData.vertices.get(surface.v4);
+                const mesh = createPlane(v1,v2,v3,v4);
+                scene.add(mesh);
+            }
+            async function addInputData(uri) {
+                const inputDataResp = await fetch(uri);
+                const inputData = await inputDataResp.text();
+                const input = parseInputFile(inputData);
+                for (const surf of input.surfaces.values()) {
+                    addSurface(input, surf);
+                }
+                return input;
+            }
+            // Add the data from the input file to the scene.
+            addInputData("../examples/ParallelPlanes.vs3");
+            // TODO: scale and reposition to scene.
+            // Add ambient lighting.
+            scene.add(new THREE.AmbientLight(0xFFFFFF));
+            renderer.render(scene, camera);
+
+            function update () {
+                renderer.render(scene, camera);
+                var timer = Date.now() * 0.001;
+                camera.position.x = Math.cos( timer ) * 5;
+                camera.position.y = Math.sin( timer ) * 5;
+                camera.position.z = Math.sin( timer ) * 5;
+                camera.lookAt( scene.position );
+
+                if(resized){
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                
+                    renderer.setSize( window.innerWidth, window.innerHeight );
+                    resized = false;
+                }
+                // Run this function on the next frame
+                requestAnimationFrame(update);
+            }
+
+            // Kick off the rendering.
+            requestAnimationFrame(update);
+        </script>
+    </body>
+</html>
