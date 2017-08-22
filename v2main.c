@@ -299,7 +299,13 @@ int main( int argc, char **argv ){
       name, area, vtmp, base, AF, &eMax );
 
   time1 = CPUtime( 0.0 );
-  SaveVF( outFile, program, version, vfCtrl.outFormat, vfCtrl.enclosure,
+  FILE *outFileHandle;
+  if(strlen(outFile) == 0) {
+    outFileHandle = stdout;
+  } else {
+    outFileHandle = fopen(outFile, "w");
+  }
+  SaveVF( outFileHandle, program, version, vfCtrl.outFormat, vfCtrl.enclosure,
           vfCtrl.emittances, nSrf, area, emit, AF, vtmp );
   sprintf( _string, "%7.2f seconds to write view factors.\n", CPUtime(time1) );
   fputs( _string, stderr );

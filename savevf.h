@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-V3D_API void SaveVF( char *fileName, char *program, char *version,
+V3D_API void SaveVF( FILE *file, char *program, char *version,
 		int format, int encl, int didemit, int nSrf,
 		float *area, float *emit, double **AF, float *vtmp
 );

@@ -30,6 +30,8 @@
 /* forward decls */
 
 void FindFile(char *msg, char *name, char *type);
+void CheckFileWritable(char *fileName);
+void CheckFileReadable(char *fileName);
 double VolPrism(Vec3 *a, Vec3 *b, Vec3 *c);
 int process(char *inFile, char *outFile);
 
@@ -85,12 +87,12 @@ int main( int argc, char **argv ){
   // TODO: Make logging to a particular file an option, log to stderr by
   // default.
 #ifdef ANSI
-  _ulog = fopen( "View3D.log", "w" );
+  // _ulog = fopen( "View3D.log", "w" );
   _ulog = stderr;
 #else
-  PathSplit( argv[0], vdrive, sizeof(vdrive), vdir, sizeof(vdir), NULL, 0, NULL, 0 );
-  PathMerge( fileName, sizeof(fileName), vdrive, vdir, "View3D", ".log" );
-  _ulog = fopen( fileName, "w" );
+  // PathSplit( argv[0], vdrive, sizeof(vdrive), vdir, sizeof(vdir), NULL, 0, NULL, 0 );
+  // PathMerge( fileName, sizeof(fileName), vdrive, vdir, "View3D", ".log" );
+  // _ulog = fopen( fileName, "w" );
   _ulog = stderr;
 #endif
   if( !_ulog )
@@ -103,16 +105,22 @@ int main( int argc, char **argv ){
   fprintf( _ulog, "Program: %s %s\n", program, version );
   fprintf( _ulog, "Executing: %s\n", argv[0] );
 
-  if( argc > 1 )
+  if( argc > 1 ){
     strcpy( inFile, argv[1] );
+    CheckFileReadable(inFile);
+  }
     // TODO: specify a non-interactive mode.
-  FindFile("Enter name of input (vertex/surface) data file", inFile, "r" );
+  // FindFile("Enter name of input (vertex/surface) data file", inFile, "r" );
   fprintf(_ulog, "Data file:  %s\n", inFile );
 
-  if( argc > 2 )
+  if( argc > 2 ) {
     strcpy( outFile, argv[2] );
+    CheckFileWritable(outFile);
+  } else {
+    // outFile = NULL;
+  }
     // TODO: if there is not output file set, output to stdout.
-  FindFile("Enter name of output (view factor) file", outFile, "w" );
+  // FindFile("Enter name of output (view factor) file", outFile, "w" );
   fprintf(_ulog, "Output file:  %s\n", outFile );
 
   time(&bintime);
@@ -539,7 +547,15 @@ int process(char *inFile, char *outFile){
     ReportAF( nSrf, encl, title, name, area, vtmp, base, AF, 0 );
 
   time1 = CPUtime( 0.0 );
-  SaveVF( outFile, program, version, vfCtrl.outFormat, vfCtrl.enclosure,
+  // Write the results to the output file.
+  // TODO: if saving to binary format, open for binary write
+  FILE *outFileHandle;
+  if(strlen(outFile) == 0) {
+    outFileHandle = stdout;
+  } else {
+    outFileHandle = fopen(outFile, "w");
+  }
+  SaveVF( outFileHandle, program, version, vfCtrl.outFormat, vfCtrl.enclosure,
           vfCtrl.emittances, nSrf, area, emit, AF, vtmp );
   sprintf( _string, "%7.2f seconds to write view factors.\n", CPUtime(time1) );
   fputs( _string, stderr );
@@ -579,6 +595,9 @@ FreeMemory:
   fprintf( _ulog, "Time:  %s", asctime(curtime) );
   fprintf( _ulog, "\n**********\n\n" );
 
+  // Close input handle.
+  // Close output handle.
+  // Close log handle.
   fclose( _ulog );
 
   fprintf( stderr, "\nDone!\n" );
@@ -728,3 +747,31 @@ void FindFile( char *msg, char *fileName, char *type ){
   fclose( pfile );
 } /* End of FindFile() */
 
+
+// Currently does not open the file.
+void CheckFileWritable(char *fileName){
+  
+  FILE  *pfile=NULL;
+
+  if(fileName!=NULL && strlen(fileName)>0){
+    /* try to open file */
+    pfile = fopen( fileName, "w");
+    if( pfile == NULL )
+      fprintf( stderr, "Error! Failed to open: %s\nTry again.\n", fileName );
+  }
+  fclose( pfile );
+}
+
+// Currently does not open the file.
+void CheckFileReadable(char *fileName){
+  
+  FILE  *pfile=NULL;
+
+  if(fileName!=NULL && strlen(fileName)>0){
+    /* try to open file */
+    pfile = fopen( fileName, "r");
+    if( pfile == NULL )
+      fprintf( stderr, "Error! Failed to open: %s\nTry again.\n", fileName );
+  }
+  fclose( pfile );
+}
