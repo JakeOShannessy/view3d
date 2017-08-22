@@ -3,6 +3,8 @@
 
 #include "getdat.h"
 #include "heap.h"
+#include "test2d.h"
+// #include "misc.h"
 /* NOTE: do not add misc.h here, see below */
 
 #include <ctype.h>
@@ -19,6 +21,18 @@
 extern FILE *_unxt;   /* NXT input file */
 extern  int _echo;      /* if true, echo NXT input file */
 extern char *_nxtbuf;   /* large buffer for NXT input file */
+
+int LongCon( char *str, long *i);
+
+V3D_API float CPUtime(float t1);
+
+int streqli( char *s1, char *s2 );
+int streql( char *s1, char *s2 );
+
+int FltCon( char *str, float *f );
+int IntCon( char *str, int *i );
+
+int DblCon( char *str, double *f );
 
 #define ERRORX(SEV,FIL,LIN,FMT,...) (fprintf(stderr,"%s:%d: ",FIL,LIN),fprintf(stderr,FMT "\n",##__VA_ARGS__))
 #define ERROR2(FMT,...) ERRORX(2,__FILE__,__LINE__,FMT,##__VA_ARGS__)
@@ -602,7 +616,8 @@ VertexSurfaceData *read_vertex_surface_data(const char *filename){
 		fprintf(stderr,"Error reading data file '%s' (res=%d)\n",filename,res);
 		return NULL;
 	}
-	fclose(f);
+
+	fclose(f);
 
 	return V;
 }

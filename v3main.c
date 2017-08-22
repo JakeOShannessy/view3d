@@ -31,6 +31,7 @@
 
 void FindFile(char *msg, char *name, char *type);
 double VolPrism(Vec3 *a, Vec3 *b, Vec3 *c);
+int process(char *inFile, char *outFile);
 
 void ReportAF( const int nSrf, const int encl, const char *title, char **name, 
   const float *area, const float *emit, const int *base, double **AF, int flag 
@@ -79,14 +80,16 @@ int main( int argc, char **argv ){
     if( argc > 1 )
       exit( 1 );
   }
-  
+
   /* open log file */
 #ifdef ANSI
   _ulog = fopen( "View3D.log", "w" );
+  _ulog = stderr;
 #else
   PathSplit( argv[0], vdrive, sizeof(vdrive), vdir, sizeof(vdir), NULL, 0, NULL, 0 );
   PathMerge( fileName, sizeof(fileName), vdrive, vdir, "View3D", ".log" );
   _ulog = fopen( fileName, "w" );
+  _ulog = stderr;
 #endif
   if( !_ulog )
     error( 3, __FILE__, __LINE__, "Failed to open View3D.log", "" );
@@ -128,9 +131,49 @@ int main( int argc, char **argv ){
 	"a government program.\n"
 	, stderr 
   );
+  return process(inFile, outFile);
+}
 
-  time0 = CPUtime( 0.0 );  /* start-of-run time */
+typedef struct {
+  View3DControlData vfCtrl;
+  char **name;
+  float *area;
+  float *emit;
+  float *vtmp;
+  char title[LINELEN]; /* project title */
+  int test;
+  int *base;
+  int *cmbn;
+  Vec3 *xyz;
+  SRFDAT3D *srf;
+} InData;
 
+// Read the file into a data structure, heap allocate it and return a pointer to
+// it. There is no point allocating it before this as we don't know the size of
+// the data.
+InData readFile(char *inFile) {
+  char **name;         /* surface names [1:nSrf][0:NAMELEN] */
+  float *area;         /* vector of surface areas [1:nSrf] */
+  float *emit;         /* vector of surface emittances [1:nSrf] */
+  float *vtmp;         /* temporary vector [1:nSrf] */
+  int *base;           /* vector of base surface numbers [1:nSrf] */
+  int *cmbn;           /* vector of combine surface numbers [1:nSrf] */
+  Vec3 *xyz;           /* vector of vertces [1:nVrt] - for ease in
+  converting V3MAIN to a subroutine */
+  SRFDAT3D *srf;       /* vector of surface data structures [1:nSrf] */
+  // vfCtrl contains control information and information on the numbers of
+  // vertices etc.
+  View3DControlData vfCtrl;
+  char title[LINELEN]; /* project title */
+  
+  InData inData;
+  inData.test = 5;
+
+  int nSrf;            /* current number of surfaces */
+  int nSrf0;           /* initial number of surfaces */
+  int encl;            /* 1 = surfaces form enclosure */
+  int n, flag;
+  
   /* initialize control data */
   memset( &vfCtrl, 0, sizeof(View3DControlData) );
   // non-zero control values:
@@ -140,7 +183,12 @@ int main( int argc, char **argv ){
 
   /* read Vertex/Surface data file */
   NxtOpen(inFile, __FILE__, __LINE__ );
+  // Read the file initially to determine the size number of components (so that
+  // we can allocate memory). This double-read may not make sense in a
+  // javascript context.
   CountVS3D(title, &vfCtrl );
+  // TODO: allocate memory and copy title string.
+  // inData.title = title;
   fprintf(_ulog, "\nTitle: %s\n", title );
 
   fprintf(_ulog, "Control values for 3-D view factor calculations:\n" );
@@ -179,32 +227,80 @@ int main( int argc, char **argv ){
   encl = vfCtrl.enclosure;
 
   if(vfCtrl.format == 4)vfCtrl.nVertices = 4 * vfCtrl.nAllSrf;
-
-  name = Alc_MC(1, nSrf0, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
-  area = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
-  emit = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
-  vtmp = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
-
-  for(n=nSrf0; n; n--)vtmp[n] = 1.0;
-
-  base = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
-  cmbn = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
-  xyz = Alc_V( 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
-  srf = Alc_V( 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
+  // Allocate memory for all of the surfaces. These will need to be resized as
+  // the data is read in.
+  inData.name = Alc_MC(1, nSrf0, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
+  inData.area = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  inData.emit = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  inData.vtmp = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  
+  for(n=nSrf0; n; n--)(inData.vtmp)[n] = 1.0;
+  
+  inData.base = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
+  inData.cmbn = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
+  inData.xyz = Alc_V( 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
+  inData.srf = Alc_V( 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
   InitTmpVertMem();  /* polygon operations in GetDat() and View3D() */
   InitPolygonMem(0, 0);
-
+  
+  // reads the  file a second time
   /* read v/s data file */
   if(_list>2)
     _echo = 1;
-  if(vfCtrl.format == 4)
-    GetVS3Da(name, emit, base, cmbn, srf, xyz, &vfCtrl );
-  else
-    GetVS3D(name, emit, base, cmbn, srf, xyz, &vfCtrl );
+  if(vfCtrl.format == 4){
+    GetVS3Da(inData.name, inData.emit, inData.base, inData.cmbn, inData.srf, inData.xyz, &vfCtrl );
+  }
+  else {
+    GetVS3D(inData.name, inData.emit, inData.base, inData.cmbn, inData.srf, inData.xyz, &vfCtrl );
+  }
   for( n=nSrf; n; n-- )
-    area[n] = (float)srf[n].area;
+    (inData.area)[n] = (float)(inData.srf)[n].area;
   NxtClose();
+  inData.vfCtrl = vfCtrl;
+  return inData;
+}
 
+/*----------------------------------------------------------------------------*/
+int process(char *inFile, char *outFile){
+  char program[]="View3D";   /* program name */
+  char version[]=V3D_VERSION;      /* program version */
+#ifndef ANSI
+  char fileName[_MAX_PATH];  /* name of file */
+  char vdrive[_MAX_DRIVE];   /* drive letter for program View3D.exe */
+  char vdir[_MAX_DIR];       /* directory path for program View3D.exe */
+#endif
+  char title[LINELEN]; /* project title */
+  char *types[]={"rsrf","subs","mask","nuls","obso"};
+  View3DControlData vfCtrl; /* VF calculation control parameters - avoid globals */
+  double **AF;         /* triangular array of area*view factor values [1:nSrf][] */
+  int *possibleObstr;  /* list of possible view obstructing surfaces */
+  struct tm *curtime;  /* time structure */
+  time_t bintime;      /* seconds since 00:00:00 GMT, 1/1/70 */
+  float time0, time1;  /* elapsed time values */
+  int nSrf;            /* current number of surfaces */
+  int nSrf0;           /* initial number of surfaces */
+  int encl;            /* 1 = surfaces form enclosure */
+  int n, flag;
+
+  time(&bintime);
+  curtime = localtime(&bintime);
+  fprintf(_ulog, "Time:  %s", asctime(curtime) );
+
+  time0 = CPUtime( 0.0 );  /* start-of-run time */
+  InData inData = readFile(inFile);
+  fprintf(stderr, "Done reading\n");
+  encl = inData.vfCtrl.enclosure;
+  nSrf = nSrf0 = inData.vfCtrl.nRadSrf;
+  vfCtrl = inData.vfCtrl;
+  char **name = inData.name;
+  float *area = inData.area;
+  float *emit = inData.emit;
+  float *vtmp = inData.vtmp;
+  int *base = inData.base;
+  int *cmbn = inData.cmbn;
+  Vec3 *xyz = inData.xyz;
+  SRFDAT3D *srf = inData.srf;
+  
   if(encl){
     /* determine volume of enclosure */
     double volume=0.0;
@@ -487,6 +583,9 @@ FreeMemory:
 
 } /* end of main() */
 
+void hello() {
+  printf("hello, world!\n");
+}
 
 /**
 	Compute 6 * volume of a prism defined by vertices a, b, c, and (0,0,0).
