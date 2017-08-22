@@ -23,16 +23,18 @@ int streql( char *s1, char *s2 );
 
 int FltCon( char *str, float *f );
 
-double ReadR8( int flag );
-int ReadIX( int flag );
+double ReadR8( FILE *inHandle, int flag );
+int ReadIX( FILE *inHandle, int flag );
 
 int IntCon( char *str, int *i );
 
 V3D_API int NxtOpen(const char *file_name, const char *file, int line);
+FILE *NxtOpenHndl(const char *file_name, const char *file, int line );
+void NxtCloseHndl(FILE *file);
 V3D_API void NxtClose( void );
-char *NxtWord( char *str, int flag, int maxlen );
+char *NxtWord( FILE* inHandle, char *str, int flag, int maxlen );
 
-float ReadR4( int flag );
+float ReadR4( FILE *inHandle, int flag );
 
 const char *sfname(const char* longfilename);
 

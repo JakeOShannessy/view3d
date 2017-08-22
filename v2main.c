@@ -147,7 +147,7 @@ int main( int argc, char **argv ){
 
                  /* read Vertex/Surface data file */
   NxtOpen( inFile, __FILE__, __LINE__ );
-  CountVS2D( title, &vfCtrl );
+  CountVS2D( _unxt, title, &vfCtrl );
   fprintf( _ulog, "Title: %s\n", title );
   fprintf( _ulog, "Control values for 2-D view factor calculations:\n" );
   fprintf( _ulog, "     enclosure designator: %3d \n", vfCtrl.enclosure );
@@ -177,7 +177,7 @@ int main( int argc, char **argv ){
     _echo = 0;
   else if( _list>3 )
     _echo = 1;
-  GetVS2D( name, emit, base, cmbn, srf, &vfCtrl );
+  GetVS2D( _unxt, name, emit, base, cmbn, srf, &vfCtrl );
   for( n=1; n<=nSrf; n++ )
     area[n] = (float)srf[n].area;
   NxtClose();

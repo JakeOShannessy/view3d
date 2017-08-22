@@ -436,6 +436,31 @@ void NxtClose( void ){
 
 }  /* end NxtClose */
 
+/*  Open file_name and return the handle.  */
+
+FILE *NxtOpenHndl(const char *file_name, const char *file, int line ){
+  /* file;  source code file name: __FILE__
+  * line;  line number: __LINE__ */
+
+  FILE *handle = fopen( file_name, "r" );  /* = NULL if no file */
+  if( !handle ){
+    error( 2, file, line, "Could not open file: ", file_name, "" );
+  }
+
+  return handle;
+
+}  /* end NxtOpen */
+
+
+
+/*  Close handle.  */
+
+void NxtCloseHndl(FILE *handle){
+    if( fclose(handle) )
+      error( 2, __FILE__, __LINE__, "Problem while closing handle", "" );
+}
+  
+
 
 
 /*  Get characters to end of line (\n --> \0); used by NxtWord().  */
@@ -478,7 +503,7 @@ char *NxtLine( char *str, int maxlen ){
  *  which may also be end-of-line (EOL) character.
  *  Initialization with flag = -1 in now invalid - debug checked. */
 
-char *NxtWord( char *str, int flag, int maxlen )
+char *NxtWord( FILE *inHandle, char *str, int flag, int maxlen )
 /* str;   buffer where word is stored; return pointer.
  * flag:  0:  get next word from current position in _unxt;
           1:  get 1st word from next line of _unxt;
@@ -492,20 +517,20 @@ char *NxtWord( char *str, int flag, int maxlen )
   int done=0;    // true when start of word is found or word is complete
 
 #ifdef _DEBUG
-  if( !_unxt )
-    error( 3, __FILE__, __LINE__, "_UNXT not open", "" );
+  if( !inHandle )
+    error( 3, __FILE__, __LINE__, "inHandle not open", "" );
   if( maxlen < 16 )
     error( 3, __FILE__, __LINE__, "Invalid maxlen: ", IntStr(maxlen), "" );
 #endif
-  c = getc( _unxt );
+  c = getc( inHandle );
   if( flag > 0 )
     {
     if( c != '\n' )  // last call did not end at EOL; ready to read next char.
       {                // would miss first char if reading first line of file.
       if( flag == 2 )
         {
-        if( ftell( _unxt) == 1 ) // 2008/01/16
-          ungetc( c, _unxt );  // restore first char of first line
+        if( ftell( inHandle) == 1 ) // 2008/01/16
+          ungetc( c, inHandle );  // restore first char of first line
         NxtLine( str, maxlen );  // read to EOL filling buffer
         }
       else
@@ -528,7 +553,7 @@ char *NxtWord( char *str, int flag, int maxlen )
             "Invalid flag: ", IntStr(flag), "" );
 #endif
         }
-      ungetc( '\n', _unxt );  // restore EOL character for next call
+      ungetc( '\n', inHandle );  // restore EOL character for next call
       return str;
       }
     }
@@ -542,12 +567,12 @@ char *NxtWord( char *str, int flag, int maxlen )
     if( c == ' ' || c == ',' || c == '\n' || c == '\t' )
       ; // skip EOW char saved at last call
     else
-      ungetc( c, _unxt );  // restore first char of first line
+      ungetc( c, inHandle );  // restore first char of first line
     }
 
   while( !done )   // search for start of next word
     {
-    c = getc( _unxt );
+    c = getc( inHandle );
     if( c==EOF ) return NULL;
     if( _echo ) putc( c, _ulog );
     switch( c )
@@ -575,7 +600,7 @@ char *NxtWord( char *str, int flag, int maxlen )
   done = 0;
   while( !done )   // search for end-of-word (EOW)
     {
-    c = getc( _unxt );
+    c = getc( inHandle );
     if( c==EOF ) return NULL;
     if( _echo ) putc( c, _ulog );
     switch( c )
@@ -600,7 +625,7 @@ char *NxtWord( char *str, int flag, int maxlen )
         break;
       }
     }  // end EOW search
-  ungetc( c, _unxt ); // save EOW character for next call
+  ungetc( c, inHandle ); // save EOW character for next call
 
   return str;
 
@@ -690,11 +715,11 @@ char *FltStr( double f, int n )
 
 /***  ReadR8.c  **************************************************************/
 
-double ReadR8( int flag )
+double ReadR8( FILE *inHandle, int flag )
   {
   double value;
 
-  NxtWord( _string, flag, sizeof(_string) );
+  NxtWord( inHandle, _string, flag, sizeof(_string) );
   if( DblCon( _string, &value ) )
     error( 2, __FILE__, __LINE__, _string, " is not a (valid) number", "" );
   return value;
@@ -705,11 +730,11 @@ double ReadR8( int flag )
 
 /*  Convert next word from file _unxt to float real. */
 
-float ReadR4( int flag )
+float ReadR4( FILE *inHandle, int flag )
   {
   double value;
 
-  NxtWord( _string, flag, sizeof(_string) );
+  NxtWord( inHandle, _string, flag, sizeof(_string) );
   if( DblCon( _string, &value ) || value > FLT_MAX || value < -FLT_MAX )
     error( 2, __FILE__, __LINE__, "Bad float value: ", _string, "" );
 
@@ -801,11 +826,11 @@ char *IntStr( long i )
 
 /*  Convert next word from file _unxt to int integer. */
 
-int ReadIX( int flag )
+int ReadIX( FILE *inHandle, int flag )
   {
   long value;
 
-  NxtWord( _string, flag, sizeof(_string) );
+  NxtWord( inHandle, _string, flag, sizeof(_string) );
   if( LongCon( _string, &value ) ||
       value > INT_MAX || value < INT_MIN )  // max/min depends on compiler
     error( 2, __FILE__, __LINE__, "Bad integer: ", _string, "" );

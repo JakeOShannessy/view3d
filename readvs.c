@@ -81,7 +81,7 @@ static char *NxtLine(FILE *f, char *str, int maxlen ){
  *  which may also be end-of-line (EOL) character.
  *  Initialization with flag = -1 in now invalid - debug checked. */
 
-static char *NxtWord(FILE *f, char *str, int flag, int maxlen )
+static char *NxtWord(FILE *inHandle, char *str, int flag, int maxlen )
 /* str;   buffer where word is stored; return pointer.
  * flag:  0:  get next word from current position in _unxt;
           1:  get 1st word from next line of _unxt;
@@ -94,20 +94,19 @@ static char *NxtWord(FILE *f, char *str, int flag, int maxlen )
   int i=0;       // current position in str
   int done=0;    // true when start of word is found or word is complete
 
-  _unxt = f;
-  c = getc(f);
+  c = getc(inHandle);
   if( flag > 0 )
     {
     if( c != '\n' )  // last call did not end at EOL; ready to read next char.
       {                // would miss first char if reading first line of file.
       if( flag == 2 )
         {
-        if( ftell( _unxt) == 1 ) // 2008/01/16
-          ungetc( c, _unxt );  // restore first char of first line
-        NxtLine(f, str, maxlen );  // read to EOL filling buffer
+        if( ftell( inHandle) == 1 ) // 2008/01/16
+          ungetc( c, inHandle );  // restore first char of first line
+        NxtLine(inHandle, str, maxlen );  // read to EOL filling buffer
         }
       else
-        NxtLine(f, str, 0 );       // skip to EOL; fix size 2008/01/16
+        NxtLine(inHandle, str, 0 );       // skip to EOL; fix size 2008/01/16
         // if flag = 1; continue to read first word on next line
       }
     if( flag > 1 )
@@ -116,16 +115,16 @@ static char *NxtWord(FILE *f, char *str, int flag, int maxlen )
       if( flag > 2 )
         {
         // if flag > 2; return all of next line (must fit in buffer)
-        NxtLine(f, str, maxlen );
+        NxtLine(inHandle, str, maxlen );
         if( flag == 3 )  // skip comment lines
           while( str[0] == '!' )
-            NxtLine(f, str, maxlen );
+            NxtLine(inHandle, str, maxlen );
 #ifdef _DEBUG
         if( flag > 4 )
           ERRORX( 3, __FILE__, __LINE__, "Invalid flag: %d", flag);
 #endif
         }
-      ungetc( '\n', f);  // restore EOL character for next call
+      ungetc( '\n', inHandle);  // restore EOL character for next call
       return str;
       }
     }
@@ -139,12 +138,12 @@ static char *NxtWord(FILE *f, char *str, int flag, int maxlen )
     if( c == ' ' || c == ',' || c == '\n' || c == '\t' )
       ; // skip EOW char saved at last call
     else
-      ungetc( c, f);  // restore first char of first line
+      ungetc( c, inHandle);  // restore first char of first line
     }
 
   while( !done )   // search for start of next word
     {
-    c = getc(f);
+    c = getc(inHandle);
     if( c==EOF ) return NULL;
     if( _echo ) putc( c, _ulog );
     switch( c )
@@ -157,7 +156,7 @@ static char *NxtWord(FILE *f, char *str, int flag, int maxlen )
       case '\0':
         break;
       case '!':          // begin comment; skip to EOL
-        NxtLine(f, str, 0 );
+        NxtLine(inHandle, str, 0 );
         break;
       case '*':          // end-of-file indicator
         return NULL;
@@ -171,7 +170,7 @@ static char *NxtWord(FILE *f, char *str, int flag, int maxlen )
   done = 0;
   while( !done )   // search for end-of-word (EOW)
     {
-    c = getc(f);
+    c = getc(inHandle);
     if( c==EOF ) return NULL;
     if( _echo ) putc( c, _ulog );
     switch( c )
@@ -196,7 +195,7 @@ static char *NxtWord(FILE *f, char *str, int flag, int maxlen )
         break;
       }
     }  // end EOW search
-  ungetc( c, f); // save EOW character for next call
+  ungetc( c, inHandle); // save EOW character for next call
 
   return str;
 
@@ -204,11 +203,11 @@ static char *NxtWord(FILE *f, char *str, int flag, int maxlen )
 
 
 
-static int ReadIX(FILE *f){
+static int ReadIX(FILE *inHandle){
   long value;
   char tmpstr[LINELEN];
 
-  NxtWord(f, tmpstr, 0, sizeof(tmpstr) );
+  NxtWord(inHandle, tmpstr, 0, sizeof(tmpstr) );
   if(LongCon(tmpstr, &value ) || value > INT_MAX || value < INT_MIN ){ /* max/min depends on compiler */
    	ERROR2("Bad integer: '%s'", tmpstr);
   }
@@ -218,11 +217,11 @@ static int ReadIX(FILE *f){
 }  /* end ReadIX */
 
 
-static float ReadR4(FILE *f){
+static float ReadR4(FILE *inHandle){
   double value;
   char tmpstr[LINELEN];
 
-  NxtWord(f,tmpstr, 0, sizeof(tmpstr) );
+  NxtWord(inHandle,tmpstr, 0, sizeof(tmpstr) );
   if( DblCon(tmpstr, &value ) || value > FLT_MAX || value < -FLT_MAX ){
 	ERROR2("Bad float value '%s'", tmpstr);
   }
@@ -378,7 +377,7 @@ static void GetCtrl( char *str, View3DControlData *vfCtrl){
 	Determine number of vertices, number of surfaces,
 	control parameters, and format of the input file.
 */
-static int CountVS(FILE *f, VertexSurfaceData *V){
+static int CountVS(FILE *inHandle, VertexSurfaceData *V){
   int c;     /* first character in line */
   int flag=0;  /* NxtWord flag: 0 for first word of first line */
 
@@ -389,7 +388,7 @@ static int CountVS(FILE *f, VertexSurfaceData *V){
 
   fprintf(stderr,"Reading vertex/surface count...\n");
 
-  while( NxtWord(f, tmpstr, flag, sizeof(tmpstr) ) != NULL ){
+  while( NxtWord(inHandle, tmpstr, flag, sizeof(tmpstr) ) != NULL ){
     c = toupper( tmpstr[0] );
     switch(c){
       case 'S':               /* surface */
@@ -402,11 +401,11 @@ static int CountVS(FILE *f, VertexSurfaceData *V){
         V->nobst += 1;
         break;
       case 'T':               /* title */
-        NxtWord(f, V->title, 2, sizeof(tmpstr) );
+        NxtWord(inHandle, V->title, 2, sizeof(tmpstr) );
         break;
       case 'F':               /* input file format: geometry */
 	  case 'G':
-        NxtWord(f, tmpstr, 0, sizeof(tmpstr) );
+        NxtWord(inHandle, tmpstr, 0, sizeof(tmpstr) );
         V->format = 0;
         if( streql( tmpstr, "2"  )){
 			fprintf(stderr,"FILE FORMAT = 2\n");
@@ -416,7 +415,7 @@ static int CountVS(FILE *f, VertexSurfaceData *V){
         if( streqli( tmpstr, "3a" ) ) V->format = 4;
         break;
       case 'C':               /* C run control data */
-        NxtWord(f, tmpstr, 2, sizeof(tmpstr) );
+        NxtWord(inHandle, tmpstr, 2, sizeof(tmpstr) );
 		GetCtrl(tmpstr, &(V->CD));
         break;
       case 'E':
@@ -443,7 +442,7 @@ finish:
 }  /*  end of CountVS  */
 
 
-static int GetVS(FILE *f, VertexSurfaceData *V){
+static int GetVS(FILE *inHandle, VertexSurfaceData *V){
 // void GetVS2D( char **name, float *emit, int *base, int *cmbn
 //	,SRFDAT2D *srf, View2DControlData *vfCtrl
 //){
@@ -455,25 +454,24 @@ static int GetVS(FILE *f, VertexSurfaceData *V){
   int n;
   char tmpstr[LINELEN];
 
-  rewind(f);
-  _unxt = f;
+  rewind(inHandle);
 
   xy = Alc_V( 1, V->nvert, sizeof(Vec2), __FILE__, __LINE__ );
 
-  while( NxtWord(f, tmpstr, flag, sizeof(tmpstr) ) != NULL ){
+  while( NxtWord(inHandle, tmpstr, flag, sizeof(tmpstr) ) != NULL ){
     c = toupper( tmpstr[0] );
     switch( c )
     {
       case 'V':
-        n = ReadIX(f);
+        n = ReadIX(inHandle);
         nv += 1;
         if( n!= nv )ERROR2("Vertex out of sequence: '%d'", n);
-        xy[nv].x = ReadR4(f);
-        xy[nv].y = ReadR4(f);
+        xy[nv].x = ReadR4(inHandle);
+        xy[nv].y = ReadR4(inHandle);
         break;
       case 'S':
       case 'O':
-        n = ReadIX(f);
+        n = ReadIX(inHandle);
         ns += 1;
         if( n!= ns ) ERROR2("Surface out of sequence: %d", n);
         if( c=='O' && n <= V->nrad) ERROR2("Obstruction surface out of sequence: '%d'", n);
@@ -481,14 +479,14 @@ static int GetVS(FILE *f, VertexSurfaceData *V){
         V->d2.srf[ns].nr = ns;
         V->d2.srf[ns].type = 1;
 
-        n = ReadIX(f);
+        n = ReadIX(inHandle);
         if(n <= 0 || n > V->nvert) ERROR2("Improper first vertex; surface '%d'",ns);
         else{
           V->d2.srf[ns].v1.x = xy[n].x;
           V->d2.srf[ns].v1.y = xy[n].y;
         }
 
-        n = ReadIX(f);
+        n = ReadIX(inHandle);
         if(n <= 0 || n > V->nvert){
 			ERROR2("Improper second vertex; surface '%d'",ns);
 		}else{
@@ -501,13 +499,13 @@ static int GetVS(FILE *f, VertexSurfaceData *V){
         if( c=='O' ) break;
 
         V->d2.srf[ns].type = 0;            /* non-obstruction surface data */
-        n = ReadIX(f);              /* obstruction surface number */
+        n = ReadIX(inHandle);              /* obstruction surface number */
         if( n>0 )
           V->d2.srf[ns].type = -2;
         if( n<0 || (n <= V->nrad && n>0) || n > V->nall) 
           ERROR2("Improper obstruction surface number: '%d'",n);
 
-        n = ReadIX(f);              /* base surface number */
+        n = ReadIX(inHandle);              /* base surface number */
         V->base[ns] = n;
         if( n<0 || n > V->nrad) ERROR2("Improper base surface number: %d",n);
         else if( n>0 ){
@@ -522,14 +520,14 @@ static int GetVS(FILE *f, VertexSurfaceData *V){
           }
         }
 
-        n = ReadIX(f);              /* combine surface number */
+        n = ReadIX(inHandle);              /* combine surface number */
         V->cmbn[ns] = n;
         if( n>=ns ) ERROR2("Must combine surface with previous surface: '%d'",n);
         if(V->cmbn[ns])
           if(V->cmbn[n]) ERROR2("May not chain combined surfaces: %d", n);
         if( n<0 || n > V->nrad) ERROR2("Improper combine surface number: %d", n);
 
-        V->emissivity[ns] = ReadR4(f);       /* surface emittance */
+        V->emissivity[ns] = ReadR4(inHandle);       /* surface emittance */
         if(V->emissivity[ns] > 0.99901){
           ERROR1("Replacing surface %d emittance ('%s') with 0.999",ns,tmpstr);
           V->emissivity[ns] = 0.999f;
@@ -539,7 +537,7 @@ static int GetVS(FILE *f, VertexSurfaceData *V){
           V->emissivity[ns] = 0.001f;
         }
 
-        NxtWord(f, tmpstr, 0, sizeof(tmpstr) );        /* surface name */
+        NxtWord(inHandle, tmpstr, 0, sizeof(tmpstr) );        /* surface name */
         strncpy(V->name[ns], tmpstr, NAMELEN );
         V->name[ns][NAMELEN-1] = '\0';  /* guarantee termination */
         break;

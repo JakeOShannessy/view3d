@@ -194,11 +194,12 @@ InData readFile(char *inFile) {
   vfCtrl.maxRecursion = 8;  // maximum number of recursion levels
 
   /* read Vertex/Surface data file */
-  NxtOpen(inFile, __FILE__, __LINE__ );
+  FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
+  _unxt = inHandle;
   // Read the file initially to determine the size number of components (so that
   // we can allocate memory). This double-read may not make sense in a
   // javascript context.
-  CountVS3D(title, &vfCtrl );
+  CountVS3D(inHandle, title, &vfCtrl );
   // TODO: allocate memory and copy title string.
   // inData.title = title;
   fprintf(_ulog, "\nTitle: %s\n", title );
@@ -260,10 +261,10 @@ InData readFile(char *inFile) {
   if(_list>2)
     _echo = 1;
   if(vfCtrl.format == 4){
-    GetVS3Da(inData.name, inData.emit, inData.base, inData.cmbn, inData.srf, inData.xyz, &vfCtrl );
+    GetVS3Da(inHandle, inData.name, inData.emit, inData.base, inData.cmbn, inData.srf, inData.xyz, &vfCtrl );
   }
   else {
-    GetVS3D(inData.name, inData.emit, inData.base, inData.cmbn, inData.srf, inData.xyz, &vfCtrl );
+    GetVS3D(inHandle, inData.name, inData.emit, inData.base, inData.cmbn, inData.srf, inData.xyz, &vfCtrl );
   }
   for( n=nSrf; n; n-- )
     (inData.area)[n] = (float)(inData.srf)[n].area;
@@ -274,6 +275,9 @@ InData readFile(char *inFile) {
 
 /*----------------------------------------------------------------------------*/
 int process(char *inFile, char *outFile){
+  if(_ulog==NULL) {
+    _ulog = stderr;
+  }
   char program[]="View3D";   /* program name */
   char version[]=V3D_VERSION;      /* program version */
 #ifndef ANSI
@@ -293,7 +297,6 @@ int process(char *inFile, char *outFile){
   int nSrf0;           /* initial number of surfaces */
   int encl;            /* 1 = surfaces form enclosure */
   int n, flag;
-
   time(&bintime);
   curtime = localtime(&bintime);
   fprintf(_ulog, "Time:  %s", asctime(curtime) );
@@ -595,9 +598,7 @@ FreeMemory:
   fprintf( _ulog, "Time:  %s", asctime(curtime) );
   fprintf( _ulog, "\n**********\n\n" );
 
-  // Close input handle.
-  // Close output handle.
-  // Close log handle.
+  // Close log handle. TODO: move this to main.
   fclose( _ulog );
 
   fprintf( stderr, "\nDone!\n" );

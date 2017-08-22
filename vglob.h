@@ -1,7 +1,7 @@
 /*subfile:  vglob.h  *********************************************************/
 /*  VGLOB:  global variables for VIEWCHK  */
 
-FILE *_ulog=NULL; /* log file */
+FILE *_ulog=stderr; /* log file */
 FILE *_unxt=NULL; /* input file */
 int _echo=0;       /* true = echo input file */
 I1 _vdrive[_MAX_DRIVE];   /* drive letter for program ViewGrX.exe */

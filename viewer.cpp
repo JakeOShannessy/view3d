@@ -116,7 +116,7 @@ int main(int argc, char **argv){
 	CD.maxRecursALI = 12; // maximum number of recursion levels
 	CD.maxRecursion = 8;  // maximum number of recursion levels
 	NxtOpen(filename, __FILE__, __LINE__ );
-	CountVS3D(title, &CD );
+	CountVS3D(_unxt, title, &CD );
 
 	fprintf(stderr, "\nTitle: %s\n", title );
 	fprintf(stderr, "Control values for 3-D view factor calculations:\n");
@@ -158,9 +158,9 @@ int main(int argc, char **argv){
 	/* read v/s data file */
 	if(_list>2)_echo = 1;
 	if(CD.format == 4){
-		GetVS3Da(name, emitt, base, cmbn, srf, xyz, &CD);
+		GetVS3Da(inHandle, name, emitt, base, cmbn, srf, xyz, &CD);
 	}else{
-		GetVS3D(name, emitt, base, cmbn, srf, xyz, &CD);
+		GetVS3D(inHandle, name, emitt, base, cmbn, srf, xyz, &CD);
 	}
 	for(int n=nSrf; n; n--)area[n] = (float)srf[n].area;
 	NxtClose();
