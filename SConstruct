@@ -211,6 +211,7 @@ env.Append(
 if env.get('DEBUG'):
 	env.Append(CPPDEFINES=['_DEBUG'])
 	env.Append(CPPFLAGS=['-g'])
+	env.Append(LINKFLAGS=['-g'])
 
 lib = env.SharedLibrary('view3d',srcs)
 
