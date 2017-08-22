@@ -105,11 +105,13 @@ int main( int argc, char **argv ){
 
   if( argc > 1 )
     strcpy( inFile, argv[1] );
+    // TODO: specify a non-interactive mode.
   FindFile("Enter name of input (vertex/surface) data file", inFile, "r" );
   fprintf(_ulog, "Data file:  %s\n", inFile );
 
   if( argc > 2 )
     strcpy( outFile, argv[2] );
+    // TODO: if there is not output file set, output to stdout.
   FindFile("Enter name of output (view factor) file", outFile, "w" );
   fprintf(_ulog, "Output file:  %s\n", outFile );
 
