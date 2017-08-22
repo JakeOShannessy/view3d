@@ -1,0 +1,8 @@
+.sconf_temp
+.sconsign.dblite
+*.os
+*.exe
+*.o
+*.pyc
+*.dll
+*.dll.a
