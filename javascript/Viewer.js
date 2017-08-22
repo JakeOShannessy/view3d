@@ -103,6 +103,13 @@ class Viewer {
         // Run this function on the next frame
         requestAnimationFrame(this.update.bind(this));
     }
+    home () {
+        this.controls.reset();
+        this.camera.position.x = 5;
+        this.camera.position.y = -5;
+        this.camera.position.z = 5;
+        this.camera.lookAt( this.scene.position );
+    }
     createPlane(v1,v2,v3,v4) {
         const geom = new THREE.Geometry();
         if (v4) {

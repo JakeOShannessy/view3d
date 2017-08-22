@@ -9,20 +9,39 @@
         <script src="./Viewer.js" type="text/javascript"></script>
         <script src="./OrbitControls.js" type="text/javascript"></script>
         <style>
-            body { margin: 0; padding: 0px }
-            canvas { width: 100%; height: 100%; margin:0px; padding:0px; display: block; }
+            body {
+                margin: 0;
+                padding: 0px;
+            }
+            canvas {
+                width: 100%;
+                height: 100%;
+                margin:0px;
+                padding:0px;
+                display: block;
+            }
+        </style>
+        <style>
+             .control{
+                margin: 5px;
+             }
         </style>
     </head>
     <body>
         <div id="container" style="overflow:hidden; position: relative;">
-            <div style="position: absolute; margin: 5px;">
+            <div style="position: absolute;">
                 <input type="file" id="uploadinput" onchange="handleFiles(this.files)" style="display:none;"/>
-                <button id="activateupload">Upload Input</button>
+                <button id="activateUpload" class="control">Upload Input</button>
+                <br/>
+                <button id="cameraReset" class="control">Home</button>
             </div>
         </div>
         <script type="text/javascript">
-            activateupload.addEventListener("click", () => {
+            activateUpload.addEventListener("click", () => {
                 uploadinput.click();
+            });
+            cameraReset.addEventListener("click", () => {
+                viewer.home()
             });
             function handleFiles(files) {
                 console.log(`Adding: ${files[0].name}`);
@@ -42,7 +61,7 @@
             const viewer = new Viewer();
             viewer.init()
             // Add the data from the input file to the scene.
-            parseInputFromURI("../examples/ParallelPlanes.vs3").then((input) => {
+            parseInputFromURI("../examples/facet.vs3").then((input) => {
                 viewer.addInputData(input);
             });
         </script>
