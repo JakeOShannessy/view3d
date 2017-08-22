@@ -44,11 +44,22 @@ class Viewer {
 
         // TODO: create a generator to cycle through colours.
         this.baseMaterial = new THREE.MeshLambertMaterial({
-                color: 0xCC0000
+                color: 0xCC0000, side: THREE.DoubleSide
             });
         // TODO: scale and reposition to scene.
         // Add ambient lighting.
-        this.scene.add(new THREE.AmbientLight(0xFFFFFF));
+        this.ambilight = new THREE.AmbientLight(0xFFFFFF, 0.4);
+        this.scene.add(this.ambilight);
+        this.hemilight = new THREE.HemisphereLight(0xffffbb, 0x080820, 1);
+        // hemilight.position = new THREE.Vector3( 0, 1, 0 );
+        this.hemihelper = new THREE.HemisphereLightHelper(this.hemilight, 5 );
+
+        // TODO: place in good position depending on geometry.
+        this.hemilight.translateZ(10)
+        this.hemilight.rotateX(-Math.PI/2)
+        
+        this.scene.add( this.hemihelper );
+        this.scene.add(this.hemilight);
         this.controls = new THREE.OrbitControls( this.camera, this.renderer.domElement );
         // controls.addEventListener( 'change', update ); // remove when using animation loop
         // enable animation loop when using damping or autorotation
@@ -105,8 +116,8 @@ class Viewer {
                          new THREE.Face3( 2, 3, 0 )
         );
         geom.computeBoundingSphere();
+        geom.computeFaceNormals();
         const mesh = new THREE.Mesh(geom, this.baseMaterial);
-        mesh.material.side = THREE.DoubleSide;
         this.planes.push(mesh);
         return mesh;
     }
