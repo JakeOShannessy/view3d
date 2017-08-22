@@ -105,16 +105,26 @@ class Viewer {
     }
     createPlane(v1,v2,v3,v4) {
         const geom = new THREE.Geometry();
-        
-        geom.vertices.push(
-            new THREE.Vector3(v1.x, v1.y, v1.z),
-            new THREE.Vector3(v2.x, v2.y, v2.z),
-            new THREE.Vector3(v3.x, v3.y, v3.z),
-            new THREE.Vector3(v4.x, v4.y, v4.z)
-        );
-        geom.faces.push( new THREE.Face3( 0, 1, 2 ),
-                         new THREE.Face3( 2, 3, 0 )
-        );
+        if (v4) {
+            // Rectangular surface.
+            geom.vertices.push(
+                new THREE.Vector3(v1.x, v1.y, v1.z),
+                new THREE.Vector3(v2.x, v2.y, v2.z),
+                new THREE.Vector3(v3.x, v3.y, v3.z),
+                new THREE.Vector3(v4.x, v4.y, v4.z)
+            );
+            geom.faces.push( new THREE.Face3( 0, 1, 2 ),
+                             new THREE.Face3( 2, 3, 0 )
+            );
+        } else {
+            // Trianglular surface.
+            geom.vertices.push(
+                new THREE.Vector3(v1.x, v1.y, v1.z),
+                new THREE.Vector3(v2.x, v2.y, v2.z),
+                new THREE.Vector3(v3.x, v3.y, v3.z)
+            );
+            geom.faces.push(new THREE.Face3( 0, 1, 2 ));
+        }
         geom.computeBoundingSphere();
         geom.computeFaceNormals();
         const mesh = new THREE.Mesh(geom, this.baseMaterial);
@@ -128,6 +138,12 @@ class Viewer {
         const v4 = inputData.vertices.get(surface.v4);
         const mesh = this.createPlane(v1,v2,v3,v4);
         this.scene.add(mesh);
+        // Add wireframe.
+        var eGeometry = new THREE.EdgesGeometry( mesh.geometry );
+        var eMaterial = new THREE.LineBasicMaterial( { color: 0x0000000, linewidth: 8 } );
+        var edges = new THREE.LineSegments( eGeometry , eMaterial );
+        this.planes.push(edges);
+        this.scene.add(edges);
     }
     addInputData(input) {
         for (const surf of input.surfaces.values()) {
