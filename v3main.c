@@ -82,6 +82,8 @@ int main( int argc, char **argv ){
   }
 
   /* open log file */
+  // TODO: Make logging to a particular file an option, log to stderr by
+  // default.
 #ifdef ANSI
   _ulog = fopen( "View3D.log", "w" );
   _ulog = stderr;
@@ -288,7 +290,7 @@ int process(char *inFile, char *outFile){
 
   time0 = CPUtime( 0.0 );  /* start-of-run time */
   InData inData = readFile(inFile);
-  fprintf(stderr, "Done reading\n");
+  fprintf(_ulog, "Done reading\n");
   encl = inData.vfCtrl.enclosure;
   nSrf = nSrf0 = inData.vfCtrl.nRadSrf;
   vfCtrl = inData.vfCtrl;
@@ -582,10 +584,6 @@ FreeMemory:
   return 0;
 
 } /* end of main() */
-
-void hello() {
-  printf("hello, world!\n");
-}
 
 /**
 	Compute 6 * volume of a prism defined by vertices a, b, c, and (0,0,0).
