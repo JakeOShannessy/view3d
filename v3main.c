@@ -33,10 +33,10 @@ void FindFile(char *msg, char *name, char *type);
 void CheckFileWritable(char *fileName);
 void CheckFileReadable(char *fileName);
 double VolPrism(Vec3 *a, Vec3 *b, Vec3 *c);
-int process(char *inFile, char *outFile);
+int processPaths(char *inFile, char *outFile);
 
-void ReportAF( const int nSrf, const int encl, const char *title, char **name, 
-  const float *area, const float *emit, const int *base, double **AF, int flag 
+void ReportAF( const int nSrf, const int encl, const char *title, char **name,
+  const float *area, const float *emit, const int *base, double **AF, int flag
 );
 
 /*----------------------------------------------------------------------------*/
@@ -141,9 +141,9 @@ int main( int argc, char **argv ){
 	"recipient further agrees not to assert any proprietary rights\n"
 	"therein or to represent this program to anyone as other than\n"
 	"a government program.\n"
-	, stderr 
+	, stderr
   );
-  return process(inFile, outFile);
+  return processPaths(inFile, outFile);
 }
 
 typedef struct {
@@ -160,10 +160,11 @@ typedef struct {
   SRFDAT3D *srf;
 } InData;
 
+
 // Read the file into a data structure, heap allocate it and return a pointer to
 // it. There is no point allocating it before this as we don't know the size of
 // the data.
-InData readFile(char *inFile) {
+InData readFileHandle(FILE *inHandle) {
   char **name;         /* surface names [1:nSrf][0:NAMELEN] */
   float *area;         /* vector of surface areas [1:nSrf] */
   float *emit;         /* vector of surface emittances [1:nSrf] */
@@ -177,7 +178,7 @@ InData readFile(char *inFile) {
   // vertices etc.
   View3DControlData vfCtrl;
   char title[LINELEN]; /* project title */
-  
+
   InData inData;
   inData.test = 5;
 
@@ -185,7 +186,7 @@ InData readFile(char *inFile) {
   int nSrf0;           /* initial number of surfaces */
   int encl;            /* 1 = surfaces form enclosure */
   int n, flag;
-  
+
   /* initialize control data */
   memset( &vfCtrl, 0, sizeof(View3DControlData) );
   // non-zero control values:
@@ -194,8 +195,8 @@ InData readFile(char *inFile) {
   vfCtrl.maxRecursion = 8;  // maximum number of recursion levels
 
   /* read Vertex/Surface data file */
-  FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
-  _unxt = inHandle;
+  // FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
+  // _unxt = inHandle;
   // Read the file initially to determine the size number of components (so that
   // we can allocate memory). This double-read may not make sense in a
   // javascript context.
@@ -246,20 +247,20 @@ InData readFile(char *inFile) {
   inData.area = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
   inData.emit = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
   inData.vtmp = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
-  
+
   for(n=nSrf0; n; n--)(inData.vtmp)[n] = 1.0;
-  
+
   inData.base = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
   inData.cmbn = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
   inData.xyz = Alc_V( 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
   inData.srf = Alc_V( 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
   InitTmpVertMem();  /* polygon operations in GetDat() and View3D() */
   InitPolygonMem(0, 0);
-  
+
   // reads the  file a second time
   /* read v/s data file */
   if(_list>2)
-    _echo = 1;
+  _echo = 1;
   if(vfCtrl.format == 4){
     GetVS3Da(inHandle, inData.name, inData.emit, inData.base, inData.cmbn, inData.srf, inData.xyz, &vfCtrl );
   }
@@ -267,24 +268,30 @@ InData readFile(char *inFile) {
     GetVS3D(inHandle, inData.name, inData.emit, inData.base, inData.cmbn, inData.srf, inData.xyz, &vfCtrl );
   }
   for( n=nSrf; n; n-- )
-    (inData.area)[n] = (float)(inData.srf)[n].area;
+  (inData.area)[n] = (float)(inData.srf)[n].area;
   NxtClose();
   inData.vfCtrl = vfCtrl;
   return inData;
 }
 
+InData readFilePath(char *inFile) {
+  FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
+  _unxt = inHandle;
+  return readFileHandle(inHandle);
+}
+
 /*----------------------------------------------------------------------------*/
-int process(char *inFile, char *outFile){
+int processHandles(FILE *inHandle, FILE *outHandle){
   if(_ulog==NULL) {
     _ulog = stderr;
   }
   char program[]="View3D";   /* program name */
   char version[]=V3D_VERSION;      /* program version */
-#ifndef ANSI
+  #ifndef ANSI
   char fileName[_MAX_PATH];  /* name of file */
   char vdrive[_MAX_DRIVE];   /* drive letter for program View3D.exe */
   char vdir[_MAX_DIR];       /* directory path for program View3D.exe */
-#endif
+  #endif
   char title[LINELEN]; /* project title */
   char *types[]={"rsrf","subs","mask","nuls","obso"};
   View3DControlData vfCtrl; /* VF calculation control parameters - avoid globals */
@@ -302,7 +309,7 @@ int process(char *inFile, char *outFile){
   fprintf(_ulog, "Time:  %s", asctime(curtime) );
 
   time0 = CPUtime( 0.0 );  /* start-of-run time */
-  InData inData = readFile(inFile);
+  InData inData = readFileHandle(inHandle);
   fprintf(_ulog, "Done reading\n");
   encl = inData.vfCtrl.enclosure;
   nSrf = nSrf0 = inData.vfCtrl.nRadSrf;
@@ -315,7 +322,7 @@ int process(char *inFile, char *outFile){
   int *cmbn = inData.cmbn;
   Vec3 *xyz = inData.xyz;
   SRFDAT3D *srf = inData.srf;
-  
+
   if(encl){
     /* determine volume of enclosure */
     double volume=0.0;
@@ -361,11 +368,11 @@ int process(char *inFile, char *outFile){
   }
 
   /* start-of-VF-calculation time */
-  time1 = CPUtime( 0.0 );  
+  time1 = CPUtime( 0.0 );
   possibleObstr = Alc_V( 1, vfCtrl.nAllSrf, sizeof(int), __FILE__, __LINE__ );
   vfCtrl.nPossObstr = SetPosObstr3D( vfCtrl.nAllSrf, srf, possibleObstr );
   sprintf( _string, "\n %.2f seconds to determine %d possible view obstructing surfaces",
-           CPUtime(time1), vfCtrl.nPossObstr 
+           CPUtime(time1), vfCtrl.nPossObstr
   );
   fputs( _string, stderr );
   fputs( "\n\n", stderr );
@@ -400,7 +407,7 @@ int process(char *inFile, char *outFile){
   time1 = CPUtime( 0.0 );
 
   /*----- view factor calculation -----*/
-  View3D( srf, base, possibleObstr, AF, &vfCtrl );  
+  View3D( srf, base, possibleObstr, AF, &vfCtrl );
 
   fprintf( _ulog, "\n%7.2f seconds to compute view factors.\n", CPUtime(time1) );
   if( _list>0 )
@@ -550,15 +557,8 @@ int process(char *inFile, char *outFile){
     ReportAF( nSrf, encl, title, name, area, vtmp, base, AF, 0 );
 
   time1 = CPUtime( 0.0 );
-  // Write the results to the output file.
-  // TODO: if saving to binary format, open for binary write
-  FILE *outFileHandle;
-  if(strlen(outFile) == 0) {
-    outFileHandle = stdout;
-  } else {
-    outFileHandle = fopen(outFile, "w");
-  }
-  SaveVF( outFileHandle, program, version, vfCtrl.outFormat, vfCtrl.enclosure,
+
+  SaveVF( outHandle, program, version, vfCtrl.outFormat, vfCtrl.enclosure,
           vfCtrl.emittances, nSrf, area, emit, AF, vtmp );
   sprintf( _string, "%7.2f seconds to write view factors.\n", CPUtime(time1) );
   fputs( _string, stderr );
@@ -605,7 +605,44 @@ FreeMemory:
 
   return 0;
 
-} /* end of main() */
+} /* end of processHandles() */
+
+int processPaths(char *inFile, char *outFile) {
+  FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
+  _unxt = inHandle;
+  // Write the results to the output file.
+  // TODO: if saving to binary format, open for binary write
+  FILE *outHandle;
+  if(strlen(outFile) == 0 || outFile == NULL) {
+    outHandle = stdout;
+  } else {
+    outHandle = fopen(outFile, "w");
+  }
+  return processHandles(inHandle, outHandle);
+}
+
+int processStrings(char *inString, char *outFile) {
+  // Windows does not support fmemopen, so write to a temporary file and open
+  // that.
+  char *tmpPath = "temp.txt";
+  FILE *tmp = fopen(tmpPath, "w");
+  fwrite(inString, 1, strlen(inString), tmp);
+  fclose(tmp);
+
+  // FILE *inHandle = fmemopen(inString, strlen(inString), "r");
+  FILE *inHandle = NxtOpenHndl(tmpPath, __FILE__, __LINE__ );
+  _unxt = inHandle;
+  // Write the results to the output file.
+  // TODO: if saving to binary format, open for binary write
+  FILE *outHandle;
+  if(strlen(outFile) == 0 || outFile == NULL) {
+    outHandle = stdout;
+  } else {
+    outHandle = fopen(outFile, "w");
+  }
+  return processHandles(inHandle, outHandle);
+}
+
 
 /**
 	Compute 6 * volume of a prism defined by vertices a, b, c, and (0,0,0).
@@ -628,7 +665,7 @@ double VolPrism( Vec3 *a, Vec3 *b, Vec3 *c ){
 	@TODO DOCUMENT THIS
 */
 void ReportAF( const int nSrf, const int encl, const char *title, char **name,
-  const float *area, const float *emit, const int *base, double **AF, int flag 
+  const float *area, const float *emit, const int *base, double **AF, int flag
 ){
   int n;           /* row */
   int m;           /* column */
@@ -729,7 +766,7 @@ void ReportAF( const int nSrf, const int encl, const char *title, char **name,
 	@param type   type of file, see fopen()
 */
 void FindFile( char *msg, char *fileName, char *type ){
-  
+
   FILE  *pfile=NULL;
 
   while(!pfile){
@@ -751,7 +788,7 @@ void FindFile( char *msg, char *fileName, char *type ){
 
 // Currently does not open the file.
 void CheckFileWritable(char *fileName){
-  
+
   FILE  *pfile=NULL;
 
   if(fileName!=NULL && strlen(fileName)>0){
@@ -765,7 +802,7 @@ void CheckFileWritable(char *fileName){
 
 // Currently does not open the file.
 void CheckFileReadable(char *fileName){
-  
+
   FILE  *pfile=NULL;
 
   if(fileName!=NULL && strlen(fileName)>0){
