@@ -1,3 +1,10 @@
+async function parseInputFromURI(uri) {
+  const inputDataResp = await fetch(uri);
+  const inputData = await inputDataResp.text();
+  const input = parseInputFile(inputData);
+  return input;
+}
+
 function parseInputFile(inputString) {
   // Initialise input object.
   const input = new View3DInput();
