@@ -38,7 +38,7 @@
                     NEAR,
                     FAR
                 );
-
+            camera.up.set( 0, 0, 1 );
             const scene = new THREE.Scene();
             scene.background = new THREE.Color(0x393939);
             // Add the camera to the scene.
@@ -102,11 +102,22 @@
             controls = new THREE.OrbitControls( camera, renderer.domElement );
             // controls.addEventListener( 'change', update ); // remove when using animation loop
             // enable animation loop when using damping or autorotation
-            //controls.enableDamping = true;
-            //controls.dampingFactor = 0.25;
-            controls.enableZoom = false;
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.25;
+            controls.enableZoom = true;
             renderer.render(scene, camera);
             camera.position.z = 5;
+
+            const grid = new THREE.GridHelper(100, 100);
+            grid.geometry.rotateX( Math.PI / 2 );
+            scene.add(grid);
+            const axisHelper = new THREE.AxisHelper( 5 );
+            scene.add( axisHelper );
+
+            camera.position.x = 5;
+            camera.position.y = -5;
+            camera.position.z = 5;
+            camera.lookAt( scene.position );
 
             function update () {
                 renderer.render(scene, camera);
