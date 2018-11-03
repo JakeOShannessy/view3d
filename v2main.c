@@ -20,7 +20,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "types.h" 
+#include "types.h"
 #include "misc.h"
 #include "heap.h"
 #include "test2d.h"
@@ -53,6 +53,7 @@ void usage(const char *progname){
 	);
 }
 
+#ifndef LIBONLY
 int main( int argc, char **argv ){
   char program[]="View2D";   /* program name */
   char version[]=V3D_VERSION;      /* program version */
@@ -86,7 +87,7 @@ int main( int argc, char **argv ){
 				exit(1);
 		}
 	}
-  
+
 	if(optind != argc - 2){
 		fprintf(stderr,"ERROR: missing command-line arguments\n");
 		usage(argv[0]);
@@ -236,7 +237,7 @@ int main( int argc, char **argv ){
     for( n=1; n<=nSrf; n++ )
       base[n] = 0;
     if( _list>2 )
-      ReportAF( nSrf, encl, "View factors after separating included surfaces:", 
+      ReportAF( nSrf, encl, "View factors after separating included surfaces:",
         name, area, vtmp, base, AF, &eMax );
     }
 
@@ -328,6 +329,7 @@ int main( int argc, char **argv ){
   return 0;
 
   }  /* end of main */
+#endif
 
 #include <ctype.h>  /* prototype: toupper */
 
@@ -335,7 +337,7 @@ int main( int argc, char **argv ){
 
 float ReportAF(const int nSrf, const int encl, const char *title
 	, char *const *const name, const float *area, const float *emit, const int *base
-	, double **AF, float *eMax 
+	, double **AF, float *eMax
 ){
   int n;    /* row */
   int m;    /* column */

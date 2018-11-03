@@ -39,6 +39,7 @@ void ReportAF( const int nSrf, const int encl, const char *title, char **name,
   const float *area, const float *emit, const int *base, double **AF, int flag
 );
 
+#ifndef LIBONLY
 /*----------------------------------------------------------------------------*/
 int main( int argc, char **argv ){
   char program[]="View3D";   /* program name */
@@ -145,6 +146,7 @@ int main( int argc, char **argv ){
   );
   return processPaths(inFile, outFile);
 }
+#endif
 
 typedef struct {
   View3DControlData vfCtrl;
@@ -598,8 +600,11 @@ FreeMemory:
   fprintf( _ulog, "Time:  %s", asctime(curtime) );
   fprintf( _ulog, "\n**********\n\n" );
 
+// Closing _ulog will not work in library
+#ifndef LIBONLY
   // Close log handle. TODO: move this to main.
   fclose( _ulog );
+#endif
 
   fprintf( stderr, "\nDone!\n" );
 
