@@ -9,3 +9,6 @@
 
 /target
 **/*.rs.bk
+
+# Project-specific
+config.h
