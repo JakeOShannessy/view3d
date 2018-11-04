@@ -1,3 +1,6 @@
+This is the original README.txt for the View3D project. For a README updated for
+this repo, see README.md.
+
 View3D - calculation of view factors between simple polygons.
 ------------------------------------------------------------
 Author: George Walton
