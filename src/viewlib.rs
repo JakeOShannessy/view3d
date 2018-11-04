@@ -6,7 +6,7 @@ use clap::{Arg, App};
 use std::ffi::{CString};
 use std::os::raw::c_char;
 use std::f64;
-use libc::{uint32_t, size_t, c_double};
+use libc::{uint32_t, size_t, c_double, c_float};
 use std::slice;
 
 // Link in the C lib via FFI
@@ -21,14 +21,36 @@ pub fn process_paths(infile: String, outfile: String) -> VFResults {
     let outfile_c = CString::new(outfile).expect("CString::new failed");
     unsafe {
         let vf_res = processPaths(infile_c.as_ptr(), outfile_c.as_ptr());
-        let af_arr_ptr = vf_res.values;
 
+        // Convert the view factor values to a vector
+        let af_arr_ptr = vf_res.values;
         assert!(!af_arr_ptr.is_null());
-        let res: &[f64] = slice::from_raw_parts(af_arr_ptr, vf_res.n_values as usize);
+        let res: &[f64] = slice::from_raw_parts(af_arr_ptr, (vf_res.n_surfs*vf_res.n_surfs) as usize);
         let res2 = res.clone();
         let vec = res2.to_vec();
+
+        // Convert the area values to a vector
+        let area_ptr = vf_res.area;
+        assert!(!area_ptr.is_null());
+        let area_raw: &[f32] = slice::from_raw_parts(area_ptr, vf_res.n_surfs as usize);
+        let area_raw2 = area_raw.clone();
+        let areas = area_raw2.to_vec();
+
+        // Convert the emissivity values to a vector
+        let emit_ptr = vf_res.emit;
+        assert!(!emit_ptr.is_null());
+        let emit_raw: &[f32] = slice::from_raw_parts(emit_ptr, vf_res.n_surfs as usize);
+        let emit_raw2 = emit_raw.clone();
+        let emit = emit_raw2.to_vec();
+
+        // Convert the enclosure flag to a bool
+        let encl = if vf_res.encl == 0 { false } else { true };
+
         VFResults {
-            n_surfs:(vf_res.n_values as f32).sqrt().round() as u32,
+            n_surfs: vf_res.n_surfs as u32,
+            encl,
+            areas,
+            emit,
             values: vec,
         }
     }
@@ -37,37 +59,24 @@ pub fn process_paths(infile: String, outfile: String) -> VFResults {
 #[derive(Debug)]
 #[repr(C)]
 pub struct VFResultsC {
-    pub n_values: i32,
+    pub n_surfs: i32,
+    pub encl: i32,
+    pub area: *const c_float,
+    pub emit: *const c_float,
     pub values: *const c_double,
-}
-
-pub fn print_vf_results(results: &VFResults) {
-    print!("    ");
-    for i in 1..=(results.n_surfs as usize) {
-        print!("{:^8} ", i);
-    }
-    println!("");
-    for (i, value) in results.values.iter().enumerate() {
-        if i % (results.n_surfs as usize) == 0 {
-            print!("{:2}: ", (i /(results.n_surfs as usize)) + 1);
-        }
-        print!("{:.*}", 6, value);
-        if (i + 1) % (results.n_surfs as usize) == 0 {
-            println!("");
-        } else {
-            print!(" ");
-        }
-    }
 }
 
 #[derive(Debug)]
 pub struct VFResults {
     pub n_surfs: u32,
+    pub encl: bool,
+    pub areas: Vec<f32>,
+    pub emit: Vec<f32>,
     pub values: Vec<f64>,
 }
 
 impl VFResults {
-    fn vf(&self, a: usize, b: usize) -> f64 {
+    pub fn vf(&self, a: usize, b: usize) -> f64 {
         self.values[(a-1)*(self.n_surfs as usize)+(b-1)]
     }
 }
@@ -82,6 +91,46 @@ impl VFResults {
 //     float *emit,
 //     double **AF,
 // }
+
+pub fn print_vf_results(results: &VFResults) {
+    println!("encl: {}", results.encl);
+    // Print column numbering
+    print!("      ");
+    for i in 1..=(results.n_surfs as usize) {
+        print!("{:^8} ", i);
+    }
+    println!("");
+    // Print areas
+    print!("area: ");
+    for area in results.areas.iter() {
+        print!("{:.*} ", 6, area);
+    }
+    println!("");
+    // Print emissivities
+    print!("emit: ");
+    for emit in results.emit.iter() {
+        print!("{:.*} ", 6, emit);
+    }
+    println!("");
+    // Print separator
+    print!("      ");
+    for _ in 1..=(results.n_surfs as usize) {
+        print!("---------");
+    }
+    println!("");
+    // Print view factors
+    for (i, value) in results.values.iter().enumerate() {
+        if i % (results.n_surfs as usize) == 0 {
+            print!("{:4}: ", (i /(results.n_surfs as usize)) + 1);
+        }
+        print!("{:.*}", 6, value);
+        if (i + 1) % (results.n_surfs as usize) == 0 {
+            println!("");
+        } else {
+            print!(" ");
+        }
+    }
+}
 
 pub fn analytic_1(width: f64, height: f64) -> f64 {
     let w = width/height;

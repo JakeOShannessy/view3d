@@ -30,7 +30,10 @@
 /* forward decls */
 
 typedef struct  {
-    int n_values;
+    int n_surfs;
+    int encl;
+    float *area;
+    float *emit;
     double *values;
 } VFResultsC;
 
@@ -597,6 +600,7 @@ VFResultsC processHandles(FILE *inHandle, FILE *outHandle){
   int ret_len = nSrf0*nSrf0;
   fprintf( stderr, "\nret_len: %d\n", ret_len);
   double *ret = malloc(sizeof(double)*ret_len);
+  // zero-based array for areas
   // for(int n=1; n<=nSrf; n++) { // row
   //   for(int m=1; m<=nSrf; m++) { // column
   //     ret[(n-1)*nSrf+(m-1)] = AF[n][m];
@@ -616,8 +620,21 @@ VFResultsC processHandles(FILE *inHandle, FILE *outHandle){
     }
   }
 
+  float *areas0 = malloc(sizeof(float)*nSrf0);
+  for (int n = 1; n <= nSrf; n++) {
+    areas0[n-1] = area[n];
+  }
+
+  float *emit0 = malloc(sizeof(float)*nSrf0);
+  for (int n = 1; n <= nSrf; n++) {
+    emit0[n-1] = emit[n];
+  }
+
   VFResultsC res_struct;
-  res_struct.n_values = ret_len;
+  res_struct.n_surfs = nSrf0;
+  res_struct.encl = encl;
+  res_struct.area = areas0;
+  res_struct.emit = emit0;
   res_struct.values = ret;
 
   if( vfCtrl.emittances )
