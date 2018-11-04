@@ -333,7 +333,7 @@ finish:
 	Function to read common surface data
 */
 void GetSrfD( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
-	,SRFDAT3D *srf, View3DControlData *vfCtrl, int ns 
+	,SRFDAT3D *srf, View3DControlData *vfCtrl, int ns
 ){
   int n;
 
@@ -393,7 +393,7 @@ void GetSrfD( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
 /*  Function to read the 3-D input file:  Vertex & Surface format */
 
 void GetVS3D( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
-	,SRFDAT3D *srf, Vec3 *xyz, View3DControlData *vfCtrl 
+	,SRFDAT3D *srf, Vec3 *xyz, View3DControlData *vfCtrl
 ){
   int c;       /* first character in line */
   int nv=0;    /* number of vertices */
@@ -510,9 +510,9 @@ finish:
 */
 
 void GetVS3Da( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
-	,SRFDAT3D *srf, Vec3 *xyz, View3DControlData *vfCtrl 
+	,SRFDAT3D *srf, Vec3 *xyz, View3DControlData *vfCtrl
 ){
-  
+
   Vec3 xyzLLC;  /* coordinates of lower left corner of surface plane */
   double azm, tilt;     /* azimuth and tilt angles of surface plane */
   double sa, ca, st, ct;
@@ -595,9 +595,9 @@ void GetVS3Da( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
         for( j=0; j<4; j++ ){
           nv++;
           srf[ns].v[j] = xyz+nv;
-          srf[ns].v[j]->x = (xyzLLC.x + v[j].x * ca 
+          srf[ns].v[j]->x = (xyzLLC.x + v[j].x * ca
                           - (v[j].y * ct - v[j].z * st ) * sa);
-          srf[ns].v[j]->y = (xyzLLC.y + v[j].x * sa 
+          srf[ns].v[j]->y = (xyzLLC.y + v[j].x * sa
                           + (v[j].y * ct - v[j].z * st ) * ca);
           srf[ns].v[j]->z = (xyzLLC.z + v[j].y * st + v[j].z * ct);
         }
@@ -873,7 +873,7 @@ void GetVS2D( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
         n = ReadIX( inHandle, 0 );              /* obstruction surface number */
         if( n>0 )
           srf[ns].type = -2;
-        if( n<0 || (n<=vfCtrl->nRadSrf && n>0) || n>vfCtrl->nAllSrf ) 
+        if( n<0 || (n<=vfCtrl->nRadSrf && n>0) || n>vfCtrl->nAllSrf )
           error( 2, __FILE__, __LINE__,
            "Improper obstruction surface number:", IntStr(n), "" );
 

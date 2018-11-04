@@ -18,7 +18,8 @@
 #include "misc.h"
 #include "heap.h"
 #include "viewobs.h"
-#include "heap.h"
+
+#include "heap.h"
 
 #define PId2     1.570796326794896619   /* pi / 2 */
 #define PIinv    0.318309886183790672   /* 1 / pi */
@@ -646,8 +647,10 @@ void ViewsInit( int maxDiv, int init )
     Fre_V( _rc2, 0, maxRC2, sizeof(EdgeDir), __FILE__, __LINE__ );
     Fre_MC( _dv1, 0, maxRC1, 0, maxDV1, sizeof(EdgeDivision), __FILE__, __LINE__ );
     Fre_V( _rc1, 0, maxRC1, sizeof(EdgeDir), __FILE__, __LINE__ );
+#ifdef LOGGING
     fprintf( _ulog, "Total line integral points evaluated:    %8lu\n",
       _usedV1LIpart );
+#endif
     }
 
   }  /* end ViewsInit */

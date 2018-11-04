@@ -17,7 +17,7 @@
 #include <float.h>  /* define: FLT_EPSILON */
 #include "types.h"
 #include "view3d.h"
-#include "misc.h" 
+#include "misc.h"
 #include "heap.h"
 
 extern FILE *_ulog; /* log file */
@@ -200,13 +200,17 @@ void NormAF( const int nSrf, const float *emit, const float *area, double **AF,
       for( n=m+1; n<=nSrf; n++ )
         AF[n][m] *= sumF;
       }
+#ifdef LOGGING
     if( _list>1 )
       fprintf( _ulog, "NormAF: %d  maxError: %.2e\n", iter+1, maxError );
+#endif
     }
 
   if( iter>=itMax )
     error( 2, __FILE__, __LINE__, "Too many iterations for normalization", "" );
+#ifdef LOGGING
   fprintf( _ulog, "%d normalization iterations.\n", iter );
+#endif
 
   }  /* end of NormAF */
 
@@ -241,7 +245,7 @@ void IntFac( const int nSrf, const float *emit, const float *area, double **AF )
     }
 
   LUFactorSymm( nSrf, AF );  /* factor AF (symmetric) */
-  
+
   for( n=1; n<=nSrf; n++ )  /* determine response vectors */
     {
     memset( w+1, 0, nSrf*sizeof(double) );
@@ -249,7 +253,7 @@ void IntFac( const int nSrf, const float *emit, const float *area, double **AF )
     LUSolveSymm( nSrf, AF, w );
     fwrite( w+1, sizeof(double), nSrf, tmpf );
     }
-  
+
   fflush( tmpf );
   rewind( tmpf );
   for( n=1; n<=nSrf; n++ )    /* compute total interchange areas */
@@ -321,7 +325,7 @@ double DotProd( const int n, const double *x, const double *y )
 /*  LUSolveSymm.c  ***********************************************************/
 
 /*  Solution of simultaneous equations [A] * {X} = {B}, where [A] (which is
- *  stored by rows) has already been reduced to L-U form in LUFactorSymm(). 
+ *  stored by rows) has already been reduced to L-U form in LUFactorSymm().
  *  The solution vector {X} over-writes {B}.  */
 
 void LUSolveSymm( const int neq, double **a, double *b )

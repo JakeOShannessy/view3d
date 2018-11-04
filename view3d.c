@@ -43,13 +43,13 @@ double _sli1;   /* use SLI if relSep > _sli1 */
 
 /*  The AF array is stored in triangular form:
  *  +--------+--------+--------+--------+----
- *  | [1][1] |   -    |   -    |   -    |  - 
+ *  | [1][1] |   -    |   -    |   -    |  -
  *  +--------+--------+--------+--------+----
- *  | [2][1] | [2][2] |   -    |   -    |  - 
+ *  | [2][1] | [2][2] |   -    |   -    |  -
  *  +--------+--------+--------+--------+----
- *  | [3][1] | [3][2] | [3][3] |   -    |  - 
+ *  | [3][1] | [3][2] | [3][3] |   -    |  -
  *  +--------+--------+--------+--------+----
- *  | [4][1] | [4][2] | [4][3] | [4][4] |  - 
+ *  | [4][1] | [4][2] | [4][3] | [4][4] |  -
  *  +--------+--------+--------+--------+----
  *  |  ...   |  ...   |  ...   |  ...   | ...
  */
@@ -99,7 +99,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
       m1 = vfCtrl->col;      /* or a single view factor, */
     }
 
-  ViewsInit( 4, 1 );  /* initialize Gaussian integration coefficients */ 
+  ViewsInit( 4, 1 );  /* initialize Gaussian integration coefficients */
   InitViewMethod( vfCtrl );
 
   possibleObstrN = Alc_V( 1, vfCtrl->nAllSrf, sizeof(int), __FILE__, __LINE__ );
@@ -108,7 +108,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
   vfCtrl->srfOT = Alc_V( 0, maxSrfT, sizeof(SRFDAT3X), __FILE__, __LINE__ );
   bins = Alc_MC( 0, 4, 1, 5, sizeof(unsigned), __FILE__, __LINE__ );
   vfCtrl->failConverge = 0;
-  
+
   if( vfCtrl->nMaskSrf ) /* pre-process view masking surfaces */
     {
     maskSrf = Alc_V( 1, vfCtrl->nMaskSrf, sizeof(int), __FILE__, __LINE__ );
@@ -142,7 +142,9 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
     if( vfCtrl->row == 0 )  /* progress display - all surfaces */
       {
       double pctDone = 100 * (double)((n-1)*n) / nAFtot;
+#ifdef LOGGING
       fprintf( stderr, "\rSurface: %d; ~ %.1f %% complete", _row, pctDone );
+#endif
       }
     AF[n][n] = 0.0;
     nPossN = vfCtrl->nPossObstr;  /* remove obstructions behind N */
@@ -162,15 +164,21 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
       _col = m;
       if( vfCtrl->row > 0 && vfCtrl->col == 0)  /* progress display - single surface */
         {
+#ifdef LOGGING
         fprintf( stderr, "\rSurface %d to surface %d", _row, _col );
+#endif
         }
       if( _list>0 && vfCtrl->row )
+#ifdef LOGGING
         fprintf( _ulog, "*ROW %d, COL %d\n", _row, _col );
+#endif
       if( vfCtrl->col )
         {
+#ifdef LOGGING
         DumpSrf3D( "  srf", srf+_row );
         DumpSrf3D( "  srf", srf+_col );
         fflush( _ulog );
+#endif
         }
 
       minArea = MIN( srf[n].area, srf[m].area );
@@ -194,9 +202,11 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
           }
         if( vfCtrl->col )
           {
+#ifdef LOGGING
           DumpSrfNM( "srfN", &srfN );
           DumpSrfNM( "srfM", &srfM );
           fflush( _ulog );
+#endif
           }
         VECTOR( (&srfN.ctd), (&srfM.ctd), (&vNM) );
         distNM = VLEN( (&vNM) );
@@ -256,6 +266,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
           else
             { srf1 = &srfM; srf2 = &srfN; }
 
+#ifdef LOGGING
           if( vfCtrl->col )
             {
             fprintf( _ulog, " Project rays from srf %d to srf %d\n",
@@ -268,6 +279,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
             }
           else if( _list>0 && vfCtrl->row )
             fprintf( _ulog, " %d probable obtructions\n", vfCtrl->nProbObstr );
+#endif
 
           if( vfCtrl->nProbObstr > maxSrfT ) /* expand srfOT array */
             {
@@ -284,7 +296,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
             vfCtrl->epsAF = minArea * vfCtrl->epsAdap;
             if( subs[j].nv == 3 )
               calcAF += ViewTP( subs[j].v, subs[j].area, 0, vfCtrl );
-            else 
+            else
               calcAF += ViewRP( subs[j].v, subs[j].area, 0, vfCtrl );
             }
           AF[n][m] = calcAF * srf2->rc * srf2->rc;   /* area scaling factor */
@@ -342,6 +354,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
 #ifdef XXX
 #endif
 
+#ifdef LOGGING
       if( _list>0 && vfCtrl->row )
         {
         fprintf( _ulog, " AF(%d,%d): %.7e %.7e %.7e %s\n", _row, _col,
@@ -349,15 +362,21 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
           methods[vfCtrl->method] );
         fflush( _ulog );
         }
+#endif
 
       }  /* end of element M of row N */
 
     }  /* end of row N */
+#ifdef LOGGING
   fputc( '\n', stderr );
+#endif
 
+#ifdef LOGGING
   fprintf( _ulog, "\nSurface pairs where F(i,j) must be zero: %8lu\n", nAF0 );
   fprintf( _ulog, "\nSurface pairs without obstructed views:  %8lu\n", nAFnO );
+#endif
   bins[4][5] = bins[0][5] + bins[1][5] + bins[2][5] + bins[3][5];
+#ifdef LOGGING
   fprintf( _ulog, "   nd %7s %7s %7s %7s %7s\n",
     methods[0], methods[1], methods[2], methods[3], methods[4] );
   fprintf( _ulog, "    2 %7u %7u %7u %7u %7u direct\n",
@@ -368,7 +387,9 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
      bins[0][4], bins[1][4], bins[2][4], bins[3][4] );
   fprintf( _ulog, "  fix %7u %7u %7u %7u %7u fixes\n",
      bins[0][5], bins[1][5], bins[2][5], bins[3][5], bins[4][5] );
+#endif
   ViewsInit( 4, 0 );
+#ifdef LOGGING
   fprintf( _ulog, "Adaptive line integral evaluations used: %8lu\n",
     vfCtrl->usedV1LIadapt );
   fprintf( _ulog, "\nSurface pairs with obstructed views:   %10lu\n", nAFwO );
@@ -387,6 +408,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
     fprintf( _ulog, "Average number of polygons per viewpoint:  %6.2f\n\n",
       (double)vfCtrl->totPoly / (double)vfCtrl->totVpt );
     }
+#endif
 
   if( vfCtrl->failConverge ) error( 1, __FILE__, __LINE__,
     "Some calculations did not converge, see VIEW3D.LOG", "" );
@@ -406,13 +428,13 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
 /***  ProjectionDirection.c  *************************************************/
 
 /*  Set direction of projection of obstruction shadows.
- *  Direction will be from surface 1 to surface 2.  
+ *  Direction will be from surface 1 to surface 2.
  *  Want surface 2 large and distance from surface 2
- *  to obstructions to be small. 
+ *  to obstructions to be small.
  *  Return direction indicator: 1 = N to M, -1 = M to N.
  */
 
-int ProjectionDirection( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM, 
+int ProjectionDirection( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
   int *probableObstr, View3DControlData *vfCtrl )
 /* srf  - data for all surfaces.
  * srfN - data for surface N.
@@ -621,7 +643,7 @@ void InitViewMethod( View3DControlData *vfCtrl )
     _dai1 = 1.0f;
     _sli1 = 0.6f;
     }
-  
+
   }  /* end InitViewMethod */
 
 /***  errorf.c  **************************************************************/
@@ -633,7 +655,7 @@ int errorf( int severity, char *file, int line, ... ){
  * file;      file name: __FILE__
  * line;      line number: __LINE__
  * ...;       string variables (up to 80 char total) */
-  
+
   va_list argp;     /* variable argument list */
   char start[]=" ";
   char *msg, *s;

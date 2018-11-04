@@ -30,6 +30,6 @@ fn main() {
 
     let vf_results = process_paths(infile.to_string(), outfile.to_string());
     print_vf_results(&vf_results);
-        println!("1->8: {:}", vf_results.vf(1,8));
-        println!("8->1: {:}", vf_results.vf(8,1));
+    println!("1->8: {:}", vf_results.vf(1,8));
+    println!("8->1: {:}", vf_results.vf(8,1));
 }

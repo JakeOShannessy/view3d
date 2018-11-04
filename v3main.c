@@ -214,6 +214,7 @@ InData readFileHandle(FILE *inHandle) {
   CountVS3D(inHandle, title, &vfCtrl );
   // TODO: allocate memory and copy title string.
   // inData.title = title;
+#ifdef LOGGING
   fprintf(_ulog, "\nTitle: %s\n", title );
 
   fprintf(_ulog, "Control values for 3-D view factor calculations:\n" );
@@ -247,6 +248,7 @@ InData readFileHandle(FILE *inHandle) {
   fprintf(_ulog, "\n" );
   fprintf(_ulog, " Total number of surfaces: %d \n", vfCtrl.nAllSrf );
   fprintf(_ulog, "   Heat transfer surfaces: %d \n", vfCtrl.nRadSrf );
+#endif
 
   nSrf = nSrf0 = vfCtrl.nRadSrf;
   encl = vfCtrl.enclosure;
@@ -600,12 +602,6 @@ VFResultsC processHandles(FILE *inHandle, FILE *outHandle){
   int ret_len = nSrf0*nSrf0;
   fprintf( stderr, "\nret_len: %d\n", ret_len);
   double *ret = malloc(sizeof(double)*ret_len);
-  // zero-based array for areas
-  // for(int n=1; n<=nSrf; n++) { // row
-  //   for(int m=1; m<=nSrf; m++) { // column
-  //     ret[(n-1)*nSrf+(m-1)] = AF[n][m];
-  //   }
-  // }
 
   for(int n = 1; n <= nSrf; n++) {
     /* process AF values for row n */
@@ -620,11 +616,13 @@ VFResultsC processHandles(FILE *inHandle, FILE *outHandle){
     }
   }
 
+  // zero-based array for areas
   float *areas0 = malloc(sizeof(float)*nSrf0);
   for (int n = 1; n <= nSrf; n++) {
     areas0[n-1] = area[n];
   }
 
+  //zero-based array for emissivities
   float *emit0 = malloc(sizeof(float)*nSrf0);
   for (int n = 1; n <= nSrf; n++) {
     emit0[n-1] = emit[n];
@@ -698,8 +696,229 @@ FreeMemory:
 
 } /* end of processHandles() */
 
+double getEnclosureVolume(View3DControlData vfCtrl, SRFDAT3D *srf) {
+    /* determine volume of enclosure */
+    double volume=0.0;
+    // Loop through each of the surfaces.
+    for(int n=vfCtrl.nAllSrf; n; n-- ) {
+      // If it is a subsurface (SUBS) we skip it.
+      if( srf[n].type == SUBS ) continue;
+      volume += VolPrism( srf[n].v[0], srf[n].v[1], srf[n].v[2] );
+      if( srf[n].nv == 4 )
+        volume += VolPrism( srf[n].v[2], srf[n].v[3], srf[n].v[0] );
+    }
+    volume /= -6.0;        /* see VolPrism() */
+    return volume;
+  }
+
+/*----------------------------------------------------------------------------*/
+// This is modified to be the simplest possible (and with little logging).
+VFResultsC processHandlesSimple(FILE *inHandle, FILE *outHandle){
+// #ifdef LOGGING
+  _ulog = stderr;
+// #endif
+  char *types[]={"rsrf","subs","mask","nuls","obso"};
+  double **AF;         /* triangular array of area*view factor values [1:nSrf][] */
+  int *possibleObstr;  /* list of possible view obstructing surfaces */
+
+  InData inData = readFileHandle(inHandle);
+
+  int encl = inData.vfCtrl.enclosure; /* 1 = surfaces form enclosure */
+  int nSrf0 = inData.vfCtrl.nRadSrf; /* initial number of surfaces */
+  int nSrf = nSrf0;            /* current number of surfaces */
+  View3DControlData vfCtrl = inData.vfCtrl; /* VF calculation control parameters - avoid globals */
+  char **name = inData.name;
+  float *area = inData.area; /* the areas of each surface */
+  float *emit = inData.emit;  /* vector of surface emittances [1:nSrf] */
+  float *vtmp = inData.vtmp;/* temporary vector [1:nSrf] */
+  int *base = inData.base;/* vector of base surface numbers [1:nSrf] */
+  int *cmbn = inData.cmbn;/* vector of combine surface numbers [1:nSrf] */
+  Vec3 *xyz = inData.xyz; /* vector of vertces [1:nVrt] */
+  SRFDAT3D *srf = inData.srf; /* the surface data */
+
+  // Allocate some space to store the list of possible obstructions. This array
+  // will never be longer than all the surfaces, so make it that length.
+  possibleObstr = Alc_V( 1, vfCtrl.nAllSrf, sizeof(int), __FILE__, __LINE__ );
+  // Find the number of possible obstructing surfaces. The index list of these
+  // surfaces is stored in possibleObstr.
+  vfCtrl.nPossObstr = SetPosObstr3D( vfCtrl.nAllSrf, srf, possibleObstr );
+
+  // If row is specified (i.e. we are only interested in the view factors of
+  // one surface) then we allocate an array big enough for those values.
+  if( vfCtrl.row ){  // may not work with some compilers. GNW 2008/01/22
+    AF = Alc_MC( vfCtrl.row, vfCtrl.row, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
+  // Otherwise we want every surface to every surface and must allocate a
+  // sufficiently sized array.
+  } else {
+#ifdef __TURBOC__
+    AF = Alc_MSR( 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
+#else
+    AF = Alc_MSC( 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
+#endif
+#ifdef LOGGING
+    fprintf( _ulog, "\nComputing view factors for all %d surfaces\n\n", nSrf0 );
+#endif
+  }
+
+  /*----- view factor calculation -----*/
+  View3D( srf, base, possibleObstr, AF, &vfCtrl );
+  // The view factors have now been calculated and stored in AF.
+
+  // The possibly obstruction surface information is no longer needed after
+  // this point.
+  Fre_V( possibleObstr, 1, vfCtrl.nAllSrf, sizeof(int), __FILE__, __LINE__ );
+  FreeTmpVertMem();  /* free polygon overlap vertices */
+  FreePolygonMem();
+  Fre_V( xyz, 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
+
+  // TODO: what does this do
+  for(int n = nSrf; n; n-- ){  /* clear base pointers to OBSO & MASK srfs */
+	// FIXME should the following line say 'srf[n]'??
+	if( srf[base[n]].type == OBSO )  /* Base is used for several things. */
+      base[n] = 0;                   /* It must be progressively cleared */
+
+	// FIXME should the following line say 'base[n]'??
+    if( srf[n].type == MASK )        /* as each use is completed. */
+      base[n] = 0;
+  }
+
+  // Here we being adusting the view factors
+
+  // Determine if any of the surfaces are NULS
+  for(int n = nSrf; n; n-- ) {
+    // If any surface has the type NULS, run the DelNull procedure to remove
+    // them.
+    if( srf[n].type==NULS ) {
+      // This will trigger once at least one such surface is found, DelNull
+      // is then applied to the whole geometry.
+      nSrf = DelNull( nSrf, srf, base, cmbn, emit, area, name, AF );
+      // And we can break from the loop.
+      break;
+    }
+  }
+
+  // TODO: work out what this does
+  for(int n = nSrf; n; n-- ) {
+    if( base[n]>0 ) {       /* separate subsurfaces */
+      Separate( nSrf, base, area, AF );
+      for(int i = nSrf; i; i-- ) {
+        base[i] = 0;
+      }
+      // Once we have found a single instance, the Separate procedure is applied
+      // to the whole geometry, so we can stop looping.
+      break;
+    }
+  }
+
+  for(int n = nSrf; n; n-- ) {
+    if (cmbn[n] > 0) {                         /* combine surfaces */
+      nSrf = Combine( nSrf, cmbn, area, name, AF );
+      // Once we have found a single instance, the Separate procedure is applied
+      // to the whole geometry, so we can stop looping.
+      break;
+    }
+  }
+
+  // If the geometry is an enclosure, we know that the sum of the view factors
+  // from a particular surface to all other surfaces equals 1. We can use this
+  // fact to normalise and adjust the view factors.
+  if( encl ) {                         /* normalize view factors */
+    NormAF( nSrf, vtmp, area, AF, 1.0e-7f, 100 );
+  }
+
+  // This is where the emissivity values are applied, if that configuration
+  // option is selected. Note that this produces a different value (not the
+  // view factor) so it needs to be very clear.
+  if( vfCtrl.emittances ){ // Process surface emissivities
+    // Compute the total radiation interchange factors. This modifies the
+    // values in AF by applying the emssivity values.
+#ifdef LOGGING
+    ReportAF( nSrf, encl, "Before IntFac", name, area, vtmp, base, AF, 0 );
+#endif
+    IntFac( nSrf, emit, area, AF );
+#ifdef LOGGING
+    ReportAF( nSrf, encl, "After IntFac", name, area, vtmp, base, AF, 0 );
+#endif
+    if( encl ) // If it is an enclosure we want to normalise again
+      NormAF( nSrf, emit, area, AF, 1.0e-7f, 30 );   /* fix rounding errors */
+  }
+
+  // The calculations are done at this point, and everything after here is
+  // just marshalling the output values into a different format and freeing
+  // memory.
+
+  // These are some conversions to make the external interface simpler
+  // Copy the values into single contigious array
+  int ret_len = nSrf0*nSrf0;
+  double *ret = malloc(sizeof(double)*ret_len);
+
+  for(int n = 1; n <= nSrf; n++) {
+    /* process AF values for row n */
+    double Ainv = 1.0 / area[n];
+    for(int m = 1; m <= nSrf; m++) {
+      /* process column values */
+      if(m < n){
+        ret[(n-1)*nSrf+(m-1)] = (float)(AF[n][m] * Ainv);
+      }else{
+        ret[(n-1)*nSrf+(m-1)] = (float)(AF[m][n] * Ainv);
+      }
+    }
+  }
+
+  // zero-based array for areas
+  float *areas0 = malloc(sizeof(float)*nSrf0);
+  for (int n = 1; n <= nSrf; n++) {
+    areas0[n-1] = area[n];
+  }
+
+  //zero-based array for emissivities
+  float *emit0 = malloc(sizeof(float)*nSrf0);
+  for (int n = 1; n <= nSrf; n++) {
+    emit0[n-1] = emit[n];
+  }
+
+  VFResultsC res_struct;
+  res_struct.n_surfs = nSrf0;
+  res_struct.encl = encl;
+  res_struct.area = areas0;
+  res_struct.emit = emit0;
+  res_struct.values = ret;
+
+  fflush(stdout);
+  fflush(stderr);
+  fflush(outHandle);
+
+  // This where we would normally output the values, but we don't want to do
+  // that in library mode.
+#ifdef LOGGING
+  SaveVF( outHandle, "View3D", "3.5", vfCtrl.outFormat, vfCtrl.enclosure,
+          vfCtrl.emittances, nSrf, area, emit, AF, vtmp );
+#endif
+
+  /* Begin: Free memory of data structures */
+  if( vfCtrl.row ){
+    Fre_MC( AF, vfCtrl.row, vfCtrl.row, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
+  }else{
+#ifdef __TURBOC__
+    Fre_MSR( (void **)AF, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
+#else
+    Fre_MSC( (void **)AF, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
+#endif
+  }
+  Fre_V( srf, 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
+  Fre_V( cmbn, 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
+  Fre_V( base, 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
+  Fre_V( vtmp, 1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  Fre_V( emit, 1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  Fre_V( area, 1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  Fre_MC( (void **)name, 1, nSrf0, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
+  /* End: Free memory of data structures */
+
+  return res_struct;
+
+} /* end of processHandlesSimple() */
+
 VFResultsC processPaths(char *inFile, char *outFile) {
-  fprintf(stderr, "Using input: %s\n", inFile);
   FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
   _unxt = inHandle;
   // Write the results to the output file.
@@ -710,7 +929,7 @@ VFResultsC processPaths(char *inFile, char *outFile) {
   } else {
     outHandle = fopen(outFile, "w");
   }
-  return processHandles(inHandle, outHandle);
+  return processHandlesSimple(inHandle, outHandle);
 }
 
 int processStrings(char *inString, char *outFile) {
