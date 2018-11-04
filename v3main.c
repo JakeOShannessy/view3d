@@ -29,11 +29,16 @@
 
 /* forward decls */
 
+typedef struct  {
+    int n_values;
+    double *values;
+} VFResultsC;
+
 void FindFile(char *msg, char *name, char *type);
 void CheckFileWritable(char *fileName);
 void CheckFileReadable(char *fileName);
 double VolPrism(Vec3 *a, Vec3 *b, Vec3 *c);
-int processPaths(char *inFile, char *outFile);
+VFResultsC processPaths(char *inFile, char *outFile);
 
 void ReportAF( const int nSrf, const int encl, const char *title, char **name,
   const float *area, const float *emit, const int *base, double **AF, int flag
@@ -144,7 +149,8 @@ int main( int argc, char **argv ){
 	"a government program.\n"
 	, stderr
   );
-  return processPaths(inFile, outFile);
+  processPaths(inFile, outFile);
+  return 0;
 }
 #endif
 
@@ -283,7 +289,7 @@ InData readFilePath(char *inFile) {
 }
 
 /*----------------------------------------------------------------------------*/
-int processHandles(FILE *inHandle, FILE *outHandle){
+VFResultsC processHandles(FILE *inHandle, FILE *outHandle){
   if(_ulog==NULL) {
     _ulog = stderr;
   }
@@ -323,12 +329,17 @@ int processHandles(FILE *inHandle, FILE *outHandle){
   int *base = inData.base;
   int *cmbn = inData.cmbn;
   Vec3 *xyz = inData.xyz;
-  SRFDAT3D *srf = inData.srf;
+  SRFDAT3D *srf = inData.srf; /* the surface data */
 
+  // encl is a boolean from the input file and indicates if the surfaces are
+  // supposed to form an enclosure. This is of no consequence to the
+  // calculations and is simply printed.
   if(encl){
     /* determine volume of enclosure */
     double volume=0.0;
+    // Loop through each of the surfaces.
     for( n=vfCtrl.nAllSrf; n; n-- ){
+      // If it is a subsurface (SUBS) we skip it.
       if( srf[n].type == SUBS ) continue;
       volume += VolPrism( srf[n].v[0], srf[n].v[1], srf[n].v[2] );
       if( srf[n].nv == 4 )
@@ -338,12 +349,16 @@ int processHandles(FILE *inHandle, FILE *outHandle){
     fprintf( _ulog, "      volume of enclosure: %.3f\n", volume );
   }
 
+  // If there are 1,000 or more surfaces then print diagnostics, otherwise it's
+  // not really worth it.
   if( nSrf0 >= 1000 ){
     sprintf( _string, "\n %.2f seconds to process input data\n", CPUtime(time0) );
     fputs( _string, stderr );
     fputs( _string, _ulog );
   }
 
+  // If verbosity (_list) is greater than 2, print some information on the
+  // surfaces.
   if( _list>2 ){
     fprintf( _ulog, "Surfaces:\n" );
     fprintf( _ulog, "   #        name     area   emit  type bsn csn (dir cos) (centroid)\n" );
@@ -369,24 +384,36 @@ int processHandles(FILE *inHandle, FILE *outHandle){
     }
   }
 
+  // View factor calculations start from here.
   /* start-of-VF-calculation time */
   time1 = CPUtime( 0.0 );
+  // Allocate some space to store the list of possible obstructions. This array
+  // will never be longer than all the surfaces, so make it that length.
   possibleObstr = Alc_V( 1, vfCtrl.nAllSrf, sizeof(int), __FILE__, __LINE__ );
+  // Find the number of possible obstructing surfaces. The index list of these
+  // surfaces is stored in possibleObstr.
   vfCtrl.nPossObstr = SetPosObstr3D( vfCtrl.nAllSrf, srf, possibleObstr );
+  // Print diagnostics on finding possibly obstructing surfaces
   sprintf( _string, "\n %.2f seconds to determine %d possible view obstructing surfaces",
            CPUtime(time1), vfCtrl.nPossObstr
   );
   fputs( _string, stderr );
   fputs( "\n\n", stderr );
   fputs( _string, _ulog );
+  // Dump the list of possibly obstructing surfaces, but only if the verbosity
+  // is greater than 1.
   if( vfCtrl.nPossObstr > 0 && _list > 1 )
     DumpOS( ":", vfCtrl.nPossObstr, possibleObstr );
   else
     fputs( "\n", _ulog );
   fflush( _ulog );
 
+  // If row is specified (i.e. we are only interested in the view factors of
+  // one surface) then we allocate an array big enough for those values.
   if( vfCtrl.row ){  // may not work with some compilers. GNW 2008/01/22
     AF = Alc_MC( vfCtrl.row, vfCtrl.row, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
+    // If col is specified, we are only interested in the view factor between
+    // two particular surfaces and don't even need to allocate
     if( vfCtrl.col ){
       fprintf( stderr, "\nComputing view factor for surface %d to surface %d\n\n",
         vfCtrl.row, vfCtrl.col );
@@ -394,6 +421,8 @@ int processHandles(FILE *inHandle, FILE *outHandle){
       fprintf( stderr, "\nComputing view factors for surface %d\n\n",
         vfCtrl.row );
     }
+  // Otherwise we want every surface to every surface and must allocate a
+  // sufficiently sized array.
   }else{
 #ifdef __TURBOC__
     AF = Alc_MSR( 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
@@ -410,16 +439,23 @@ int processHandles(FILE *inHandle, FILE *outHandle){
 
   /*----- view factor calculation -----*/
   View3D( srf, base, possibleObstr, AF, &vfCtrl );
-
+  // ReportAF( nSrf, encl, "Calculated view factors:",
+  //       name, area, emit, base, AF, 0 );
+  // The view factors have now been calculated and stored in AF.
   fprintf( _ulog, "\n%7.2f seconds to compute view factors.\n", CPUtime(time1) );
   if( _list>0 )
     MemNet( "At end of View3D()" );
 
+  // The possibly obstruction surface information is no longer needed after
+  // this point.
   Fre_V( possibleObstr, 1, vfCtrl.nAllSrf, sizeof(int), __FILE__, __LINE__ );
   FreeTmpVertMem();  /* free polygon overlap vertices */
   FreePolygonMem();
   Fre_V( xyz, 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
+  fprintf(stderr, "vfCtrl.row: %d\n", vfCtrl.row);
+  fprintf(stderr, "vfCtrl.col: %d\n", vfCtrl.col);
 
+  // If only the row is specified, we simply print the values for that row
   if( vfCtrl.row ){
     int n=vfCtrl.row,
        m=vfCtrl.col;
@@ -427,6 +463,8 @@ int processHandles(FILE *inHandle, FILE *outHandle){
     double F, sum;
     fprintf( _ulog, "\n" );
     if( vfCtrl.col ){
+      // If the column and row are both specified, we can simply print that
+      // single value and end
       fprintf( _ulog, "F[%d][%d] = %.5e\n\n", n, m, AF[n][m]*ai );
       goto FreeMemory;
     }
@@ -490,8 +528,10 @@ int processHandles(FILE *inHandle, FILE *outHandle){
   fprintf( stderr, "\nAdjusting view factors\n" );
   time1 = CPUtime( 0.0 );
 
+  // Determine if any of the surfaces are NULS
   for( flag=0,n=nSrf; n; n-- )
     if( srf[n].type==NULS ) flag = 1;
+  // If there are, run the DelNull routine to remove them.
   if( flag ){                         /* remove null surfaces */
     nSrf = DelNull( nSrf, srf, base, cmbn, emit, area, name, AF );
     if( _list>1 )
@@ -553,6 +593,33 @@ int processHandles(FILE *inHandle, FILE *outHandle){
   }
 
   fprintf( _ulog, "\nFinal view factors:" );
+  // Copy the values into single contigious array
+  int ret_len = nSrf0*nSrf0;
+  fprintf( stderr, "\nret_len: %d\n", ret_len);
+  double *ret = malloc(sizeof(double)*ret_len);
+  // for(int n=1; n<=nSrf; n++) { // row
+  //   for(int m=1; m<=nSrf; m++) { // column
+  //     ret[(n-1)*nSrf+(m-1)] = AF[n][m];
+  //   }
+  // }
+
+  for(int n = 1; n <= nSrf; n++) {
+    /* process AF values for row n */
+    double Ainv = 1.0 / area[n];
+    for(int m = 1; m <= nSrf; m++) {
+      /* process column values */
+      if(m < n){
+        ret[(n-1)*nSrf+(m-1)] = (float)(AF[n][m] * Ainv);
+      }else{
+        ret[(n-1)*nSrf+(m-1)] = (float)(AF[m][n] * Ainv);
+      }
+    }
+  }
+
+  VFResultsC res_struct;
+  res_struct.n_values = ret_len;
+  res_struct.values = ret;
+
   if( vfCtrl.emittances )
     ReportAF( nSrf, encl, title, name, area, emit, base, AF, 0 );
   else
@@ -608,11 +675,14 @@ FreeMemory:
 
   fprintf( stderr, "\nDone!\n" );
 
-  return 0;
+  // return 0;
+
+  return res_struct;
 
 } /* end of processHandles() */
 
-int processPaths(char *inFile, char *outFile) {
+VFResultsC processPaths(char *inFile, char *outFile) {
+  fprintf(stderr, "Using input: %s\n", inFile);
   FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
   _unxt = inHandle;
   // Write the results to the output file.
@@ -645,7 +715,8 @@ int processStrings(char *inString, char *outFile) {
   } else {
     outHandle = fopen(outFile, "w");
   }
-  return processHandles(inHandle, outHandle);
+  processHandles(inHandle, outHandle);
+  return 0;
 }
 
 

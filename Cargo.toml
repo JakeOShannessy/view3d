@@ -4,6 +4,14 @@ version = "0.1.0"
 authors = ["Jake O'Shannessy <joshannessy@gmail.com>"]
 build = "build.rs"
 
+[[bin]]
+name = "view3d"
+path = "src/view3d.rs"
+
+[[bin]]
+name = "view2d"
+path = "src/view2d.rs"
+
 [dependencies]
 clap = "~2.32.0"
 time = "0.1"

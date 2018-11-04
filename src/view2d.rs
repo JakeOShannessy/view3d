@@ -7,10 +7,10 @@ use std::ffi::{CString};
 use std::os::raw::c_char;
 
 fn main() {
-    let matches = App::new("View3d")
+    let matches = App::new("View2d")
             .version("3.5")
             .author("Jake O'Shannessy <joshannessy@gmail.com>")
-            .about("Compute view factors for a 3D geometry..")
+            .about("Compute view factors for a 2D geometry.")
             .arg(Arg::with_name("INFILE")
                 .help("The input file")
                 .value_name("INFILE"))
@@ -28,12 +28,12 @@ fn main() {
     let outfile_c = CString::new(outfile).expect("CString::new failed");
 
     unsafe {
-        processPaths(infile_c.as_ptr(), outfile_c.as_ptr());
+        processPaths2d(infile_c.as_ptr(), outfile_c.as_ptr());
     }
 }
 
 // Link in the C lib via FFI
-#[link(name = "view3d", kind = "static")]
+#[link(name = "view2d", kind = "static")]
 extern "C" {
-    fn processPaths(infile: *const c_char, outfile: *const c_char);
+    fn processPaths2d(infile: *const c_char, outfile: *const c_char);
 }

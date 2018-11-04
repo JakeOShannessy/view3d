@@ -16,6 +16,12 @@ use std::path::Path;
 extern crate cc;
 
 fn main() {
+
+    Command::new("make")
+        .args(&["config.h"])
+        //    .arg(&format!("{}/hello.o", out_dir))
+        .status().unwrap();
+
     cc::Build::new()
         .file("ctrans.c")
         .file("heap.c")
@@ -38,5 +44,28 @@ fn main() {
         .include(".")
         .define("LIBONLY", Some("1"))
         .compile("view3d");
+
+    cc::Build::new()
+        .file("ctrans.c")
+        .file("heap.c")
+        .file("polygn.c")
+        .file("savevf.c")
+        .file("viewobs.c")
+        .file("viewunob.c")
+        .file("getdat.c")
+        .file("readvf.c")
+        .file("readvs.c")
+        .file("test3d.c")
+        .file("view3d.c")
+        .file("viewpp.c")
+        .file("common.c")
+        .file("view2d.c")
+        .file("test2d.c")
+        .file("misc.c")
+        .file("v2main.c")
+        // .file("v3main.c")
+        .include(".")
+        .define("LIBONLY", Some("1"))
+        .compile("view2d");
 }
 

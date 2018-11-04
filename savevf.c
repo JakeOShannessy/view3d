@@ -157,3 +157,15 @@ void SaveVF( FILE *file, char *program, char *version,
   }
 } /* end SaveVF */
 
+typedef struct {
+  char *program;
+  char *program_version;
+  int format;
+  int encl;
+  int didemit;
+  int nSrf;
+  float *area;
+  float *emit;
+  double **AF;
+} VFResults;
+

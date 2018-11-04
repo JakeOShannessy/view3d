@@ -17,7 +17,9 @@
 #include <math.h>   /* prototype: sqrt */
 #include <time.h>   /* prototypes: time, localtime, asctime; define: tm, time_t */
 
+#ifndef LIBONLY
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 
 #include "types.h"
@@ -141,13 +143,87 @@ int main( int argc, char **argv ){
   a government program.\n", stderr );
 #endif
 
+  return processPaths2d(inFile, outFile);
+
+  }  /* end of main */
+#endif
+
+int processPaths2d(char *inFile, char *outFile) {
+  FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
+  _unxt = inHandle;
+  // Write the results to the output file.
+  // TODO: if saving to binary format, open for binary write
+  FILE *outHandle;
+  if(strlen(outFile) == 0 || outFile == NULL) {
+    outHandle = stdout;
+  } else {
+    outHandle = fopen(outFile, "w");
+  }
+  return processHandles2d(inHandle, outHandle);
+}
+
+int processHandles2d(FILE *inHandle, FILE *outHandle) {
+  char program[]="View2D";   /* program name */
+  char version[]=V3D_VERSION;      /* program version */
+  char inFile[_MAX_PATH]=""; /* input file name */
+  char outFile[_MAX_PATH]="";/* output file name */
+  char title[LINELEN];  /* project title */
+  char **name;       /* surface names [1:nSrf][0:NAMELEN] */
+  SRFDAT2D *srf;   /* vector of surface data structures [1:nSrf] */
+  View2DControlData vfCtrl;   /* VF calculation control parameters */
+  double **AF;         /* triangular array of area*view factor values [1:nSrf][] */
+  float *area;        /* vector of surface areas [1:nSrf0] */
+  float *emit;        /* vector of surface emittances [1:nSrf0] */
+  int *base;        /* vector of base surface numbers [1:nSrf0] */
+  int *cmbn;        /* vector of combine surface numbers [1:nSrf0] */
+  float *vtmp;        /* temporary vector [1:nSrf0] */
+  struct tm *curtime; /* time structure */
+  time_t bintime;  /* seconds since 00:00:00 GMT, 1/1/70 */
+  float time0, time1; /* elapsed time values */
+  int nSrf;         /* current number of surfaces */
+  int nSrf0;        /* initial number of surfaces */
+  int encl;         /* 1 = surfaces form enclosure */
+  float eMax=0.0;     /* maximum row error, if enclosure */
+  float eRMS=0.0;     /* RMS row error, if enclosure */
+  int n, flag;
+
+
+	/* open log file */
+	_ulog = fopen( "View2D.log", "w" );
+	if(_ulog==NULL){
+		fprintf(stderr,"Unable to open logfile for writing\n");
+		exit(1);
+	}
+
+	time(&bintime);
+	curtime = localtime(&bintime);
+	fprintf( _ulog, "Time:  %s", asctime(curtime) );
+
+#if 0
+	/* this text has been moved to LICENSE.txt */
+  fputs("\n\
+  View2D - calculation of view factors between 2-D planar surfaces.\n\
+     Provided for review only.\n\
+  This program is furnished by the government and is accepted by\n\
+  any recipient with the express understanding that the United\n\
+  States Government makes no warranty, expressed or implied,\n\
+  concerning the accuracy, completeness, reliability, usability,\n\
+  or suitability for any particular purpose of the information\n\
+  and data contained in this program or furnished in connection\n\
+  therewith, and the United States shall be under no liability\n\
+  whatsoever to any person by reason of any use made thereof.\n\
+  This program belongs to the government.  Therefore, the\n\
+  recipient further agrees not to assert any proprietary rights\n\
+  therein or to represent this program to anyone as other than\n\
+  a government program.\n", stderr );
+#endif
+
   time0 = CPUtime( 0.0 );
 
                  /* initialize control data */
   memset( &vfCtrl, 0, sizeof(View2DControlData) );
 
                  /* read Vertex/Surface data file */
-  NxtOpen( inFile, __FILE__, __LINE__ );
   CountVS2D( _unxt, title, &vfCtrl );
   fprintf( _ulog, "Title: %s\n", title );
   fprintf( _ulog, "Control values for 2-D view factor calculations:\n" );
@@ -217,6 +293,7 @@ int main( int argc, char **argv ){
   fprintf( stderr, "\nComputing view factors from surface N to surfaces 1 through N-1\n" );
 
   time1 = CPUtime( 0.0 );
+  // This is the routine that computes the view factors
   View2D( srf, AF, &vfCtrl );
   fprintf( _ulog, "\n%7.2f seconds to compute view factors.\n", CPUtime(time1) );
   Fre_V( srf, 1, vfCtrl.nAllSrf, sizeof(SRFDAT2D), __FILE__, __LINE__ );
@@ -300,13 +377,8 @@ int main( int argc, char **argv ){
       name, area, vtmp, base, AF, &eMax );
 
   time1 = CPUtime( 0.0 );
-  FILE *outFileHandle;
-  if(strlen(outFile) == 0) {
-    outFileHandle = stdout;
-  } else {
-    outFileHandle = fopen(outFile, "w");
-  }
-  SaveVF( outFileHandle, program, version, vfCtrl.outFormat, vfCtrl.enclosure,
+
+  SaveVF( outHandle, program, version, vfCtrl.outFormat, vfCtrl.enclosure,
           vfCtrl.emittances, nSrf, area, emit, AF, vtmp );
   sprintf( _string, "%7.2f seconds to write view factors.\n", CPUtime(time1) );
   fputs( _string, stderr );
@@ -328,8 +400,7 @@ int main( int argc, char **argv ){
 
   return 0;
 
-  }  /* end of main */
-#endif
+}
 
 #include <ctype.h>  /* prototype: toupper */
 
