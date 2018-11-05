@@ -13,7 +13,11 @@ SRCS =  ctrans.c  heap.c  polygn.c  savevf.c  viewobs.c  viewunob.c \
 
 OBJS = $(SRCS:.c=.o)
 
-LFLAGS = -lmingw32 -lview3d -lm
+LFLAGS = -lview3d -lm
+ifeq ($(OS),Windows_NT)
+	LFLAGS += -lmingw32
+endif
+
 INCLUDES = -I.
 
 LIBNAME = libview3d.dll.a
