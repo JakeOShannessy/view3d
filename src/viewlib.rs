@@ -14,7 +14,7 @@ extern "C" {
     fn processPaths(infile: *const c_char, outfile: *const c_char) -> VFResultsC;
 }
 
-#[link(name = "view2d", kind = "static")]
+#[link(name = "view3d", kind = "static")]
 extern "C" {
     pub fn processPaths2d(infile: *const c_char, outfile: *const c_char);
 }
