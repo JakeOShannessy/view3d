@@ -11,11 +11,7 @@ use std::slice;
 // Link in the C lib via FFI
 #[link(name = "view3d", kind = "static")]
 extern "C" {
-    fn processPaths(infile: *const c_char, outfile: *const c_char) -> VFResultsC;
-}
-
-#[link(name = "view3d", kind = "static")]
-extern "C" {
+    pub fn processPaths(infile: *const c_char, outfile: *const c_char) -> VFResultsC;
     pub fn processPaths2d(infile: *const c_char, outfile: *const c_char);
 }
 
