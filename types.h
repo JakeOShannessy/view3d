@@ -15,6 +15,7 @@
 #else
 #include <stdlib.h>  /* define _MAX_PATH, etc. */
 #endif
+#include <limits.h>  /* define _MAX_PATH, etc. */
 #ifndef _MAX_PATH
 # ifdef PATH_MAX     /* GNUC parameter defined in <limits.h> */
 #  define _MAX_PATH  PATH_MAX
@@ -22,6 +23,9 @@
 #  define _MAX_FNAME NAME_MAX
 # else
 /* _MAX_PATH, _MAX_DIR, _MAX_FNAME retain VisualC++ values */
+#  define _MAX_PATH  4096
+#  define _MAX_DIR   4096
+#  define _MAX_FNAME 4096
 # endif
 #define _MAX_DRIVE 4    /* 3 minimum (3 VisualC++) */
 #define _MAX_EXT   8    /* 5 minimum (256 VisualC++) */
