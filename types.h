@@ -21,6 +21,7 @@
 #  define _MAX_DIR   PATH_MAX
 #  define _MAX_FNAME NAME_MAX
 # else
+#  define MAX_PATH 256
 /* _MAX_PATH, _MAX_DIR, _MAX_FNAME retain VisualC++ values */
 # endif
 #define _MAX_DRIVE 4    /* 3 minimum (3 VisualC++) */
