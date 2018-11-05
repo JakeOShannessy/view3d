@@ -17,7 +17,10 @@
 #include <math.h>   /* prototype: sqrt */
 #include <time.h>   /* prototypes: time, localtime, asctime; define: tm, time_t */
 
+#ifndef LIBONLY
 #include <unistd.h>
+#include <getopt.h>
+#endif
 #include <stdlib.h>
 
 #include "types.h"
