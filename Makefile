@@ -15,12 +15,16 @@ OBJS = $(SRCS:.c=.o)
 
 LFLAGS = -lview3d -lm
 ifeq ($(OS),Windows_NT)
-	LFLAGS += -lmingw32
+LFLAGS += -lmingw32
 endif
 
 INCLUDES = -I.
 
+ifeq ($(OS),Windows_NT)
 LIBNAME = libview3d.dll.a
+else
+LIBNAME = libview3d.a
+endif
 
 all: view2d.exe view3d.exe viewht.exe
 
