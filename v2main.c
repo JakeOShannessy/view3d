@@ -31,6 +31,8 @@
 #include "getdat.h"
 #include "savevf.h"
 
+#define _MAX_PATH 256
+
 /*  Main program for batch processing of 2-D view factors.  */
 
 FILE *_uout; /* output file */
@@ -109,25 +111,6 @@ int main( int argc, char **argv ){
 	time(&bintime);
 	curtime = localtime(&bintime);
 	fprintf( _ulog, "Time:  %s", asctime(curtime) );
-
-#if 0
-	/* this text has been moved to LICENSE.txt */
-  fputs("\n\
-  View2D - calculation of view factors between 2-D planar surfaces.\n\
-     Provided for review only.\n\
-  This program is furnished by the government and is accepted by\n\
-  any recipient with the express understanding that the United\n\
-  States Government makes no warranty, expressed or implied,\n\
-  concerning the accuracy, completeness, reliability, usability,\n\
-  or suitability for any particular purpose of the information\n\
-  and data contained in this program or furnished in connection\n\
-  therewith, and the United States shall be under no liability\n\
-  whatsoever to any person by reason of any use made thereof.\n\
-  This program belongs to the government.  Therefore, the\n\
-  recipient further agrees not to assert any proprietary rights\n\
-  therein or to represent this program to anyone as other than\n\
-  a government program.\n", stderr );
-#endif
 
   return processPaths2d(inFile, outFile);
 
