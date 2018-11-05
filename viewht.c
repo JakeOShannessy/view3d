@@ -363,24 +363,4 @@ FILE *FileOpen( char *prompt, char *fileName, char *mode, int flag )
     fclose( pfile );
   return NULL;
 
-  }  /*  end of FileOpen  */
-
-
-
-#include <time.h>   /* prototype: clock;  define CLOCKS_PER_SEC */
-#include <math.h>   /* prototype: fabs */
-
-/***  CPUtime.c  *************************************************************/
-
-/*  Determine elapsed time.  Call once to determine t1;
-    call later to get elapsed time. */
-
-float CPUtime( float t1 ){
-  float t2;
-
-  t2 = (float)clock() / (float)CLOCKS_PER_SEC;
-  t2 = (float)(fabs(t2-t1));  /* clear -0.0 */
-
-  return t2;
-
-}  /* end CPUtime */
+}  /*  end of FileOpen  */
