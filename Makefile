@@ -4,7 +4,7 @@ CC = gcc
 # compiler flags:
 #  -g    adds debugging information to the executable file
 #  -Wall turns on most, but not all, compiler warnings
-CFLAGS  = -g -Wall -DANSI -D_DEBUG
+CFLAGS  = -g -Wall -DANSI -D_DEBUG -DMAIN
 
 SRCS =  ctrans.c  heap.c  polygn.c  savevf.c  viewobs.c  viewunob.c \
 	getdat.c  misc.c  readvf.c  readvs.c  test3d.c view3d.c viewpp.c \
@@ -45,7 +45,7 @@ view3d.exe: $(LIBNAME) v3main.o config.h
 viewht.exe: $(LIBNAME) viewht.o config.h
 	$(CC) $(CFLAGS) $(INCLUDES) -L. -o $@ viewht.o $(LFLAGS) $(LIBS)
 
-%.o: %.c
+%.o: %.c config.h
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
 
 clean:

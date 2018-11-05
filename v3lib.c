@@ -54,76 +54,43 @@ a government program.
 
 /* forward decls */
 
-void FindFile(char *msg, char *name, char *type);
-void CheckFileWritable(char *fileName);
-void CheckFileReadable(char *fileName);
-double VolPrism(Vec3 *a, Vec3 *b, Vec3 *c);
-VFResultsC processPaths(char *inFile, char *outFile);
-
+// Internal
 void ReportAF( const int nSrf, const int encl, const char *title, char **name,
   const float *area, const float *emit, const int *base, double **AF, int flag
 );
-
-InData readFileHandle(FILE *inHandle);
-RawInData readFileHandleRaw(FILE *inHandle);
-
+void GetVS3DNew( FILE *inHandle, RawInData *inData);
 InData InDataFromRaw(RawInData *rawInData);
 
-// API
-extern InData parseIn(FILE *file);
-extern VFResultsC calculateVFs(InData inData);
+
+// Main External API
+extern RawInData parseIn(FILE *file);
+extern VFResultsC calculateVFs(RawInData rawInData);
 // TODO: need to work out some things about the results format before that
 // can be completed.
-// extern void printVFs(int format, FILE *file);
+// extern void printVFs(int format, FILE *file, InData inData, VFResultsC results);
 
-
-InData parseIn(FILE *file) {
-    return readFileHandle(file);
-}
+// Extra API (for convenience, to be deprecated)
+VFResultsC processPaths(char *inFile, char *outFile);
 
 // void printVFs(int format, FILE *file, InData inData, VFResultsC results) {
 //   return SaveVFNew(file, inData.vfCtrl.outFormat, inData.vfCtrl.enclosure,
 //           inData.vfCtrl.emittances, results.nSrf, inData.area, inData.emit,
 //           results.AF, inData.vtmp );
 // }
-RawInData readFileHandleRaw(FILE *inHandle) {
-  char **name;         /* surface names [1:nSrf][0:NAMELEN] */
-  float *area;         /* vector of surface areas [1:nSrf] */
-  float *emit;         /* vector of surface emittances [1:nSrf] */
-  float *vtmp;         /* temporary vector [1:nSrf] */
-  int *base;           /* vector of base surface numbers [1:nSrf] */
-  int *cmbn;           /* vector of combine surface numbers [1:nSrf] */
-  Vec3 *xyz;           /* vector of vertces [1:nVrt] - for ease in
-  converting V3MAIN to a subroutine */
-  SRFDAT3D *srf;       /* vector of surface data structures [1:nSrf] */
-  // vfCtrl contains control information and information on the numbers of
-  // vertices etc.
+
+RawInData parseIn(FILE *inHandle) {
   View3DControlData vfCtrl;
   char title[LINELEN]; /* project title */
-
   RawInData rawInData;
 
-  int nSrf;            /* current number of surfaces */
-  int nSrf0;           /* initial number of surfaces */
-  int encl;            /* 1 = surfaces form enclosure */
-  int n, flag;
+  /* non-zero control values: */
+  vfCtrl.epsAdap = 1.0e-4f; /* convergence for adaptive integration */
+  vfCtrl.maxRecursALI = 12; /* maximum number of recursion levels */
+  vfCtrl.maxRecursion = 8;  /* maximum number of recursion levels */
 
-  /* initialize control data */
-//   memset( &rawInData.opts, 0, sizeof(RawInOptions) );
-  // non-zero control values:
-  vfCtrl.epsAdap = 1.0e-4f; // convergence for adaptive integration
-  vfCtrl.maxRecursALI = 12; // maximum number of recursion levels
-  vfCtrl.maxRecursion = 8;  // maximum number of recursion levels
-
-  /* read Vertex/Surface data file */
-  // FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
-  // _unxt = inHandle;
-  // Read the file initially to determine the size number of components (so that
-  // we can allocate memory). This double-read may not make sense in a
-  // javascript context.
   CountVS3D(inHandle, title, &vfCtrl );
-  // Copy vfCtrl data to opts
-  fprintf(stderr, "##readFileHandleRaw##epsAdap: %f\n", vfCtrl.epsAdap);
+  /* Copy vfCtrl data to opts */
+  fprintf(stderr, "##parseIn##epsAdap: %f\n", vfCtrl.epsAdap);
   rawInData.opts.epsAdap = vfCtrl.epsAdap;
   rawInData.opts.enclosure = vfCtrl.enclosure;
   rawInData.opts.emittances = vfCtrl.emittances;
@@ -135,163 +102,10 @@ RawInData readFileHandleRaw(FILE *inHandle) {
   rawInData.opts.prjReverse = vfCtrl.prjReverse;
   // TODO: allocate memory and copy title string.
   // inData.title = title;
-#ifdef LOGGING
-  fprintf(_ulog, "\nTitle: %s\n", title );
-
-  fprintf(_ulog, "Control values for 3-D view factor calculations:\n" );
-  if(rawInData.opts.enclosure)fprintf( _ulog, "  Surfaces form enclosure.\n" );
-  if(rawInData.opts.emittances)fprintf( _ulog, "  Will process emittances.\n" );
-
-  fprintf(_ulog, "     Adaptive convergence: %g", rawInData.opts.epsAdap );
-  if(rawInData.opts.epsAdap != 1.e-4f )fprintf( _ulog, " *" );
-
-  fprintf(_ulog, "\n  Unobstructed recursions: %d", rawInData.opts.maxRecursALI );
-  if(rawInData.opts.maxRecursALI != 12)fprintf( _ulog, " *" );
-
-  fprintf(_ulog, "\nMax obstructed recursions: %d", rawInData.opts.maxRecursion );
-  if(rawInData.opts.maxRecursion != 8)fprintf( _ulog, " *" );
-
-  fprintf(_ulog, "\nMin obstructed recursions: %d", rawInData.opts.minRecursion );
-  if(rawInData.opts.minRecursion)fprintf( _ulog, " *" );
-
-  fprintf(_ulog, "\n              Solving row:" );
-  if(rawInData.opts.row)fprintf( _ulog, " %d *", rawInData.opts.row );
-  else fprintf(_ulog, " all" );
-
-  fprintf(_ulog, "\n           Solving column:" );
-  if(rawInData.opts.col)fprintf(_ulog, " %d *", rawInData.opts.col );
-  else fprintf(_ulog, " all" );
-
-  if(rawInData.opts.prjReverse)fprintf(_ulog, "\n      Reverse projections. **" );
-
-  fprintf(_ulog, "\n Output control parameter: %d\n", _list );
-
-  fprintf(_ulog, "\n" );
-  fprintf(_ulog, " Total number of surfaces: %d \n", rawInData.nAllSrf );
-  fprintf(_ulog, "   Heat transfer surfaces: %d \n", rawInData.nRadSrf );
-#endif
-
-  nSrf = nSrf0 = rawInData.nRadSrf;
-  encl = rawInData.opts.enclosure;
-
   GetVS3DNew(inHandle, &rawInData);
-  
-  // NxtClose();
   return rawInData;
 }
-// Read the file into a data structure, heap allocate it and return a pointer to
-// it. There is no point allocating it before this as we don't know the size of
-// the data.
-InData readFileHandle(FILE *inHandle) {
-  char **name;         /* surface names [1:nSrf][0:NAMELEN] */
-  float *area;         /* vector of surface areas [1:nSrf] */
-  float *emit;         /* vector of surface emittances [1:nSrf] */
-  float *vtmp;         /* temporary vector [1:nSrf] */
-  int *base;           /* vector of base surface numbers [1:nSrf] */
-  int *cmbn;           /* vector of combine surface numbers [1:nSrf] */
-  Vec3 *xyz;           /* vector of vertces [1:nVrt] - for ease in
-  converting V3MAIN to a subroutine */
-  SRFDAT3D *srf;       /* vector of surface data structures [1:nSrf] */
-  // vfCtrl contains control information and information on the numbers of
-  // vertices etc.
-  View3DControlData vfCtrl;
-  char title[LINELEN]; /* project title */
 
-  InData inData;
-
-  int nSrf;            /* current number of surfaces */
-  int nSrf0;           /* initial number of surfaces */
-  int encl;            /* 1 = surfaces form enclosure */
-  int n, flag;
-
-  /* initialize control data */
-  memset( &vfCtrl, 0, sizeof(View3DControlData) );
-  // non-zero control values:
-  vfCtrl.epsAdap = 1.0e-4f; // convergence for adaptive integration
-  vfCtrl.maxRecursALI = 12; // maximum number of recursion levels
-  vfCtrl.maxRecursion = 8;  // maximum number of recursion levels
-
-  /* read Vertex/Surface data file */
-  // FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
-  // _unxt = inHandle;
-  // Read the file initially to determine the size number of components (so that
-  // we can allocate memory). This double-read may not make sense in a
-  // javascript context.
-  CountVS3D(inHandle, title, &vfCtrl );
-  // TODO: allocate memory and copy title string.
-  // inData.title = title;
-#ifdef LOGGING
-  fprintf(_ulog, "\nTitle: %s\n", title );
-
-  fprintf(_ulog, "Control values for 3-D view factor calculations:\n" );
-  if(vfCtrl.enclosure)fprintf( _ulog, "  Surfaces form enclosure.\n" );
-  if(vfCtrl.emittances)fprintf( _ulog, "  Will process emittances.\n" );
-
-  fprintf(_ulog, "     Adaptive convergence: %g", vfCtrl.epsAdap );
-  if(vfCtrl.epsAdap != 1.e-4f )fprintf( _ulog, " *" );
-
-  fprintf(_ulog, "\n  Unobstructed recursions: %d", vfCtrl.maxRecursALI );
-  if(vfCtrl.maxRecursALI != 12)fprintf( _ulog, " *" );
-
-  fprintf(_ulog, "\nMax obstructed recursions: %d", vfCtrl.maxRecursion );
-  if(vfCtrl.maxRecursion != 8)fprintf( _ulog, " *" );
-
-  fprintf(_ulog, "\nMin obstructed recursions: %d", vfCtrl.minRecursion );
-  if(vfCtrl.minRecursion)fprintf( _ulog, " *" );
-
-  fprintf(_ulog, "\n              Solving row:" );
-  if(vfCtrl.row)fprintf( _ulog, " %d *", vfCtrl.row );
-  else fprintf(_ulog, " all" );
-
-  fprintf(_ulog, "\n           Solving column:" );
-  if(vfCtrl.col)fprintf(_ulog, " %d *", vfCtrl.col );
-  else fprintf(_ulog, " all" );
-
-  if(vfCtrl.prjReverse)fprintf(_ulog, "\n      Reverse projections. **" );
-
-  fprintf(_ulog, "\n Output control parameter: %d\n", _list );
-
-  fprintf(_ulog, "\n" );
-  fprintf(_ulog, " Total number of surfaces: %d \n", vfCtrl.nAllSrf );
-  fprintf(_ulog, "   Heat transfer surfaces: %d \n", vfCtrl.nRadSrf );
-#endif
-
-  nSrf = nSrf0 = vfCtrl.nRadSrf;
-  encl = vfCtrl.enclosure;
-
-  if(vfCtrl.format == 4)vfCtrl.nVertices = 4 * vfCtrl.nAllSrf;
-  // Allocate memory for all of the surfaces. These will need to be resized as
-  // the data is read in.
-  inData.name = Alc_MC(1, nSrf0, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
-  inData.area = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
-  inData.emit = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
-  inData.vtmp = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
-
-  for(n=nSrf0; n; n--)(inData.vtmp)[n] = 1.0;
-
-  inData.base = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
-  inData.cmbn = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
-  inData.xyz = Alc_V( 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
-  inData.srf = Alc_V( 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
-  InitTmpVertMem();  /* polygon operations in GetDat() and View3D() */
-  InitPolygonMem(0, 0);
-
-  // reads the  file a second time
-  /* read v/s data file */
-  if(_list>2)
-  _echo = 1;
-  if(vfCtrl.format == 4){
-    GetVS3Da(inHandle, inData.name, inData.emit, inData.base, inData.cmbn, inData.srf, inData.xyz, &vfCtrl );
-  }
-  else {
-    GetVS3D(inHandle, inData.name, inData.emit, inData.base, inData.cmbn, inData.srf, inData.xyz, &vfCtrl );
-  }
-  for( n=nSrf; n; n-- )
-  (inData.area)[n] = (float)(inData.srf)[n].area;
-  NxtClose();
-  inData.vfCtrl = vfCtrl;
-  return inData;
-}
 
 void printRawInData(RawInData *rawInData) {
   // for (int i 0; i < 5; i++) 
@@ -382,42 +196,47 @@ void printInData(InData *inData) {
   }
 }
 
-InData readFilePath(char *inFile) {
-  FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
-  _unxt = inHandle;
-  return readFileHandle(inHandle);
+/**
+	Compute 6 * volume of a prism defined by vertices a, b, c, and (0,0,0).
+
+	Ref: E Kreyszig, _Advanced Engineering Mathematics_, 3rd ed, Wiley, 1972,
+	pp 214,5.  Volume = A dot (B cross C) / 6; A = vector from 0 to a, ...;
+
+	Uses the fact that Vec3 A = Vec3 a, ...; Sign of result depends
+	on sequence (clockwise or counter-clockwise) of vertices.
+*/
+double VolPrism( Vec3 *a, Vec3 *b, Vec3 *c ){
+  Vec3 bxc;
+
+  VCROSS( b, c, (&bxc) );
+  return VDOT( a, (&bxc) );
 }
 
 double getEnclosureVolume(View3DControlData vfCtrl, SRFDAT3D *srf) {
-    /* determine volume of enclosure */
-    double volume=0.0;
-    // Loop through each of the surfaces.
-    for(int n=vfCtrl.nAllSrf; n; n-- ) {
-      // If it is a subsurface (SUBS) we skip it.
-      if( srf[n].type == SUBS ) continue;
-      volume += VolPrism( srf[n].v[0], srf[n].v[1], srf[n].v[2] );
-      if( srf[n].nv == 4 )
-        volume += VolPrism( srf[n].v[2], srf[n].v[3], srf[n].v[0] );
-    }
-    volume /= -6.0;        /* see VolPrism() */
-    return volume;
+  /* determine volume of enclosure */
+  double volume=0.0;
+  // Loop through each of the surfaces.
+  for(int n=vfCtrl.nAllSrf; n; n-- ) {
+    // If it is a subsurface (SUBS) we skip it.
+    if( srf[n].type == SUBS ) continue;
+    volume += VolPrism( srf[n].v[0], srf[n].v[1], srf[n].v[2] );
+    if( srf[n].nv == 4 )
+      volume += VolPrism( srf[n].v[2], srf[n].v[3], srf[n].v[0] );
   }
-
-VFResultsC processHandlesSimple(FILE *inHandle, FILE *outHandle) {
-#define NEW_READ
-#ifdef NEW_READ
-  RawInData rawInData = readFileHandleRaw(inHandle);
-  // printRawInData(&rawInData);
-  InData inData = InDataFromRaw(&rawInData);
-#else
-  InData inData = parseIn(inHandle);
-#endif
-  printInData(&inData);
-  return calculateVFs(inData);
+  volume /= -6.0;        /* see VolPrism() */
+  return volume;
 }
+
+/* deprecated */
+VFResultsC processHandlesSimple(FILE *inHandle, FILE *outHandle) {
+  RawInData rawInData = parseIn(inHandle);
+  return calculateVFs(rawInData);
+}
+
 /*----------------------------------------------------------------------------*/
 /* This is modified to be the simplest possible (and with little logging). */
-VFResultsC calculateVFs(InData inData){
+VFResultsC calculateVFs(RawInData rawInData){
+  InData inData = InDataFromRaw(&rawInData);
   _ulog = stderr;
   double **AF;         /* triangular array of area*view factor values [1:nSrf][] */
   int *possibleObstr;  /* list of possible view obstructing surfaces */
@@ -485,13 +304,15 @@ VFResultsC calculateVFs(InData inData){
 
   // Determine if any of the surfaces are NULS
   for(int n = nSrf; n; n-- ) {
-    // If any surface has the type NULS, run the DelNull procedure to remove
-    // them.
+    /* If any surface has the type NULS, run the DelNull procedure to remove
+     * them.
+     */
     if( srf[n].type==NULS ) {
-      // This will trigger once at least one such surface is found, DelNull
-      // is then applied to the whole geometry.
+      /* This will trigger once at least one such surface is found, DelNull
+       * is then applied to the whole geometry.
+       */
       nSrf = DelNull( nSrf, srf, base, cmbn, emit, area, name, AF );
-      // And we can break from the loop.
+      /* And we can break from the loop. */
       break;
     }
   }
@@ -503,8 +324,9 @@ VFResultsC calculateVFs(InData inData){
       for(int i = nSrf; i; i-- ) {
         base[i] = 0;
       }
-      // Once we have found a single instance, the Separate procedure is applied
-      // to the whole geometry, so we can stop looping.
+      /* Once we have found a single instance, the Separate procedure is applied
+       * to the whole geometry, so we can stop looping.
+       */
       break;
     }
   }
@@ -512,15 +334,17 @@ VFResultsC calculateVFs(InData inData){
   for(int n = nSrf; n; n-- ) {
     if (cmbn[n] > 0) {                         /* combine surfaces */
       nSrf = Combine( nSrf, cmbn, area, name, AF );
-      // Once we have found a single instance, the Separate procedure is applied
-      // to the whole geometry, so we can stop looping.
+      /* Once we have found a single instance, the Separate procedure is applied
+       * to the whole geometry, so we can stop looping.
+       */
       break;
     }
   }
 
-  // If the geometry is an enclosure, we know that the sum of the view factors
-  // from a particular surface to all other surfaces equals 1. We can use this
-  // fact to normalise and adjust the view factors.
+  /* If the geometry is an enclosure, we know that the sum of the view factors
+   * from a particular surface to all other surfaces equals 1. We can use this
+   * fact to normalise and adjust the view factors.
+   */
   if( encl ) {                         /* normalize view factors */
     NormAF( nSrf, vtmp, area, AF, 1.0e-7f, 100 );
   }
@@ -529,8 +353,9 @@ VFResultsC calculateVFs(InData inData){
   // option is selected. Note that this produces a different value (not the
   // view factor) so it needs to be very clear.
   if( vfCtrl.emittances ){ // Process surface emissivities
-    // Compute the total radiation interchange factors. This modifies the
-    // values in AF by applying the emssivity values.
+    /* Compute the total radiation interchange factors. This modifies the
+     * values in AF by applying the emssivity values.
+     */
 #ifdef LOGGING
     ReportAF( nSrf, encl, "Before IntFac", name, area, vtmp, base, AF, 0 );
 #endif
@@ -538,7 +363,7 @@ VFResultsC calculateVFs(InData inData){
 #ifdef LOGGING
     ReportAF( nSrf, encl, "After IntFac", name, area, vtmp, base, AF, 0 );
 #endif
-    if( encl ) // If it is an enclosure we want to normalise again
+    if( encl ) /* If it is an enclosure we want to normalise again */
       NormAF( nSrf, emit, area, AF, 1.0e-7f, 30 );   /* fix rounding errors */
   }
 
@@ -583,8 +408,13 @@ VFResultsC calculateVFs(InData inData){
   res_struct.emit = emit0;
   res_struct.values = ret;
 
-//   SaveVF( outHandle, "View3D", "3.5", vfCtrl.outFormat, vfCtrl.enclosure,
-//           vfCtrl.emittances, nSrf, area, emit, AF, vtmp );
+  // Rather hacky way to main the old executable style work
+#ifdef MAIN
+  fflush(stderr);
+  fflush(stdout);
+  SaveVF( stdout, "View3D", "3.5", vfCtrl.outFormat, vfCtrl.enclosure,
+          vfCtrl.emittances, nSrf, area, emit, AF, vtmp );
+#endif
 
   /* Begin: Free memory of data structures */
   if( vfCtrl.row ){
@@ -609,6 +439,8 @@ VFResultsC calculateVFs(InData inData){
 
 } /* end of processHandlesSimple() */
 
+/* deprecated */
+/* TODO: this extra file-based API should be behind a flag for portability */
 VFResultsC processPaths(char *inFile, char *outFile) {
   FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
   _unxt = inHandle;
@@ -620,9 +452,13 @@ VFResultsC processPaths(char *inFile, char *outFile) {
   } else {
     outHandle = fopen(outFile, "w");
   }
-  return processHandlesSimple(inHandle, outHandle);
+  VFResultsC res = processHandlesSimple(inHandle, outHandle);
+  fclose(inHandle);
+  fclose(outHandle);
+  return res;
 }
 
+/* deprecated */
 int processStrings(char *inString, char *outFile) {
   // Windows does not support fmemopen, so write to a temporary file and open
   // that.
@@ -645,24 +481,6 @@ int processStrings(char *inString, char *outFile) {
   processHandlesSimple(inHandle, outHandle);
   return 0;
 }
-
-
-/**
-	Compute 6 * volume of a prism defined by vertices a, b, c, and (0,0,0).
-
-	Ref: E Kreyszig, _Advanced Engineering Mathematics_, 3rd ed, Wiley, 1972,
-	pp 214,5.  Volume = A dot (B cross C) / 6; A = vector from 0 to a, ...;
-
-	Uses the fact that Vec3 A = Vec3 a, ...; Sign of result depends
-	on sequence (clockwise or counter-clockwise) of vertices.
-*/
-double VolPrism( Vec3 *a, Vec3 *b, Vec3 *c ){
-  Vec3 bxc;
-
-  VCROSS( b, c, (&bxc) );
-  return VDOT( a, (&bxc) );
-}
-
 
 /**
 	@TODO DOCUMENT THIS
@@ -759,60 +577,3 @@ void ReportAF( const int nSrf, const int encl, const char *title, char **name,
     fprintf( _ulog, "\n" );
   }
 } /* end of ReportAF() */
-
-
-/**
-	Find user designated file.  REPLACE WITH FILEOPEN.TXT ???
-	First character of type string must be 'r', 'w', or 'a'.
-	@param msg    message to user
-	@param name   file name (string long enough for any file name)
-	@param type   type of file, see fopen()
-*/
-void FindFile( char *msg, char *fileName, char *type ){
-
-  FILE  *pfile=NULL;
-
-  while(!pfile){
-    if(fileName[0]){
-      /* try to open file */
-      pfile = fopen( fileName, type );
-      if( pfile == NULL )
-        fprintf( stderr, "Error! Failed to open: %s\nTry again.\n", fileName );
-    }
-    if(!pfile){        /* ask for file name */
-      fprintf( stderr, "%s: ", msg );
-      fflush(stderr);
-      scanf( "%s", fileName );
-    }
-  }
-  fclose( pfile );
-} /* End of FindFile() */
-
-
-// Currently does not open the file.
-void CheckFileWritable(char *fileName){
-
-  FILE  *pfile=NULL;
-
-  if(fileName!=NULL && strlen(fileName)>0){
-    /* try to open file */
-    pfile = fopen( fileName, "w");
-    if( pfile == NULL )
-      fprintf( stderr, "Error! Failed to open: %s\nTry again.\n", fileName );
-  }
-  fclose( pfile );
-}
-
-// Currently does not open the file.
-void CheckFileReadable(char *fileName){
-
-  FILE  *pfile=NULL;
-
-  if(fileName!=NULL && strlen(fileName)>0){
-    /* try to open file */
-    pfile = fopen( fileName, "r");
-    if( pfile == NULL )
-      fprintf( stderr, "Error! Failed to open: %s\nTry again.\n", fileName );
-  }
-  fclose( pfile );
-}

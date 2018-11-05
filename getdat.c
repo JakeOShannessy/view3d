@@ -577,26 +577,9 @@ InData InDataFromRaw(RawInData *rawInData) {
       rawInData->vertices[i].z);
   }
 
-  // First we must allocate some data for these things
-
-  char **name;         /* surface names [1:nSrf][0:NAMELEN] */
-  float *area;         /* vector of surface areas [1:nSrf] */
-  float *emit;         /* vector of surface emittances [1:nSrf] */
-  float *vtmp;         /* temporary vector [1:nSrf] */
-  int *base;           /* vector of base surface numbers [1:nSrf] */
-  int *cmbn;           /* vector of combine surface numbers [1:nSrf] */
-  Vec3 *xyz;           /* vector of vertces [1:nVrt] - for ease in
-  converting V3MAIN to a subroutine */
-  SRFDAT3D *srf;       /* vector of surface data structures [1:nSrf] */
-  // vfCtrl contains control information and information on the numbers of
-  // vertices etc.
+  int nSrf;
+  int nSrf0;
   View3DControlData vfCtrl;
-  char title[LINELEN]; /* project title */
-
-  int nSrf;            /* current number of surfaces */
-  int nSrf0;           /* initial number of surfaces */
-  int encl;            /* 1 = surfaces form enclosure */
-  int n, flag;
 
   /* initialize control data */
   memset( &vfCtrl, 0, sizeof(View3DControlData) );
@@ -638,7 +621,7 @@ InData InDataFromRaw(RawInData *rawInData) {
   inData.emit = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
   inData.vtmp = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
 
-  for(n=nSrf0; n; n--)(inData.vtmp)[n] = 1.0;
+  for(int n=nSrf0; n; n--)(inData.vtmp)[n] = 1.0;
 
   inData.base = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
   inData.cmbn = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
@@ -701,7 +684,7 @@ InData InDataFromRaw(RawInData *rawInData) {
   /* read v/s data file */
   if(_list>2)
   _echo = 1;
-  for( n=nSrf; n; n-- )
+  for( int n=nSrf; n; n-- )
   (inData.area)[n] = (float)(inData.srf)[n].area;
   inData.vfCtrl = vfCtrl;
 
