@@ -3,9 +3,6 @@ extern crate time;
 extern crate libc;
 
 use clap::{Arg, App};
-use std::ffi::{CString};
-use std::f64;
-use std::slice;
 
 mod viewlib;
 use viewlib::*;

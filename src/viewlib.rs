@@ -2,11 +2,10 @@ extern crate clap;
 extern crate time;
 extern crate libc;
 
-use clap::{Arg, App};
 use std::ffi::{CString};
 use std::os::raw::c_char;
 use std::f64;
-use libc::{uint32_t, size_t, c_double, c_float};
+use libc::{c_double, c_float};
 use std::slice;
 
 // Link in the C lib via FFI
@@ -14,6 +13,12 @@ use std::slice;
 extern "C" {
     fn processPaths(infile: *const c_char, outfile: *const c_char) -> VFResultsC;
 }
+
+#[link(name = "view2d", kind = "static")]
+extern "C" {
+    pub fn processPaths2d(infile: *const c_char, outfile: *const c_char);
+}
+
 
 pub fn process_paths(infile: String, outfile: String) -> VFResults {
     // Convert these arguments to C strings to use in FFI

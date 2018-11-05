@@ -4,7 +4,9 @@ extern crate libc;
 
 use clap::{Arg, App};
 use std::ffi::{CString};
-use std::os::raw::c_char;
+
+mod viewlib;
+use viewlib::*;
 
 fn main() {
     let matches = App::new("View2d")
@@ -30,10 +32,4 @@ fn main() {
     unsafe {
         processPaths2d(infile_c.as_ptr(), outfile_c.as_ptr());
     }
-}
-
-// Link in the C lib via FFI
-#[link(name = "view2d", kind = "static")]
-extern "C" {
-    fn processPaths2d(infile: *const c_char, outfile: *const c_char);
 }
