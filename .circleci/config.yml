@@ -24,4 +24,6 @@ jobs:
             source $HOME/.cargo/env
       - run:
           name: Build Rust binaries
-          command: cargo build
+          command: |
+            source $HOME/.cargo/env
+            cargo build
