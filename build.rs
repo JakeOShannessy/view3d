@@ -27,9 +27,8 @@ fn main() {
         .file("view2d.c")
         .file("test2d.c")
         .file("misc.c")
-        .file("v2main.c")
+        .file("v2lib.c")
         .file("v3lib.c")
         .include(".")
-        .define("LIBONLY", Some("1"))
         .compile("view3d");
 }
