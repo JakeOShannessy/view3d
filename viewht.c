@@ -233,52 +233,6 @@ void PgmInit( char *program ){
 # include <alloc.h> /* prototype: heapcheck, heapwalk */
 #endif
 
-/***  MemRem.c  **************************************************************/
-
-/*  Report memory allocated and freed. Tubro C's coreleft() reports the amount
- *  of memory between the highest allocated block and the top of the heap.
- *  Freed lower blocks are not counted as available memory.
- *  heapwalk() shows the details.  */
-
-void MemRem(char *msg)
-  {
-#if( __TURBOC__ >= 0x295 )
-  {
-  struct heapinfo hp;   /* heap information */
-  unsigned long bytes = coreleft();
-  fprintf( _ulog, "%s:\n", msg );
-  fprintf( _ulog, "  Unallocated heap memory:  %ld bytes\n", bytes );
-
-# if( MEMTEST > 1 )
-  switch( heapcheck( ) )
-    {
-    case _HEAPEMPTY:
-      fprintf( _ulog, "The heap is empty.\n" );
-      break;
-    case _HEAPOK:
-      fprintf( _ulog, "The heap is O.K.\n" );
-      break;
-    case _HEAPCORRUPT:
-      fprintf( _ulog, "The heap is corrupted.\n" );
-      break;
-    }  /* end switch */
-
-  fprintf( _ulog, "Heap: loc, size, used?\n" );
-  hp.ptr = NULL;
-  while( heapwalk( &hp ) == _HEAPOK )
-    {
-    fprintf( _ulog, "[%p]%8lu %s\n",
-             hp.ptr, hp.size, hp.in_use ? "used" : "free" );
-    }
-# endif
-  }
-#else
-  MemNet( msg );  /* for non-TurboC code */
-#endif
-
-  }  /* end of MemRem */
-
-
 /***  FileOpen.c  ************************************************************/
 
 /*  Check/open fileName. If fileName is empty or or cannot be opened, 
