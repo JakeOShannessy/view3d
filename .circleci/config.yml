@@ -7,7 +7,7 @@ jobs:
       - checkout
       - run:
           name: Setup
-          command: apt-get install build-essential
+          command: apt-get install gcc make -y
       - run:
           name: Build lib
           command: make lib
