@@ -165,7 +165,7 @@ void GetCtrl( char *str, View3DControlData *vfCtrl){
       p = strtok( NULL, "= ," );
     }
 
-    p = strtok( NULL, "= ," );    // get next word
+    p = strtok( NULL, "= ," );    /* get next word */
   }
 
   if( vfCtrl->col && !vfCtrl->row )
@@ -483,7 +483,7 @@ void GetVS3D( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
            "Obstruction surface: ", IntStr(n), " out of sequence", "" );
         if( c=='S' && n>vfCtrl->nRadSrf ) error( 2, __FILE__, __LINE__,
            "Radiating surface: ", IntStr(n), " out of sequence", "" );
-        // information about the surface types is first created here
+        /* information about the surface types is first created here */
         srf[ns].nr = ns;
         if( c == 'S' )
           srf[ns].type = RSRF;
@@ -557,21 +557,17 @@ finish:
 
 }  /*  end of GetVS3D  */
 
-// We have raw input data and we want to convert it to InData.
+/* We have raw input data and we want to convert it to InData. */
 InData InDataFromRaw(RawInData *rawInData) {
-//   void GetVS3D( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
-// 	,SRFDAT3D *srf, Vec3 *xyz, View3DControlData *vfCtrl
-// ) {
-
+  int i,n; /* for use as loop counters ONLY */
   error( -2, __FILE__, __LINE__, "" );  /* clear error count */
-  // rewind( inHandle );
 
-  // The InData we will return
+  /* The InData we will return */
   InData inData;
-  // convert across all the vertices
+  /* convert across all the vertices */
   fprintf(stderr, "rawInData->nVertices: %d\n", rawInData->nVertices);
-  // Important to remember vertices are indexed from 1
-  for (int i = 1; i <= rawInData->nVertices; i++) {
+  /* Important to remember vertices are indexed from 1 */
+  for (i = 1; i <= rawInData->nVertices; i++) {
     fprintf(stderr, "vert[%d]: %f %f %f\n", i, rawInData->vertices[i].x,
       rawInData->vertices[i].y,
       rawInData->vertices[i].z);
@@ -583,11 +579,11 @@ InData InDataFromRaw(RawInData *rawInData) {
 
   /* initialize control data */
   memset( &vfCtrl, 0, sizeof(View3DControlData) );
-  // non-zero control values:
-  vfCtrl.epsAdap = rawInData->opts.epsAdap; // convergence for adaptive integration
-  vfCtrl.maxRecursALI = rawInData->opts.maxRecursALI; // maximum number of recursion levels
-  vfCtrl.minRecursion = rawInData->opts.minRecursion;  // minimum number of recursion levels
-  vfCtrl.maxRecursion = rawInData->opts.maxRecursion;  // maximum number of recursion levels
+  /* non-zero control values: */
+  vfCtrl.epsAdap = rawInData->opts.epsAdap; /* convergence for adaptive integration */
+  vfCtrl.maxRecursALI = rawInData->opts.maxRecursALI; /* maximum number of recursion levels */
+  vfCtrl.minRecursion = rawInData->opts.minRecursion;  /* minimum number of recursion levels */
+  vfCtrl.maxRecursion = rawInData->opts.maxRecursion;  /* maximum number of recursion levels */
   fprintf(stderr, "rawInData->opts.enclosure: %d\n", rawInData->opts.enclosure);
   vfCtrl.enclosure = rawInData->opts.enclosure;  
   vfCtrl.emittances = rawInData->opts.emittances;  
@@ -598,13 +594,13 @@ InData InDataFromRaw(RawInData *rawInData) {
 
   vfCtrl.nRadSrf = rawInData->nRadSrf;  
   vfCtrl.nVertices = rawInData->nVertices;  
-  // vfCtrl.nAllSrf = rawInData->nAllSrf;  
+  /* vfCtrl.nAllSrf = rawInData->nAllSrf;   */
   vfCtrl.nObstrSrf = rawInData->nObstrSrf;
   vfCtrl.nAllSrf = vfCtrl.nRadSrf + vfCtrl.nObstrSrf;
 
-  // CountVS3D(inHandle, title, &vfCtrl );
-  // TODO: allocate memory and copy title string.
-  // inData.title = title;
+  /* CountVS3D(inHandle, title, &vfCtrl ); */
+  /* TODO: allocate memory and copy title string. */
+  /* inData.title = title; */
 
   nSrf = nSrf0 = vfCtrl.nRadSrf;
   fprintf(stderr, "vfCtrl.nVertices: %d\n", vfCtrl.nVertices);
@@ -613,34 +609,34 @@ InData InDataFromRaw(RawInData *rawInData) {
   fprintf(stderr, "vfCtrl.nAllSrf: %d\n", vfCtrl.nAllSrf);
 
   if(vfCtrl.format == 4)vfCtrl.nVertices = 4 * vfCtrl.nAllSrf;
-  // Allocate memory for all of the surfaces. These will need to be resized as
-  // the data is read in.
+  /* Allocate memory for all of the surfaces. These will need to be resized as */
+  /* the data is read in. */
   fprintf(stderr, "Allocating memory for inData\n");
   inData.name = Alc_MC(1, nSrf0, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
   inData.area = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
   inData.emit = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
   inData.vtmp = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
 
-  for(int n=nSrf0; n; n--)(inData.vtmp)[n] = 1.0;
+  for(n=nSrf0; n; n--)(inData.vtmp)[n] = 1.0;
 
   inData.base = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
   inData.cmbn = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
   inData.xyz = Alc_V( 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
   inData.srf = Alc_V( 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
   fprintf(stderr, "Running init procedures\n");
-  // TODO: this should only be run once.
+  /* TODO: this should only be run once. */
   InitTmpVertMem();  /* polygon operations in GetDat() and View3D() */
   InitPolygonMem(0, 0);
   fprintf(stderr, "Done init procedures\n");
 
-  // Convert vertices
-  for (int i = 1; i <= rawInData->nVertices; i++) {
+  /* Convert vertices */
+  for (i = 1; i <= rawInData->nVertices; i++) {
     inData.xyz[i] = rawInData->vertices[i];
   }
-  // For each surface we want to put the data into the arrays.
-  for (int i = 1; i <= rawInData->nRadSrf; i++) {
+  /* For each surface we want to put the data into the arrays. */
+  for (i = 1; i <= rawInData->nRadSrf; i++) {
     fprintf(stderr, "Converting surf: %s\n", rawInData->surfaces[i].name);
-    // Restrict emittance to not 0 and not 1 (somewhere in between)
+    /* Restrict emittance to not 0 and not 1 (somewhere in between) */
     inData.emit[rawInData->surfaces[i].nr] = rawInData->surfaces[i].emit;
     if( inData.emit[rawInData->surfaces[i].nr] > 0.99901 ){
       error( 1, __FILE__, __LINE__,  "Replacing surface ", IntStr(i),
@@ -661,7 +657,7 @@ InData InDataFromRaw(RawInData *rawInData) {
     
     /* Vec3 *v[MAXNV];  */ /* pointers to coordinates of up to MAXNV vertices */
     fprintf(stderr, "\tvertices(%d):\n", inData.srf[rawInData->surfaces[i].nr].nv);
-    for (int n = 0; n < inData.srf[rawInData->surfaces[i].nr].nv; n++) {
+    for (n = 0; n < inData.srf[rawInData->surfaces[i].nr].nv; n++) {
       inData.srf[rawInData->surfaces[i].nr].v[n] = &inData.xyz[rawInData->surfaces[i].vertexIndices[n]];
       fprintf(stderr, "\t\tvertex[%d]: (%f,%f,%f)\n",n, inData.srf[rawInData->surfaces[i].nr].v[n]->x
         , inData.srf[rawInData->surfaces[i].nr].v[n]->y
@@ -680,11 +676,11 @@ InData InDataFromRaw(RawInData *rawInData) {
     
   }
 
-  // reads the  file a second time
+  /* reads the  file a second time */
   /* read v/s data file */
   if(_list>2)
   _echo = 1;
-  for( int n=nSrf; n; n-- )
+  for(n=nSrf; n; n-- )
   (inData.area)[n] = (float)(inData.srf)[n].area;
   inData.vfCtrl = vfCtrl;
 
@@ -738,7 +734,7 @@ void GetVS3DNew( FILE *inHandle, RawInData *inData) {
         else if( c == 'M' )
           inData->surfaces[ns].type = MASK;
 
-        // Read in the vertices
+        /* Read in the vertices */
         n = ReadIX( inHandle, 0 );
         if( n<=0 || n>inData->nVertices ) error( 2, __FILE__, __LINE__,
           "Surface ", IntStr(ns), "- improper first vertex:", IntStr(n), "" );
@@ -767,7 +763,7 @@ void GetVS3DNew( FILE *inHandle, RawInData *inData) {
           inData->surfaces[ns].vertexIndices[3] = n;
         }
 
-        // SetPlane( inData->srf+ns );          /* compute plane polygon values */
+        /* SetPlane( inData->srf+ns ); */          /* compute plane polygon values */
 
 
         if( c!='O' )
@@ -796,7 +792,7 @@ void GetVS3DNew( FILE *inHandle, RawInData *inData) {
   }
 
 finish:
-  // TestSubSrf( srf, base, vfCtrl );
+  /* TestSubSrf( srf, base, vfCtrl ); */
 
   if( error( -1, __FILE__, __LINE__, "" )>0 )
     error( 3, __FILE__, __LINE__, "Fix errors in input data", "" );

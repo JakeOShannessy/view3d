@@ -22,8 +22,8 @@ static void SaveF0( FILE *vfout, char *header, int nSrf,
   int n; /* row */
   int m; /* column */
 
-  // fprintf(stderr,"Saving view factors to file '%s' in format '0' (square array, area, emit)...\n",fileName);
-  // vfout = fopen( fileName, "w" );
+  /* fprintf(stderr,"Saving view factors to file '%s' in format '0' (square array, area, emit)...\n",fileName); */
+  /* vfout = fopen( fileName, "w" ); */
 
   fprintf( vfout, "%s", header );
   fprintf( vfout, "%g", area[1] );
@@ -66,9 +66,9 @@ static void SaveF1( FILE *vfout, char *header, int nSrf,
 ){
   int n;    /* row */
 
-  // fprintf(stderr,"Saving view factors to file '%s' in format '1' (square array, binary format)...\n",fileName);
-// TODO: remember to open for binary writing here
-  // vfout = fopen( fileName, "wb" );
+  /* fprintf(stderr,"Saving view factors to file '%s' in format '1' (square array, binary format)...\n",fileName); */
+/* TODO: remember to open for binary writing here */
+  /* vfout = fopen( fileName, "wb" ); */
   fwrite( header, sizeof(char), 32, vfout );
   fwrite( area+1, sizeof(float), nSrf, vfout );
 
@@ -99,7 +99,7 @@ void SaveAF( FILE *vfout, char *header, int nSrf, char *title, char **name,
 ){
   int n;    /* row */
 
-  // vfout = fopen( fileName, "w" );
+  /* vfout = fopen( fileName, "w" ); */
   fprintf( vfout, "%s", header );
   fprintf( vfout, "T %s\n", title );
   fprintf( vfout, "!  #     area          emit    name\n" );
@@ -121,7 +121,7 @@ void SaveAF( FILE *vfout, char *header, int nSrf, char *title, char **name,
     if( m%5 != 1 ) fputc( '\n', vfout );
     }
   fputc( '\n', vfout );
-  // fclose( vfout );
+  /* fclose( vfout ); */
 
   }  /* end of SaveAF */
 
@@ -154,7 +154,7 @@ void SaveVF( FILE *file, char *program, char *version,
 
   }else{
     error( 3, __FILE__, __LINE__, "Undefined format: ", IntStr(format), "" );
-    // SaveAF( file, header, nSrf, title, name, area, emit, AF );
+    /* SaveAF( file, header, nSrf, title, name, area, emit, AF ); */
   }
 } /* end SaveVF */
 

@@ -224,8 +224,8 @@ void PgmInit( char *program ){
 
 }  /* end PgmInit */
 
-#ifdef __TURBOC__   // using old TURBO C compiler
-# include <alloc.h> // prototype: heapcheck, heapwalk
+#ifdef __TURBOC__   /* using old TURBO C compiler */
+# include <alloc.h> /* prototype: heapcheck, heapwalk */
 #endif
 
 /***  MemRem.c  **************************************************************/
@@ -239,7 +239,7 @@ void MemRem(char *msg)
   {
 #if( __TURBOC__ >= 0x295 )
   {
-  struct heapinfo hp;   // heap information
+  struct heapinfo hp;   /* heap information */
   unsigned long bytes = coreleft();
   fprintf( _ulog, "%s:\n", msg );
   fprintf( _ulog, "  Unallocated heap memory:  %ld bytes\n", bytes );
@@ -256,7 +256,7 @@ void MemRem(char *msg)
     case _HEAPCORRUPT:
       fprintf( _ulog, "The heap is corrupted.\n" );
       break;
-    }  // end switch
+    }  /* end switch */
 
   fprintf( _ulog, "Heap: loc, size, used?\n" );
   hp.ptr = NULL;
@@ -268,7 +268,7 @@ void MemRem(char *msg)
 # endif
   }
 #else
-  MemNet( msg );  // for non-TurboC code
+  MemNet( msg );  /* for non-TurboC code */
 #endif
 
   }  /* end of MemRem */
@@ -374,7 +374,7 @@ float CPUtime( float t1 ){
   float t2;
 
   t2 = (float)clock() / (float)CLOCKS_PER_SEC;
-  t2 = (float)(fabs(t2-t1));  // clear -0.0
+  t2 = (float)(fabs(t2-t1));  /* clear -0.0 */
 
   return t2;
 

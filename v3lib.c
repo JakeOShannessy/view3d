@@ -29,8 +29,8 @@ a government program.
 # define DEBUG 0
 #endif
 
-// This is part of the library, so therefore it needs to #define V3D_BUILD to
-// ensure things are exported, not imported.
+/* This is part of the library, so therefore it needs to #define V3D_BUILD to
+   ensure things are exported, not imported. */
 #define V3D_BUILD
 
 #include <stdio.h>
@@ -54,7 +54,7 @@ a government program.
 
 /* forward decls */
 
-// Internal
+/* Internal */
 void ReportAF( const int nSrf, const int encl, const char *title, char **name,
   const float *area, const float *emit, const int *base, double **AF, int flag
 );
@@ -62,21 +62,23 @@ void GetVS3DNew( FILE *inHandle, RawInData *inData);
 InData InDataFromRaw(RawInData *rawInData);
 
 
-// Main External API
+/* Main External API */
 extern RawInData parseIn(FILE *file);
 extern VFResultsC calculateVFs(RawInData rawInData);
-// TODO: need to work out some things about the results format before that
-// can be completed.
-// extern void printVFs(int format, FILE *file, InData inData, VFResultsC results);
+/* TODO: need to work out some things about the results format before that */
+/* can be completed. */
+/* extern void printVFs(int format, FILE *file, InData inData, VFResultsC results); */
 
-// Extra API (for convenience, to be deprecated)
+/* Extra API (for convenience, to be deprecated) */
 VFResultsC processPaths(char *inFile, char *outFile);
 
-// void printVFs(int format, FILE *file, InData inData, VFResultsC results) {
-//   return SaveVFNew(file, inData.vfCtrl.outFormat, inData.vfCtrl.enclosure,
-//           inData.vfCtrl.emittances, results.nSrf, inData.area, inData.emit,
-//           results.AF, inData.vtmp );
-// }
+/*
+void printVFs(int format, FILE *file, InData inData, VFResultsC results) {
+  return SaveVFNew(file, inData.vfCtrl.outFormat, inData.vfCtrl.enclosure,
+          inData.vfCtrl.emittances, results.nSrf, inData.area, inData.emit,
+          results.AF, inData.vtmp );
+}
+*/
 
 RawInData parseIn(FILE *inHandle) {
   View3DControlData vfCtrl;
@@ -100,15 +102,15 @@ RawInData parseIn(FILE *inHandle) {
   rawInData.opts.col = vfCtrl.col;
   rawInData.opts.row = vfCtrl.row;
   rawInData.opts.prjReverse = vfCtrl.prjReverse;
-  // TODO: allocate memory and copy title string.
-  // inData.title = title;
+  /* TODO: allocate memory and copy title string. */
+  /* inData.title = title; */
   GetVS3DNew(inHandle, &rawInData);
   return rawInData;
 }
 
 
 void printRawInData(RawInData *rawInData) {
-  // for (int i 0; i < 5; i++) 
+  /* for (int i 0; i < 5; i++)  */
   fprintf(stderr, "printing rawInData\n");
   fprintf(stderr, "s1 name: %s\n", rawInData->surfaces[1].name);
   fprintf(stderr, "s1 v2: %d\n", rawInData->surfaces[1].vertexIndices[1]);
@@ -117,19 +119,7 @@ void printRawInData(RawInData *rawInData) {
 
 
 void printInData(InData *inData) {
-  // for (int i 0; i < 5; i++) 
-  // View3DControlData vfCtrl;
-  // char **name;
-  // float *area;
-  // float *emit;
-  // float *vtmp;
-  // char title[LINELEN]; /* project title */
-  // int *base;
-  // int *cmbn;
-  // Vec3 *xyz;
-  // SRFDAT3D *srf;
-
-
+  int i, n; /* for loop counters ONLY */
   fprintf(stderr, "printing InData\n");
   fprintf(stderr, "vftrl:\n");
   fprintf(stderr, "\tnAllSrf: %d\n", inData->vfCtrl.nAllSrf);
@@ -152,24 +142,9 @@ void printInData(InData *inData) {
   fprintf(stderr, "\tmethod: %d\n", inData->vfCtrl.method);
   fprintf(stderr, "\tnEdgeDiv: %d\n", inData->vfCtrl.nEdgeDiv);
   fprintf(stderr, "\tmaxRecursALI: %d\n", inData->vfCtrl.maxRecursALI);
-  // unsigned long usedV1LIadapt; /* number of V1LIadapt() calculations used */
-  // int failViewALI;   /* 1 = unobstructed view factor did not converge */
   fprintf(stderr, "\tminRecursion: %d\n", inData->vfCtrl.minRecursion);
   fprintf(stderr, "\tmaxRecursion: %d\n", inData->vfCtrl.maxRecursion);
-  // int failRecursion; /* 1 = obstructed view factor did not converge */
-  // double epsAF;         /* convergence for current AF calculation */
-  // unsigned long wastedVObs;    /* number of ViewObstructed() calculations wasted */
-  // unsigned long usedVObs;      /* number of ViewObstructed() calculations used */
-  // unsigned long totPoly;       /* total number of polygon view factors */
-  // unsigned long totVpt;        /* total number of view points */
-  // int failConverge;  /* 1 if any calculation failed to converge */
-  // SRFDAT3X srf1T;   /* participating surface; transformed coordinates */
-  // SRFDAT3X srf2T;   /* participating surface; transformed coordinates;
-  //                      view from srf1T toward srf2T. */ 
-  // SRFDAT3X *srfOT;  /* pointer to array of view obstrucing surfaces;
-  //                      dimensioned from 0 to maxSrfT in View3d();
-  //                      coordinates transformed relative to srf2T. */
-  for (int i = 1; i <= inData->vfCtrl.nRadSrf; i++) {
+  for (i = 1; i <= inData->vfCtrl.nRadSrf; i++) {
     fprintf(stderr, "surface %d: %s\n", i, inData->name[i]);
     fprintf(stderr, "\tnr: %d\n", inData->srf[i].nr);
     fprintf(stderr, "\tnv: %d\n", inData->srf[i].nv);
@@ -180,19 +155,19 @@ void printInData(InData *inData) {
     fprintf(stderr, "\tbase: %d\n", inData->base[i]);
     fprintf(stderr, "\tcmbn: %d\n", inData->cmbn[i]);
     fprintf(stderr, "\trc: %f\n", inData->srf[i].rc);
-    // fprintf(stderr, "\tdc: %d\n", i, inData->srf[i].dc);
+    /* fprintf(stderr, "\tdc: %d\n", i, inData->srf[i].dc); */
     fprintf(stderr, "\tctd: (%f,%f,%f)\n", inData->srf[i].ctd.x, inData->srf[i].ctd.y, inData->srf[i].ctd.z);
     fprintf(stderr, "\tvertices:\n");
-    for (int n = 0; n < inData->srf[i].nv; n++) {
+    for (n = 0; n < inData->srf[i].nv; n++) {
       fprintf(stderr, "\t\tv[%d]: (%f,%f,%f)\n", n, inData->srf[i].v[n]->x, inData->srf[i].v[n]->y, inData->srf[i].v[n]->z);
     }
-    // fprintf(stderr, "\tctd:(%f,%f,%f)\n", i, inData->srf[i].ctd.x, inData->srf[i].ctd.y, inData->srf[i].ctd.z);
+    /* fprintf(stderr, "\tctd:(%f,%f,%f)\n", i, inData->srf[i].ctd.x, inData->srf[i].ctd.y, inData->srf[i].ctd.z); */
 
-  // DirCos dc;          /* direction cosines of surface normal */
-  // int NrelS;           /* orientation of srf N relative to S:
-  //                        -1: N behind S; +1: N in front of S;
-  //                         0: part of N behind S, part in front */
-  // int MrelS;           /* orientation of srf M relative to S */
+  /* DirCos dc; */        /* direction cosines of surface normal */ 
+  /* int NrelS; */        /* orientation of srf N relative to S: */
+                          /*    -1: N behind S; +1: N in front of S; */
+                          /*     0: part of N behind S, part in front */ 
+  /* int MrelS; */          /* orientation of srf M relative to S */ 
   }
 }
 
@@ -213,11 +188,12 @@ double VolPrism( Vec3 *a, Vec3 *b, Vec3 *c ){
 }
 
 double getEnclosureVolume(View3DControlData vfCtrl, SRFDAT3D *srf) {
+  int n; /* for loop counters ONLY */
   /* determine volume of enclosure */
   double volume=0.0;
-  // Loop through each of the surfaces.
-  for(int n=vfCtrl.nAllSrf; n; n-- ) {
-    // If it is a subsurface (SUBS) we skip it.
+  /* Loop through each of the surfaces. */
+  for(n=vfCtrl.nAllSrf; n; n-- ) {
+    /* If it is a subsurface (SUBS) we skip it. */
     if( srf[n].type == SUBS ) continue;
     volume += VolPrism( srf[n].v[0], srf[n].v[1], srf[n].v[2] );
     if( srf[n].nv == 4 )
@@ -236,6 +212,7 @@ VFResultsC processHandlesSimple(FILE *inHandle, FILE *outHandle) {
 /*----------------------------------------------------------------------------*/
 /* This is modified to be the simplest possible (and with little logging). */
 VFResultsC calculateVFs(RawInData rawInData){
+  int i, m, n; /* for loop counters ONLY */
   InData inData = InDataFromRaw(&rawInData);
   _ulog = stderr;
   double **AF;         /* triangular array of area*view factor values [1:nSrf][] */
@@ -254,19 +231,19 @@ VFResultsC calculateVFs(RawInData rawInData){
   Vec3 *xyz = inData.xyz; /* vector of vertces [1:nVrt] */
   SRFDAT3D *srf = inData.srf; /* the surface data */
 
-  // Allocate some space to store the list of possible obstructions. This array
-  // will never be longer than all the surfaces, so make it that length.
+  /* Allocate some space to store the list of possible obstructions. This array
+     will never be longer than all the surfaces, so make it that length. */
   possibleObstr = Alc_V( 1, vfCtrl.nAllSrf, sizeof(int), __FILE__, __LINE__ );
-  // Find the number of possible obstructing surfaces. The index list of these
-  // surfaces is stored in possibleObstr.
+  /* Find the number of possible obstructing surfaces. The index list of these
+     surfaces is stored in possibleObstr. */
   vfCtrl.nPossObstr = SetPosObstr3D( vfCtrl.nAllSrf, srf, possibleObstr );
 
-  // If row is specified (i.e. we are only interested in the view factors of
-  // one surface) then we allocate an array big enough for those values.
-  if( vfCtrl.row ){  // may not work with some compilers. GNW 2008/01/22
+  /* If row is specified (i.e. we are only interested in the view factors of
+     one surface) then we allocate an array big enough for those values. */
+  if( vfCtrl.row ){  /* may not work with some compilers. GNW 2008/01/22 */
     AF = Alc_MC( vfCtrl.row, vfCtrl.row, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
-  // Otherwise we want every surface to every surface and must allocate a
-  // sufficiently sized array.
+  /* Otherwise we want every surface to every surface and must allocate a
+     sufficiently sized array. */
   } else {
 #ifdef __TURBOC__
     AF = Alc_MSR( 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
@@ -280,30 +257,30 @@ VFResultsC calculateVFs(RawInData rawInData){
 
   /*----- view factor calculation -----*/
   View3D( srf, base, possibleObstr, AF, &vfCtrl );
-  // The view factors have now been calculated and stored in AF.
+  /* The view factors have now been calculated and stored in AF. */
 
-  // The possibly obstruction surface information is no longer needed after
-  // this point.
+  /* The possibly obstruction surface information is no longer needed after
+     this point. */
   Fre_V( possibleObstr, 1, vfCtrl.nAllSrf, sizeof(int), __FILE__, __LINE__ );
   FreeTmpVertMem();  /* free polygon overlap vertices */
   FreePolygonMem();
   Fre_V( xyz, 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
 
-  // TODO: what does this do
-  for(int n = nSrf; n; n-- ){  /* clear base pointers to OBSO & MASK srfs */
-	// FIXME should the following line say 'srf[n]'??
+  /* TODO: what does this do */
+  for(n = nSrf; n; n-- ){  /* clear base pointers to OBSO & MASK srfs */
+	/* FIXME should the following line say 'srf[n]'?? */
 	if( srf[base[n]].type == OBSO )  /* Base is used for several things. */
       base[n] = 0;                   /* It must be progressively cleared */
 
-	// FIXME should the following line say 'base[n]'??
+	/* FIXME should the following line say 'base[n]'?? */
     if( srf[n].type == MASK )        /* as each use is completed. */
       base[n] = 0;
   }
 
-  // Here we being adusting the view factors
+  /* Here we being adusting the view factors */
 
-  // Determine if any of the surfaces are NULS
-  for(int n = nSrf; n; n-- ) {
+  /* Determine if any of the surfaces are NULS */
+  for(n = nSrf; n; n-- ) {
     /* If any surface has the type NULS, run the DelNull procedure to remove
      * them.
      */
@@ -317,11 +294,11 @@ VFResultsC calculateVFs(RawInData rawInData){
     }
   }
 
-  // TODO: work out what this does
-  for(int n = nSrf; n; n-- ) {
+  /* TODO: work out what this does */
+  for(n = nSrf; n; n-- ) {
     if( base[n]>0 ) {       /* separate subsurfaces */
       Separate( nSrf, base, area, AF );
-      for(int i = nSrf; i; i-- ) {
+      for(i = nSrf; i; i-- ) {
         base[i] = 0;
       }
       /* Once we have found a single instance, the Separate procedure is applied
@@ -331,7 +308,7 @@ VFResultsC calculateVFs(RawInData rawInData){
     }
   }
 
-  for(int n = nSrf; n; n-- ) {
+  for(n = nSrf; n; n-- ) {
     if (cmbn[n] > 0) {                         /* combine surfaces */
       nSrf = Combine( nSrf, cmbn, area, name, AF );
       /* Once we have found a single instance, the Separate procedure is applied
@@ -349,10 +326,10 @@ VFResultsC calculateVFs(RawInData rawInData){
     NormAF( nSrf, vtmp, area, AF, 1.0e-7f, 100 );
   }
 
-  // This is where the emissivity values are applied, if that configuration
-  // option is selected. Note that this produces a different value (not the
-  // view factor) so it needs to be very clear.
-  if( vfCtrl.emittances ){ // Process surface emissivities
+  /* This is where the emissivity values are applied, if that configuration
+     option is selected. Note that this produces a different value (not the
+     view factor) so it needs to be very clear. */
+  if( vfCtrl.emittances ){ /* Process surface emissivities */
     /* Compute the total radiation interchange factors. This modifies the
      * values in AF by applying the emssivity values.
      */
@@ -367,19 +344,19 @@ VFResultsC calculateVFs(RawInData rawInData){
       NormAF( nSrf, emit, area, AF, 1.0e-7f, 30 );   /* fix rounding errors */
   }
 
-  // The calculations are done at this point, and everything after here is
-  // just marshalling the output values into a different format and freeing
-  // memory.
+  /* The calculations are done at this point, and everything after here is
+     just marshalling the output values into a different format and freeing
+     memory. */
 
-  // These are some conversions to make the external interface simpler
-  // Copy the values into single contigious array
+  /* These are some conversions to make the external interface simpler
+     Copy the values into single contigious array */
   int ret_len = nSrf0*nSrf0;
   double *ret = malloc(sizeof(double)*ret_len);
 
-  for(int n = 1; n <= nSrf; n++) {
+  for(n = 1; n <= nSrf; n++) {
     /* process AF values for row n */
     double Ainv = 1.0 / area[n];
-    for(int m = 1; m <= nSrf; m++) {
+    for(m = 1; m <= nSrf; m++) {
       /* process column values */
       if(m < n){
         ret[(n-1)*nSrf+(m-1)] = (float)(AF[n][m] * Ainv);
@@ -389,15 +366,15 @@ VFResultsC calculateVFs(RawInData rawInData){
     }
   }
 
-  // zero-based array for areas
+  /* zero-based array for areas */
   float *areas0 = malloc(sizeof(float)*nSrf0);
-  for (int n = 1; n <= nSrf; n++) {
+  for (n = 1; n <= nSrf; n++) {
     areas0[n-1] = area[n];
   }
 
-  //zero-based array for emissivities
+  /*zero-based array for emissivities */
   float *emit0 = malloc(sizeof(float)*nSrf0);
-  for (int n = 1; n <= nSrf; n++) {
+  for (n = 1; n <= nSrf; n++) {
     emit0[n-1] = emit[n];
   }
 
@@ -408,7 +385,7 @@ VFResultsC calculateVFs(RawInData rawInData){
   res_struct.emit = emit0;
   res_struct.values = ret;
 
-  // Rather hacky way to main the old executable style work
+  /* Rather hacky way to main the old executable style work */
 #ifdef MAIN
   fflush(stderr);
   fflush(stdout);
@@ -444,8 +421,8 @@ VFResultsC calculateVFs(RawInData rawInData){
 VFResultsC processPaths(char *inFile, char *outFile) {
   FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
   _unxt = inHandle;
-  // Write the results to the output file.
-  // TODO: if saving to binary format, open for binary write
+  /* Write the results to the output file. */
+  /* TODO: if saving to binary format, open for binary write */
   FILE *outHandle;
   if(strlen(outFile) == 0 || outFile == NULL) {
     outHandle = stdout;
@@ -460,18 +437,18 @@ VFResultsC processPaths(char *inFile, char *outFile) {
 
 /* deprecated */
 int processStrings(char *inString, char *outFile) {
-  // Windows does not support fmemopen, so write to a temporary file and open
-  // that.
+  /* Windows does not support fmemopen, so write to a temporary file and open
+     that. */
   char *tmpPath = "temp.txt";
   FILE *tmp = fopen(tmpPath, "w");
   fwrite(inString, 1, strlen(inString), tmp);
   fclose(tmp);
 
-  // FILE *inHandle = fmemopen(inString, strlen(inString), "r");
+  /* FILE *inHandle = fmemopen(inString, strlen(inString), "r"); */
   FILE *inHandle = NxtOpenHndl(tmpPath, __FILE__, __LINE__ );
   _unxt = inHandle;
-  // Write the results to the output file.
-  // TODO: if saving to binary format, open for binary write
+  /* Write the results to the output file. */
+  /* TODO: if saving to binary format, open for binary write */
   FILE *outHandle;
   if(strlen(outFile) == 0 || outFile == NULL) {
     outHandle = stdout;

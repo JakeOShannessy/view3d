@@ -60,15 +60,15 @@ int main( int argc, char **argv ){
   }
 
   /* open log file */
-  // TODO: Make logging to a particular file an option, log to stderr by
-  // default.
+  /* TODO: Make logging to a particular file an option, log to stderr by */
+  /* default. */
 #ifdef ANSI
-  // _ulog = fopen( "View3D.log", "w" );
+  /* _ulog = fopen( "View3D.log", "w" ); */
   _ulog = stderr;
 #else
-  // PathSplit( argv[0], vdrive, sizeof(vdrive), vdir, sizeof(vdir), NULL, 0, NULL, 0 );
-  // PathMerge( fileName, sizeof(fileName), vdrive, vdir, "View3D", ".log" );
-  // _ulog = fopen( fileName, "w" );
+  /* PathSplit( argv[0], vdrive, sizeof(vdrive), vdir, sizeof(vdir), NULL, 0, NULL, 0 ); */
+  /* PathMerge( fileName, sizeof(fileName), vdrive, vdir, "View3D", ".log" ); */
+  /* _ulog = fopen( fileName, "w" ); */
   _ulog = stderr;
 #endif
   if( !_ulog )
@@ -85,18 +85,18 @@ int main( int argc, char **argv ){
     strcpy( inFile, argv[1] );
     CheckFileReadable(inFile);
   }
-    // TODO: specify a non-interactive mode.
-  // FindFile("Enter name of input (vertex/surface) data file", inFile, "r" );
+    /* TODO: specify a non-interactive mode. */
+  /* FindFile("Enter name of input (vertex/surface) data file", inFile, "r" ); */
   fprintf(_ulog, "Data file:  %s\n", inFile );
 
   if( argc > 2 ) {
     strcpy( outFile, argv[2] );
     CheckFileWritable(outFile);
   } else {
-    // outFile = NULL;
+    /* outFile = NULL; */
   }
-    // TODO: if there is not output file set, output to stdout.
-  // FindFile("Enter name of output (view factor) file", outFile, "w" );
+    /* TODO: if there is not output file set, output to stdout. */
+  /* FindFile("Enter name of output (view factor) file", outFile, "w" ); */
   fprintf(_ulog, "Output file:  %s\n", outFile );
 
   time(&bintime);
@@ -151,7 +151,7 @@ void FindFile( char *msg, char *fileName, char *type ){
 } /* End of FindFile() */
 
 
-// Currently does not open the file.
+/* Currently does not open the file. */
 void CheckFileWritable(char *fileName){
 
   FILE  *pfile=NULL;
@@ -165,7 +165,7 @@ void CheckFileWritable(char *fileName){
   fclose( pfile );
 }
 
-// Currently does not open the file.
+/* Currently does not open the file. */
 void CheckFileReadable(char *fileName){
 
   FILE  *pfile=NULL;

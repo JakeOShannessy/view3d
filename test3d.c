@@ -501,10 +501,10 @@ int SetShape( const int nv, Vec3 *v, double *area )
     if( fabs(edge[2] - edge[0]) < epsA * (edge[0] + edge[2]) )
       if( fabs(edge[3] - edge[1]) < epsA * (edge[1] + edge[3]) )
         shape = 4;      /* parallelogram */
-//      if( fabs(area0 - area2) < epsA * (area0 + area2) )
-//        shape = 4;      /* rectangle */
-//      else
-//        errorf( 1, __FILE__, __LINE__, "Parallelogram", "" );
+/*      if( fabs(area0 - area2) < epsA * (area0 + area2) ) */
+/*        shape = 4;   */  /* rectangle */ 
+/*      else */
+/*        errorf( 1, __FILE__, __LINE__, "Parallelogram", "" ); */
     }
   else
     {

@@ -14,16 +14,16 @@
 #include "heap.h"
 
 #include <stdio.h>
-#include <string.h> // prototypes: memset, ...
-#include <stdlib.h> // prototype: malloc, free
-#include <limits.h> // define UINT_MAX
-#include "types.h"  // define unsigned char, short, etc.
-#include "misc.h"  // miscellaneous function prototypes
+#include <string.h> /* prototypes: memset, ... */
+#include <stdlib.h> /* prototype: malloc, free */
+#include <limits.h> /* define UINT_MAX */
+#include "types.h"  /* define unsigned char, short, etc. */
+#include "misc.h"  /* miscellaneous function prototypes */
 
-char _heapmsg[256];     // buffer for heap messages
+char _heapmsg[256];     /* buffer for heap messages */
 
-long _bytesAllocated=0L;  // through Alc_E()
-long _bytesFreed=0L;      // through Fre_E()
+long _bytesAllocated=0L;  /* through Alc_E() */
+long _bytesFreed=0L;      /* through Fre_E() */
 
 /*------------------------------------------------------------------------------
   ELEMENTS ('E')
@@ -38,14 +38,14 @@ long _bytesFreed=0L;      // through Fre_E()
  *  @param line   line in file.
 */
 void *Alc_E( long length, const char *file, int line ){
-  unsigned char *p;     // pointer to allocated memory
+  unsigned char *p;     /* pointer to allocated memory */
 
   if( length < 1 ){
     sprintf( _heapmsg, "Element too small to allocate: %ld bytes\n", length );
     error( 3, file, line, _heapmsg, "" );
   }
 
-  // TODO use 'calloc' instead?
+  /*TODO use 'calloc' instead? */
 
   p = (unsigned char *)malloc( length );
   _bytesAllocated += length;
@@ -56,7 +56,7 @@ void *Alc_E( long length, const char *file, int line ){
     error( 3, file, line, _heapmsg, "" );
   }
 
-  memset( p, 0, length );  // zero allocated memory
+  memset( p, 0, length );  /* zero allocated memory */
 
   return (void *)p;
 }  /*  end of Alc_E  */
@@ -83,7 +83,7 @@ int Chk_E( void *pm, unsigned length, const char *file, int line ){
 	@param line;   line in file.  
 */
 void *Fre_E( void *pm, unsigned length, const char *file, int line ){
-  unsigned char *p=pm;     // pointer to allocated memory
+  unsigned char *p=pm;     /* pointer to allocated memory */
   _bytesFreed += length;
   free( p );
   return (NULL);
@@ -109,7 +109,7 @@ long MemNet( char *msg ){
 
 void MemList( void ){
 	/* nothing here */
-} // end of MemList
+} /* end of MemList */
 
 /***  MemRem.c  **************************************************************/
 
@@ -119,7 +119,7 @@ void MemList( void ){
  *  heapwalk() shows the details.  */
 
 void MemRem( char *msg ){
-  MemNet( msg );  // for non-TurboC code
+  MemNet( msg );  /* for non-TurboC code */
 } /* end of MemRem */
 
 /***  Alc_EC.c  **************************************************************/
@@ -132,12 +132,12 @@ void MemRem( char *msg ){
  *  April 1990, pp 103 - 107.
  *  Must begin with Alc_ECI for initialization; free with Fre_EC.  */
 
-typedef struct memblock   // block of memory for Alc_EC() allocation
+typedef struct memblock   /* block of memory for Alc_EC() allocation */
   {
-  struct memblock *prevBlock;  // pointer to previous block
-  struct memblock *nextBlock;  // pointer to next block
-  long blockSize;   // number of bytes in block
-  long dataOffset;  // offset to free space
+  struct memblock *prevBlock;  /* pointer to previous block */
+  struct memblock *nextBlock;  /* pointer to next block */
+  long blockSize;   /* number of bytes in block */
+  long dataOffset;  /* offset to free space */
 } MEMBLOCK;
 
 void *Alc_EC( char **block, long size, const char *file, int line ){
@@ -146,17 +146,17 @@ void *Alc_EC( char **block, long size, const char *file, int line ){
  *  file;   name of file for originating call.
  *  line;   line in file. */
   
-  char *p;  // pointer to the structure
-  MEMBLOCK *mb, // current memory block
-           *nb; // next memory block
+  char *p;  /* pointer to the structure */
+  MEMBLOCK *mb, /* current memory block */
+           *nb; /* next memory block */
 
   if( size < 1 ){
     sprintf( _heapmsg, "Element too small to allocate: %ld bytes\n", size );
     error( 3, file, line, _heapmsg, "" );
   }
 
-  // Set memory alignment.
-  size = (size+7) & 0xFFFFFFF8;   // 32 bit; multiple of 8
+  /* Set memory alignment. */
+  size = (size+7) & 0xFFFFFFF8;   /* 32 bit; multiple of 8 */
 
   mb = (void *)*block;
   if( size > mb->blockSize - (long)sizeof(MEMBLOCK) )
@@ -168,12 +168,12 @@ void *Alc_EC( char **block, long size, const char *file, int line ){
   if( mb->dataOffset + size > mb->blockSize )
     {
     if( mb->nextBlock )
-      nb = mb->nextBlock;     // next block already exists
+      nb = mb->nextBlock;     /* next block already exists */
     else
-      {                       // else create next block
+      {                       /* else create next block */
       nb = (MEMBLOCK *)Alc_E( mb->blockSize, file, line );
-      nb->prevBlock = mb;     // back linked list
-      mb->nextBlock = nb;     // forward linked list
+      nb->prevBlock = mb;     /* back linked list */
+      mb->nextBlock = nb;     /* forward linked list */
       nb->nextBlock = NULL;
       nb->blockSize = mb->blockSize;
       nb->dataOffset = sizeof(MEMBLOCK);
@@ -191,7 +191,7 @@ void *Alc_EC( char **block, long size, const char *file, int line ){
 /***  Alc_ECI.c  *************************************************************/
 
 /*  Block initialization for Alc_EC.  Use:
- *    char *_ms;    // memory block for small structures
+ *    char *_ms;     memory block for small structures
  *    _ms = (char *)alc_eci( 2000, "ms-block" );  */
 
 void *Alc_ECI( long size, const char *file, int line )
@@ -230,16 +230,16 @@ void *Clr_EC( void *block, const char *file, int line )
   MEMBLOCK *mb=block;
 
   for( ; mb->nextBlock; mb=mb->nextBlock )
-    ;  // guarantee mb at end of list
+    ;  /* guarantee mb at end of list */
 
-  for( p=(void *)mb; mb; mb=mb->prevBlock )  // loop to start of list
+  for( p=(void *)mb; mb; mb=mb->prevBlock )  /* loop to start of list */
     {
     p = (void *)mb;
     memset( p + sizeof(MEMBLOCK), 0, mb->blockSize - sizeof(MEMBLOCK) );
     mb->dataOffset = sizeof(MEMBLOCK);
     }
 
-  return (void *)p;  // return start of linked list
+  return (void *)p;  /* return start of linked list */
 
   }  /*  end of Clr_EC  */
 
@@ -255,9 +255,9 @@ void *Fre_EC( void *block, const char *file, int line )
   MEMBLOCK *mb, *nb=block;
 
   for( mb=nb; mb->nextBlock; mb=mb->nextBlock )
-    ;  // guarantee mb at end of list
+    ;  /* guarantee mb at end of list */
 
-  for( ; mb; mb=nb )  // loop to start of list
+  for( ; mb; mb=nb )  /* loop to start of list */
     {
     nb=mb->prevBlock;
     Fre_E( mb, mb->blockSize, file, line );
@@ -267,7 +267,7 @@ void *Fre_EC( void *block, const char *file, int line )
 
   }  /*  end of Fre_EC  */
 
-#define ANSIOFFSET 0 // 1 = include V[0] in vector allocation
+#define ANSIOFFSET 0 /* 1 = include V[0] in vector allocation */
 
 /***  Alc_V.c  ***************************************************************/
 
@@ -289,8 +289,8 @@ void *Alc_V( int min_index, long max_index, int size, const char *file, int line
  *  file;   name of file for originating call.
  *  line;   line in file. */
   {
-  char *p;      // pointer to the vector
-  long length = // length of vector (bytes)
+  char *p;      /* pointer to the vector */
+  long length = /* length of vector (bytes) */
     (max_index - min_index + 1) * size;
 
   if( length < 1 )
@@ -344,8 +344,8 @@ void *Fre_V( void *v, int min_index, int max_index, int size, const char *file, 
  *  file;   name of file for originating call.
  *  line;   line in file. */
   {
-  char *p=(char *)v;  // pointer to the vector data
-  unsigned length =     // number of bytes in vector data
+  char *p=(char *)v;  /* pointer to the vector data */
+  unsigned length =     /* number of bytes in vector data */
     (unsigned)(max_index - min_index + 1) * size;
 
 #if( ANSIOFFSET > 0 )
@@ -394,22 +394,22 @@ void *Fre_V( void *v, int min_index, int max_index, int size, const char *file, 
 void *Alc_MC( int min_row_index, int max_row_index, int min_col_index,
               int max_col_index, int size, const char *file, int line
 ){
-  // prow - vector of pointers to rows of M
-  int nrow = max_row_index - min_row_index + 1;    // number of rows [i]
-  long tot_row_index = min_row_index + nrow - 1;    // max prow index
+  /* prow - vector of pointers to rows of M */
+  int nrow = max_row_index - min_row_index + 1;    /* number of rows [i] */
+  long tot_row_index = min_row_index + nrow - 1;    /* max prow index */
   char **prow = (char **)Alc_V( min_row_index, tot_row_index, sizeof(int *), file, line );
 
-  // pdata - vector of contiguous A[i][j] data values
-  int ncol = max_col_index - min_col_index + 1;    // number of columns [j]
-  long tot_col_index = min_col_index + nrow*ncol - 1;  // max pdata index
+  /* pdata - vector of contiguous A[i][j] data values */
+  int ncol = max_col_index - min_col_index + 1;    /* number of columns [j] */
+  long tot_col_index = min_col_index + nrow*ncol - 1;  /* max pdata index */
   char *pdata = (char *)Alc_V( min_col_index, tot_col_index, size, file, line );
-  // Note: must have nrow >= 1 and ncol >= 1.
-  // If nrow < 1, allocation of prow will fail with fatal error message. 
-  // If ncol < 1, allocation of pdata will fail since nrow*ncol <= 0.
+  /* Note: must have nrow >= 1 and ncol >= 1. */
+  /* If nrow < 1, allocation of prow will fail with fatal error message.  */
+  /* If ncol < 1, allocation of pdata will fail since nrow*ncol <= 0. */
 
   int n, m;
   for( m=0,n=min_row_index; n<=tot_row_index; n++){
-	// set row pointers
+	/* set row pointers */
     prow[n] = pdata + ncol*size*m++;  
   }
 
@@ -480,20 +480,20 @@ void *Fre_MC( void *m, int min_row_index, int max_row_index, int min_col_index,
  *  @param line;   line in file.
 */
 void *Alc_MSC( int min_index, int max_index, int size, const char *file, int line){
-  // prow - vector of pointers to rows of M
+  /* prow - vector of pointers to rows of M */
   char **prow = (char **)Alc_V( min_index, max_index, sizeof(char *), file, line );
 
-     // pdata - vector of contiguous M[i][j] data values
-  int nrow = max_index - min_index + 1;    // number of rows
-  int nval = nrow * (nrow + 1) / 2;        // number of values
-  int tot_index = min_index + nval - 1;    // max pdata index
+     /* pdata - vector of contiguous M[i][j] data values */
+  int nrow = max_index - min_index + 1;    /* number of rows */
+  int nval = nrow * (nrow + 1) / 2;        /* number of values */
+  int tot_index = min_index + nval - 1;    /* max pdata index */
   char *pdata = (char *)Alc_V( min_index, tot_index, size, file, line );
-     // If nrow < 1, allocation of prow will fail with fatal error message. 
+     /* If nrow < 1, allocation of prow will fail with fatal error message.  */
 
   int n, m;
   prow[min_index] = pdata;
   for( m=1,n=min_index+1; n<=max_index; n++ ) 
-    prow[n] = prow[n-1] + size*m++;  // set row pointers
+    prow[n] = prow[n-1] + size*m++;  /* set row pointers */
   
   return ((void *)prow);
 }  /*  end of Alc_MSC  */
@@ -606,4 +606,3 @@ void *Fre_MSR( void *v, int min_index, int max_index, int size, const char *file
 
   return (NULL);
 }  /*  end of Fre_MSR  */
-

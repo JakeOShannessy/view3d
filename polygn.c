@@ -78,9 +78,9 @@ int PolygonOverlap(const Polygon *p1, Polygon *p2, const int savePD, int freeP2)
   int nLeftVrt;  /* number of vertices to left of edge */
   int nRightVrt; /* number of vertices to right of edge */
   int nTempVrt;  /* number of vertices of temporary polygon */
-//  Vec2 leftVrt[MAXNVT];  /* coordinates of vertices to left of edge */
-//  Vec2 rightVrt[MAXNVT]; /* coordinates of vertices to right of edge */
-//  Vec2 tempVrt[MAXNVT];  /* coordinates of temporary polygon */
+/*  Vec2 leftVrt[MAXNVT]; */ /* coordinates of vertices to left of edge */
+/*  Vec2 rightVrt[MAXNVT]; */ /* coordinates of vertices to right of edge */
+/*  Vec2 tempVrt[MAXNVT]; */ /* coordinates of temporary polygon */
   int overlap=0; /* 0: P2 outside P1; 1: P2 inside P1; 2: part overlap */
   int j, jm1;    /* vertex indices;  jm1 = j - 1 */
 
@@ -100,7 +100,7 @@ int PolygonOverlap(const Polygon *p1, Polygon *p2, const int savePD, int freeP2)
   do{  /*  process tempVrt against each edge of P1 (long loop) */
        /*  transfer tempVrt into leftVrt and/or rightVrt  */
     double a1, b1, c1; /* HC for current edge of P1 */
-//    int u[MAXNVT];  /* +1 = vertex left of edge; -1 = vertex right of edge */
+/*    int u[MAXNVT]; */ /* +1 = vertex left of edge; -1 = vertex right of edge */
     int left=1;     /* true if all vertices left of edge */
     int right=1;    /* true if all vertices right of edge */
 #if( DEBUG > 1 )
@@ -176,8 +176,8 @@ int PolygonOverlap(const Polygon *p1, Polygon *p2, const int savePD, int freeP2)
     DumpP2D( "Left polygon:", nLeftVrt, _leftVrt );
     DumpP2D( "Right polygon:", nRightVrt, _rightVrt );
 #endif
-//    if( nLeftVrt >= _maxNVT || nRightVrt >= _maxNVT )
-//      errorf( 3, __FILE__, __LINE__, "Parameter _maxNVT too small", "" );
+/*    if( nLeftVrt >= _maxNVT || nRightVrt >= _maxNVT ) */
+/*      errorf( 3, __FILE__, __LINE__, "Parameter _maxNVT too small", "" ); */
     if( nLeftVrt >= _maxNVT )
       {
       errorf( 2, __FILE__, __LINE__,
@@ -587,7 +587,7 @@ void FreePolygonMem( void )
 int LimitPolygon( int nVrt, Vec2 polyVrt[],
   const double maxX, const double minX, const double maxY, const double minY )
   {
-//  Vec2 tempVrt[MAXNV2];  /* temporary vertices */
+/*  Vec2 tempVrt[MAXNV2]; */ /* temporary vertices */
   int n, m;  /* vertex index */
 
                          /* test vertices against maxX */
@@ -818,4 +818,3 @@ void DumpP2D( char *title, const int nvs, Vec2 *vs )
   fflush( _ulog );
 
   }  /* end of DumpP2D */
-

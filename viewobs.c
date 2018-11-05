@@ -258,10 +258,10 @@ double ViewObstructed( View3DControlData *vfCtrl, int nv1, Vec3 v1[], double are
     }  /* end of view points (np) loop */
 
 #if( DEBUG > 0 )
-  if( AFu < 0.0 )  // due to negative weight; enly np=0
+  if( AFu < 0.0 )  /* due to negative weight; enly np=0 */
     {
     if( weight[0] > 0 ) errorf( 1, __FILE__, __LINE__,
-//    if( AFu < -1.0e-11 ) errorf( 1, __FILE__, __LINE__,
+/*    if( AFu < -1.0e-11 ) errorf( 1, __FILE__, __LINE__, */
       "Negative AFu (", FltStr(AFu,4), ") set to 0", "" );
     AFu = 0.0;
     }
@@ -783,4 +783,3 @@ double ViewRP( Vec3 v1[], double area, int level, View3DControlData *vfCtrl )
   return AF;
 
   }  /* end ViewRP */
-

@@ -151,8 +151,8 @@ int main( int argc, char **argv ){
 int processPaths2d(char *inFile, char *outFile) {
   FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
   _unxt = inHandle;
-  // Write the results to the output file.
-  // TODO: if saving to binary format, open for binary write
+  /* Write the results to the output file. */
+  /* TODO: if saving to binary format, open for binary write */
   FILE *outHandle;
   if(strlen(outFile) == 0 || outFile == NULL) {
     outHandle = stdout;
@@ -293,7 +293,7 @@ int processHandles2d(FILE *inHandle, FILE *outHandle) {
   fprintf( stderr, "\nComputing view factors from surface N to surfaces 1 through N-1\n" );
 
   time1 = CPUtime( 0.0 );
-  // This is the routine that computes the view factors
+  /* This is the routine that computes the view factors */
   View2D( srf, AF, &vfCtrl );
   fprintf( _ulog, "\n%7.2f seconds to compute view factors.\n", CPUtime(time1) );
   Fre_V( srf, 1, vfCtrl.nAllSrf, sizeof(SRFDAT2D), __FILE__, __LINE__ );
@@ -601,4 +601,3 @@ int setlpos2( SRFDATD *srfv, int *stype, int *lpos )
 
   }  /*  end of setlpos2  */
 #endif
-

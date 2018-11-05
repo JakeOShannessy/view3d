@@ -4,7 +4,7 @@ CC = gcc
 # compiler flags:
 #  -g    adds debugging information to the executable file
 #  -Wall turns on most, but not all, compiler warnings
-CFLAGS  = -g -Wall -DANSI -D_DEBUG -DMAIN
+CFLAGS  = -g -Wall -DANSI -D_DEBUG -DMAIN -ansi
 
 SRCS =  ctrans.c  heap.c  polygn.c  savevf.c  viewobs.c  viewunob.c \
 	getdat.c  misc.c  readvf.c  readvs.c  test3d.c view3d.c viewpp.c \

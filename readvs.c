@@ -4,7 +4,7 @@
 #include "getdat.h"
 #include "heap.h"
 #include "test2d.h"
-// #include "misc.h"
+/* #include "misc.h" */
 /* NOTE: do not add misc.h here, see below */
 
 #include <ctype.h>
@@ -53,8 +53,8 @@ static char *NxtLine(FILE *f, char *str, int maxlen ){
     c = getc(f);
     if( c==EOF ) return NULL;
     if( _echo ) putc( c, _ulog );
-    if( maxlen < 1 ) continue;   // do not fill buffer
-    if( c == '\r' ) continue;    // 2007/10/07 Linux EOL = \n\r
+    if( maxlen < 1 ) continue;   /* do not fill buffer */
+    if( c == '\r' ) continue;    /* 2007/10/07 Linux EOL = \n\r */
     str[i++] = (char)c;
     if( i == maxlen ){
       str[i-1] = '\0';
@@ -90,33 +90,33 @@ static char *NxtWord(FILE *inHandle, char *str, int flag, int maxlen )
           4:  get next line (even if comment) (\n --> \0).
  * maxlen: length of buffer to test for overflow. */
   {
-  int c;         // character read from _unxt
-  int i=0;       // current position in str
-  int done=0;    // true when start of word is found or word is complete
+  int c;         /* character read from _unxt */
+  int i=0;       /* current position in str */
+  int done=0;    /* true when start of word is found or word is complete */
 
   c = getc(inHandle);
   if( flag > 0 )
     {
-    if( c != '\n' )  // last call did not end at EOL; ready to read next char.
-      {                // would miss first char if reading first line of file.
+    if( c != '\n' )  /* last call did not end at EOL; ready to read next char. */
+      {                /* would miss first char if reading first line of file. */
       if( flag == 2 )
         {
-        if( ftell( inHandle) == 1 ) // 2008/01/16
-          ungetc( c, inHandle );  // restore first char of first line
-        NxtLine(inHandle, str, maxlen );  // read to EOL filling buffer
+        if( ftell( inHandle) == 1 ) /* 2008/01/16 */
+          ungetc( c, inHandle );  /* restore first char of first line */
+        NxtLine(inHandle, str, maxlen );  /* read to EOL filling buffer */
         }
       else
-        NxtLine(inHandle, str, 0 );       // skip to EOL; fix size 2008/01/16
-        // if flag = 1; continue to read first word on next line
+        NxtLine(inHandle, str, 0 );       /* skip to EOL; fix size 2008/01/16 */
+        /* if flag = 1; continue to read first word on next line */
       }
     if( flag > 1 )
       {
-        // if flag = 2; return (partial?) line just read
+        /* if flag = 2; return (partial?) line just read */
       if( flag > 2 )
         {
-        // if flag > 2; return all of next line (must fit in buffer)
+        /* if flag > 2; return all of next line (must fit in buffer) */
         NxtLine(inHandle, str, maxlen );
-        if( flag == 3 )  // skip comment lines
+        if( flag == 3 )  /* skip comment lines */
           while( str[0] == '!' )
             NxtLine(inHandle, str, maxlen );
 #ifdef _DEBUG
@@ -124,11 +124,11 @@ static char *NxtWord(FILE *inHandle, char *str, int flag, int maxlen )
           ERRORX( 3, __FILE__, __LINE__, "Invalid flag: %d", flag);
 #endif
         }
-      ungetc( '\n', inHandle);  // restore EOL character for next call
+      ungetc( '\n', inHandle);  /* restore EOL character for next call */
       return str;
       }
     }
-  else  // flag == 0
+  else  /* flag == 0 */
     {
 #ifdef _DEBUG
     if( flag < 0 )
@@ -136,66 +136,66 @@ static char *NxtWord(FILE *inHandle, char *str, int flag, int maxlen )
         "Invalid flag: %d", flag);
 #endif
     if( c == ' ' || c == ',' || c == '\n' || c == '\t' )
-      ; // skip EOW char saved at last call
+      ; /* skip EOW char saved at last call */
     else
-      ungetc( c, inHandle);  // restore first char of first line
+      ungetc( c, inHandle);  /* restore first char of first line */
     }
 
-  while( !done )   // search for start of next word
+  while( !done )   /* search for start of next word */
     {
     c = getc(inHandle);
     if( c==EOF ) return NULL;
     if( _echo ) putc( c, _ulog );
     switch( c )
       {
-      case ' ':          // skip word separators
+      case ' ':          /* skip word separators */
       case ',':
       case '\n':
       case '\r':
       case '\t':
       case '\0':
         break;
-      case '!':          // begin comment; skip to EOL
+      case '!':          /* begin comment; skip to EOL */
         NxtLine(inHandle, str, 0 );
         break;
-      case '*':          // end-of-file indicator
+      case '*':          /* end-of-file indicator */
         return NULL;
-      default:           // first character of word found
+      default:           /* first character of word found */
         str[i++] = (char)c;
         done = 1;
         break;
       }
-    }  // end start-of-word search
+    }  /* end start-of-word search */
 
   done = 0;
-  while( !done )   // search for end-of-word (EOW)
+  while( !done )   /* search for end-of-word (EOW) */
     {
     c = getc(inHandle);
     if( c==EOF ) return NULL;
     if( _echo ) putc( c, _ulog );
     switch( c )
       {
-      case '\n':   // EOW characters
+      case '\n':   /* EOW characters */
       case ' ':
       case ',':
       case '\t':
         str[i] = '\0';
         done = 1;
         break;
-      case '\r':   // 2004/01/14 here for Linux: EOL = \n\r
+      case '\r':   /* 2004/01/14 here for Linux: EOL = \n\r */
       case '\0':
         break;
-      default:     // accumulate word in buffer
+      default:     /* accumulate word in buffer */
         str[i++] = (char)c;
-        if( i == maxlen )  // with overflow test
+        if( i == maxlen )  /* with overflow test */
           {
           str[i-1] = '\0';
           ERRORX( 3, __FILE__, __LINE__, "Buffer overflow: %s", str);
           }
         break;
       }
-    }  // end EOW search
-  ungetc( c, inHandle); // save EOW character for next call
+    }  /* end EOW search */
+  ungetc( c, inHandle); /* save EOW character for next call */
 
   return str;
 
@@ -361,7 +361,7 @@ static void GetCtrl( char *str, View3DControlData *vfCtrl){
       p = strtok( NULL, "= ," );
     }
 
-    p = strtok( NULL, "= ," );    // get next word
+    p = strtok( NULL, "= ," );    /* get next word */
   }
 
   if( vfCtrl->col && !vfCtrl->row )
@@ -443,9 +443,6 @@ finish:
 
 
 static int GetVS(FILE *inHandle, VertexSurfaceData *V){
-// void GetVS2D( char **name, float *emit, int *base, int *cmbn
-//	,SRFDAT2D *srf, View2DControlData *vfCtrl
-//){
   char c;       /* first character in line */
   int nv=0;    /* number of vertices */
   int ns=0;    /* number of surfaces */
@@ -632,4 +629,3 @@ void vertex_surface_data_destroy(VertexSurfaceData *V){
 	}
 	V3D_FREE(VertexSurfaceData,V);
 }
-

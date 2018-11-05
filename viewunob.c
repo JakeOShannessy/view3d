@@ -635,7 +635,7 @@ void ViewsInit( int maxDiv, int init )
     _rc1 = Alc_V( 0, maxRC1, sizeof(EdgeDir), __FILE__, __LINE__ );
     maxDV1 = maxDiv - 1;
     _dv1 = Alc_MC( 0, maxRC1, 0, maxDV1, sizeof(EdgeDivision), __FILE__, __LINE__ );
-    maxRC2 = _maxNVT;  // MAXNVT @@@ needs work; 2005/11/02;
+    maxRC2 = _maxNVT;  /* MAXNVT @@@ needs work; 2005/11/02; */
     _rc2 = Alc_V( 0, maxRC2, sizeof(EdgeDir), __FILE__, __LINE__ );
     maxDV2 = maxDiv - 1;
     _dv2 = Alc_MC( 0, maxRC2, 0, maxDV2, sizeof(EdgeDivision), __FILE__, __LINE__ );
@@ -883,4 +883,3 @@ int GQTriangle( const int nDiv, const Vec3 *vt, Vec3 *p, double *w )
   return nSubSrf;
 
   }  /* end GQTriangle */
-

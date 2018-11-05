@@ -229,16 +229,16 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
         if( nProb )
           nProb = ConeRadiusTest( srf, &srfN, &srfM,
             vfCtrl, probableObstr, nProb, distNM );
-//DumpOS( " Rad LOS:", nProb, probableObstr );
+/*DumpOS( " Rad LOS:", nProb, probableObstr ); */
 
         if( nProb )
           nProb = BoxTest( srf, &srfN, &srfM, vfCtrl, probableObstr, nProb );
-//DumpOS( " Box LOS:", nProb, probableObstr );
+/*DumpOS( " Box LOS:", nProb, probableObstr ); */
 
         if( nProb )   /* test/set obstruction orientations */
           nProb = OrientationTest( srf, &srfN, &srfM,
             vfCtrl, probableObstr, nProb );
-//DumpOS( " Orn LOS:", nProb, probableObstr );
+/*DumpOS( " Orn LOS:", nProb, probableObstr ); */
 
         if( vfCtrl->nMaskSrf ) /* add masking surfaces */
           nProb = AddMaskSrf( srf, &srfN, &srfM, maskSrf, base,
@@ -252,7 +252,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
             probableObstr[++k] = probableObstr[j];
         nProb = k;
         }
-//DumpOS( " Msk LOS:", nProb, probableObstr );
+/*DumpOS( " Msk LOS:", nProb, probableObstr ); */
 
         if( vfCtrl->nProbObstr )    /*** obstructed view factors ***/
           {
@@ -271,8 +271,8 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
             {
             fprintf( _ulog, " Project rays from srf %d to srf %d\n",
               srf1->nr, srf2->nr );
-//          DumpSrfNM( "from srf", srf1 );
-//          DumpSrfNM( "  to srf", srf2 );
+/*          DumpSrfNM( "from srf", srf1 ); */
+/*          DumpSrfNM( "  to srf", srf2 ); */
             fprintf( _ulog, " %d probable obtructions:\n", vfCtrl->nProbObstr );
             for( j=1; j<=vfCtrl->nProbObstr; j++ )
               DumpSrf3D( "   surface", srf+probableObstr[j] );
@@ -292,7 +292,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
           nSubSrf = Subsurface( &vfCtrl->srf1T, subs );
           for( vfCtrl->failRecursion=j=0; j<nSubSrf; j++ )
             {
-//          minArea = MIN( subs[j].area, vfCtrl->srf2T.area );
+/*          minArea = MIN( subs[j].area, vfCtrl->srf2T.area ); */
             vfCtrl->epsAF = minArea * vfCtrl->epsAdap;
             if( subs[j].nv == 3 )
               calcAF += ViewTP( subs[j].v, subs[j].area, 0, vfCtrl );
@@ -322,7 +322,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
           else
             { srf1 = &srfN; srf2 = &srfM; }
           ViewMethod( &srfN, &srfM, distNM, vfCtrl );
-//        minArea = MIN( srfN.area, srfM.area );
+/*        minArea = MIN( srfN.area, srfM.area ); */
           vfCtrl->epsAF = minArea * vfCtrl->epsAdap;
           AF[n][m] = ViewUnobstructed( vfCtrl, _row, _col );
           if( vfCtrl->failViewALI )
@@ -331,7 +331,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
               _row, _col, AF[n][m] );
             vfCtrl->failConverge = 1;
             }
-          if( vfCtrl->method<5 ) // ???
+          if( vfCtrl->method<5 ) /* ??? */
             bins[vfCtrl->method][vfCtrl->nEdgeDiv] += 1;   /* count edge divisions */
           nAFnO += 1;
           }
@@ -460,8 +460,8 @@ int ProjectionDirection( SRFDAT3D *srf, SRFDATNM *srfN, SRFDATNM *srfM,
       direction = -1;
                this is worse for OVERHANG.VS3
 #endif
-#ifdef XXX  // this great idea doesn't seem to work well
-  if( srfM->rc > 10.0 * srfN->rc )  // 2005/11/06
+#ifdef XXX  /* this great idea doesn't seem to work well */
+  if( srfM->rc > 10.0 * srfN->rc )  /* 2005/11/06 */
     direction = 1;
   if( srfN->rc > 10.0 * srfM->rc )
     direction = -1;
@@ -663,13 +663,13 @@ int errorf( int severity, char *file, int line, ... ){
                          "*** warning ***",
                          " *** error *** ",
                          " *** fatal *** " };
-//  char name[16];
+/*  char name[16]; */
   int n=1;
 
   if( severity >= 0 )
     {
     if( severity>3 ) severity = 3;
-//    PathSplit( file, _string, _string, name, _string );
+/*    PathSplit( file, _string, _string, name, _string ); */
     sprintf( _string, "%s  (file %s, line %d)\n", head[severity], sfname( file ), line );
     fputs( "\n", stderr );
     fputs( _string, stderr );
@@ -705,5 +705,3 @@ int errorf( int severity, char *file, int line, ... ){
   return 0;
 
   }  /*  end of errorf  */
-
-

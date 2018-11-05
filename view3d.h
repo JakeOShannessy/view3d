@@ -13,7 +13,6 @@
 #define MAXNV 4     /* max number of vertices for an initial surface */
 #define MAXNV1 5    /* max number of vertices after 1 clip */
 #define MAXNV2 12   /* max number of vertices clipped projection */
-//#define NAMELEN 12  /* length of a name */
 #ifdef XXX
 #define PI       3.141592653589793238
 #define PIt2     6.283185307179586477   /* 2 * pi */
@@ -295,14 +294,16 @@ typedef struct  {
     double *values;
 } VFResultsC;
 
-// typedef struct {
-//   int encl;
-//   int didemit;
-//   int nSrf;
-//   float *area;
-//   float *emit;
-//   double **AF;
-// } VFResults;
+/*
+typedef struct {
+  int encl;
+  int didemit;
+  int nSrf;
+  float *area;
+  float *emit;
+  double **AF;
+} VFResults;
+*/
 
 /* The input type for view3d. */
 typedef struct {

@@ -14,12 +14,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdarg.h> // variable argument list macro definitions
-#include "types.h"  // define unsigned char, short, etc.
+#include <stdarg.h> /* variable argument list macro definitions */
+#include "types.h"  /* define unsigned char, short, etc. */
 
-#define NMAX 4      // maximum number of calls to xxxStr at one time
-#define NXTBUF 1    // buffer size (if > 1023)
-#define ANSIC 1     // 1 to use only ANSI C code for Path functions
+#define NMAX 4      /* maximum number of calls to xxxStr at one time */
+#define NXTBUF 1    /* buffer size (if > 1023) */
+#define ANSIC 1     /* 1 to use only ANSI C code for Path functions */
 
 int _emode=1;   /* error message mode: 0=logFile, 1=DOS console, 2=Windows */
 
@@ -138,7 +138,7 @@ int error( int severity, const char *file, const int line, ... ){
     sprintf( source, "  (file %s, line %d)\n",
       sfname( file ), line );
 
-#if( _MSC_VERXXX ) // for Windoows programs
+#if( _MSC_VERXXX ) /* for Windoows programs */
     if( _emode == 2 )
       errorw( head[severity], message, source );
     else
@@ -150,7 +150,7 @@ int error( int severity, const char *file, const int line, ... ){
     if( severity>2 )
       {
       if( _ulog )
-        fclose( _ulog );  // exit() closes files
+        fclose( _ulog );  /* exit() closes files */
       exit( 1 );
       }
   }else if( severity < -1 ){
@@ -166,9 +166,9 @@ int error( int severity, const char *file, const int line, ... ){
 /*  Return pointer to file name from the full path name.  */
 
 const char *sfname(const char* fullpath){
-	const char *name=fullpath, *c;  // allow for name == fullpath
+	const char *name=fullpath, *c;  /* allow for name == fullpath */
 
-	for( c=fullpath; *c; c++ ){  // find last dir char before name
+	for( c=fullpath; *c; c++ ){  /* find last dir char before name */
 		if( *c == '/' ) name = c+1;
 		if( *c == '\\' ) name = c+1;
 		if( *c == ':' ) name = c+1;
@@ -178,16 +178,16 @@ const char *sfname(const char* fullpath){
 
 
 #if( __GNUC__ )
-#include <unistd.h> // prototypes: getcwd
+#include <unistd.h> /* prototypes: getcwd */
 char _dirchr='/';
 #elif( _MSC_VER )
-#include <direct.h> // prototypes: _getcdw
+#include <direct.h> /* prototypes: _getcdw */
 char _dirchr='\\';
 #elif( __TURBOC__ )
-#include <dir.h>    // prototypes: getcwd
+#include <dir.h>    /* prototypes: getcwd */
 char _dirchr='\\';
 #else
-char _dirchr='\0';    // this will force a failure
+char _dirchr='\0';    /* this will force a failure */
 #endif
 
 /***  errorc.c  **************************************************************/
@@ -215,9 +215,9 @@ static void errorc( int severity, char *message ){
 /*  Merge full path from its component parts.  */
 
 void PathMerge( char *fullpath, int szfp, char *drv, char *path, char *name, char *ext ){
-  // string indexing [ 0 | 1 | ... | sz-2 | sz-1 ] for size sz string
-  int n=0; // index to fullpath string
-  char *c;  // pointer to source string
+  /* string indexing [ 0 | 1 | ... | sz-2 | sz-1 ] for size sz string */
+  int n=0; /* index to fullpath string */
+  char *c;  /* pointer to source string */
 
 #if( DEBUG > 0 )
   if( !fullpath ) errorc( 3, "PathMerge: NULL fullpath" );
@@ -235,7 +235,7 @@ void PathMerge( char *fullpath, int szfp, char *drv, char *path, char *name, cha
     for( c=path; *c && n<szfp; c++ )
       fullpath[n++] = *c;
     if( fullpath[n-1] != _dirchr && n<szfp )
-      fullpath[n++] = _dirchr;  // ensure path ends with _dirchr
+      fullpath[n++] = _dirchr;  /* ensure path ends with _dirchr */
     }
 
   if( name && *name )
@@ -245,7 +245,7 @@ void PathMerge( char *fullpath, int szfp, char *drv, char *path, char *name, cha
   if( ext && *ext )
     {
     if( ext[0] != '.' && n<szfp )
-      fullpath[n++] = '.';  // ensure period before extension
+      fullpath[n++] = '.';  /* ensure period before extension */
     for( c=ext; *c && n<szfp; c++ )
       fullpath[n++] = *c;
     }
@@ -262,10 +262,10 @@ void PathMerge( char *fullpath, int szfp, char *drv, char *path, char *name, cha
   if( _ulog )
     {
     fprintf( _ulog, "Merge path: %s\n", fullpath );
-//  fprintf( _ulog, "   drv: %s\n", drv );
-//  fprintf( _ulog, "  path: %s\n", path );
-//  fprintf( _ulog, "  name: %s\n", name );
-//  fprintf( _ulog, "   ext: %s\n", ext );
+/*  fprintf( _ulog, "   drv: %s\n", drv ); */
+/*  fprintf( _ulog, "  path: %s\n", path ); */
+/*  fprintf( _ulog, "  name: %s\n", name ); */
+/*  fprintf( _ulog, "   ext: %s\n", ext ); */
     fflush( _ulog );
     }
 #endif
@@ -286,16 +286,16 @@ void PathMerge( char *fullpath, int szfp, char *drv, char *path, char *name, cha
 void PathSplit( char *fullpath, char *drv, int szd, char *path, int szp
 		,char *name, int szn, char *ext, int sze 
 ){
-  char *c, // position in fullpath
-     *p; // pointer to special charactor
-  int n;  // character count
+  char *c, /* position in fullpath */
+     *p; /* pointer to special charactor */
+  int n;  /* character count */
 
 #if( DEBUG > 0 )
   if( !fullpath ) errorc( 3, "PathSplit: NULL fullpath" );
 #endif
 
   c = fullpath;
-  if( drv )   // fill directory string
+  if( drv )   /* fill directory string */
     {
     n = 0;
     if( fullpath[1] == ':' )
@@ -304,15 +304,15 @@ void PathSplit( char *fullpath, char *drv, int szd, char *path, int szp
         errorc( 2, "pathsplit: file drive overrun" );
       else
         {
-        drv[n++] = *c++;  // copy drive characters
+        drv[n++] = *c++;  /* copy drive characters */
         drv[n++] = *c++;
         }
       }
-    drv[n] =  '\0';  // terminate drive string
+    drv[n] =  '\0';  /* terminate drive string */
     }
 
   p = strrchr( c, _dirchr );
-  if( p )  // p = last directory charactor in fullpath
+  if( p )  /* p = last directory charactor in fullpath */
     {
     if( path )
       {
@@ -321,37 +321,37 @@ void PathSplit( char *fullpath, char *drv, int szd, char *path, int szp
         path[n++] = *c++;
       if( n == szp )
         { errorc( 2, "pathsplit: file path overrun" ); n--; }
-      path[n] = '\0';  // terminate path string
+      path[n] = '\0';  /* terminate path string */
       }
-    c = p + 1;  // c = start of name in fullpath
+    c = p + 1;  /* c = start of name in fullpath */
     }
   
   p = strrchr( c, '.' );
   if( name )
     {
     n = 0;
-    if( p )  // p = last period in fullpath
+    if( p )  /* p = last period in fullpath */
       while( c<p && n<szn )
         name[n++] = *c++;
-    else     // no period in/after name
+    else     /* no period in/after name */
       while( *c && n<szn )
         name[n++] = *c++;
     if( n == szn )
       { errorc( 2, "pathsplit: file name overrun" ); n--; }
-    name[n] = '\0';  // terminate name string
+    name[n] = '\0';  /* terminate name string */
     }
 
   if( ext )
     {
     n = 0;
-    if( p )  // p = last period in fullpath
+    if( p )  /* p = last period in fullpath */
       {
       for( c=p; *c && n<sze; c++ )
         ext[n++] = *c;
       if( n == sze )
         { errorc( 2, "pathsplit: file extension overrun" ); n--; }
       }
-    ext[n] = '\0';  // terminate extension string
+    ext[n] = '\0';  /* terminate extension string */
     }
 
 #if( DEBUG > 0 )
@@ -474,8 +474,8 @@ char *NxtLine( char *str, int maxlen ){
     c = getc( _unxt );
     if( c==EOF ) return NULL;
     if( _echo ) putc( c, _ulog );
-    if( maxlen < 1 ) continue;   // do not fill buffer
-    if( c == '\r' ) continue;    // 2007/10/07 Linux EOL = \n\r
+    if( maxlen < 1 ) continue;   /* do not fill buffer */
+    if( c == '\r' ) continue;    /* 2007/10/07 Linux EOL = \n\r */
     str[i++] = (char)c;
     if( i == maxlen )
       {
@@ -512,9 +512,9 @@ char *NxtWord( FILE *inHandle, char *str, int flag, int maxlen )
           4:  get next line (even if comment) (\n --> \0).
  * maxlen: length of buffer to test for overflow. */
   {
-  int c;         // character read from _unxt
-  int i=0;       // current position in str
-  int done=0;    // true when start of word is found or word is complete
+  int c;         /* character read from _unxt */
+  int i=0;       /* current position in str */
+  int done=0;    /* true when start of word is found or word is complete */
 
 #ifdef _DEBUG
   if( !inHandle )
@@ -525,26 +525,26 @@ char *NxtWord( FILE *inHandle, char *str, int flag, int maxlen )
   c = getc( inHandle );
   if( flag > 0 )
     {
-    if( c != '\n' )  // last call did not end at EOL; ready to read next char.
-      {                // would miss first char if reading first line of file.
+    if( c != '\n' )  /* last call did not end at EOL; ready to read next char. */
+      {                /* would miss first char if reading first line of file. */
       if( flag == 2 )
         {
-        if( ftell( inHandle) == 1 ) // 2008/01/16
-          ungetc( c, inHandle );  // restore first char of first line
-        NxtLine( str, maxlen );  // read to EOL filling buffer
+        if( ftell( inHandle) == 1 ) /* 2008/01/16 */
+          ungetc( c, inHandle );  /* restore first char of first line */
+        NxtLine( str, maxlen );  /* read to EOL filling buffer */
         }
       else
-        NxtLine( str, 0 );       // skip to EOL; fix size 2008/01/16
-        // if flag = 1; continue to read first word on next line
+        NxtLine( str, 0 );       /* skip to EOL; fix size 2008/01/16 */
+        /* if flag = 1; continue to read first word on next line */
       }
     if( flag > 1 )
       {
-        // if flag = 2; return (partial?) line just read
+        /* if flag = 2; return (partial?) line just read */
       if( flag > 2 )
         {
-        // if flag > 2; return all of next line (must fit in buffer)
+        /* if flag > 2; return all of next line (must fit in buffer) */
         NxtLine( str, maxlen );
-        if( flag == 3 )  // skip comment lines
+        if( flag == 3 )  /* skip comment lines */
           while( str[0] == '!' )
             NxtLine( str, maxlen );
 #ifdef _DEBUG
@@ -553,11 +553,11 @@ char *NxtWord( FILE *inHandle, char *str, int flag, int maxlen )
             "Invalid flag: ", IntStr(flag), "" );
 #endif
         }
-      ungetc( '\n', inHandle );  // restore EOL character for next call
+      ungetc( '\n', inHandle );  /* restore EOL character for next call */
       return str;
       }
     }
-  else  // flag == 0
+  else  /* flag == 0 */
     {
 #ifdef _DEBUG
     if( flag < 0 )
@@ -565,67 +565,67 @@ char *NxtWord( FILE *inHandle, char *str, int flag, int maxlen )
         "Invalid flag: ", IntStr(flag), "" );
 #endif
     if( c == ' ' || c == ',' || c == '\n' || c == '\t' )
-      ; // skip EOW char saved at last call
+      ; /* skip EOW char saved at last call */
     else
-      ungetc( c, inHandle );  // restore first char of first line
+      ungetc( c, inHandle );  /* restore first char of first line */
     }
 
-  while( !done )   // search for start of next word
+  while( !done )   /* search for start of next word */
     {
     c = getc( inHandle );
     if( c==EOF ) return NULL;
     if( _echo ) putc( c, _ulog );
     switch( c )
       {
-      case ' ':          // skip word separators
+      case ' ':          /* skip word separators */
       case ',':
       case '\n':
       case '\r':
       case '\t':
       case '\0':
         break;
-      case '!':          // begin comment; skip to EOL
+      case '!':          /* begin comment; skip to EOL */
         NxtLine( str, 0 );
         break;
-      case '*':          // end-of-file indicator
+      case '*':          /* end-of-file indicator */
         NxtClose();
         return NULL;
-      default:           // first character of word found
+      default:           /* first character of word found */
         str[i++] = (char)c;
         done = 1;
         break;
       }
-    }  // end start-of-word search
+    }  /* end start-of-word search */
 
   done = 0;
-  while( !done )   // search for end-of-word (EOW)
+  while( !done )   /* search for end-of-word (EOW) */
     {
     c = getc( inHandle );
     if( c==EOF ) return NULL;
     if( _echo ) putc( c, _ulog );
     switch( c )
       {
-      case '\n':   // EOW characters
+      case '\n':   /* EOW characters */
       case ' ':
       case ',':
       case '\t':
         str[i] = '\0';
         done = 1;
         break;
-      case '\r':   // 2004/01/14 here for Linux: EOL = \n\r
+      case '\r':   /* 2004/01/14 here for Linux: EOL = \n\r */
       case '\0':
         break;
-      default:     // accumulate word in buffer
+      default:     /* accumulate word in buffer */
         str[i++] = (char)c;
-        if( i == maxlen )  // with overflow test
+        if( i == maxlen )  /* with overflow test */
           {
           str[i-1] = '\0';
           error( 3, __FILE__, __LINE__, "Buffer overflow: ", str, "" );
           }
         break;
       }
-    }  // end EOW search
-  ungetc( c, inHandle ); // save EOW character for next call
+    }  /* end EOW search */
+  ungetc( c, inHandle ); /* save EOW character for next call */
 
   return str;
 
@@ -810,7 +810,7 @@ int IntCon( char *str, int *i )
 
 char *IntStr( long i )
   {
-  static char string[NMAX][12];  // strings long enough for 32-bit integers
+  static char string[NMAX][12];  /* strings long enough for 32-bit integers */
   static int index=0;
 
   if( ++index == NMAX )
@@ -832,7 +832,7 @@ int ReadIX( FILE *inHandle, int flag )
 
   NxtWord( inHandle, _string, flag, sizeof(_string) );
   if( LongCon( _string, &value ) ||
-      value > INT_MAX || value < INT_MIN )  // max/min depends on compiler
+      value > INT_MAX || value < INT_MIN )  /* max/min depends on compiler */
     error( 2, __FILE__, __LINE__, "Bad integer: ", _string, "" );
 
   return (int)value;
@@ -850,7 +850,7 @@ int ReadIX( FILE *inHandle, int flag )
 float CPUtime(float t1){
   float t2;
   t2 = (float)clock() / (float)CLOCKS_PER_SEC;
-  t2 = (float)(fabs(t2-t1));  // clear -0.0
+  t2 = (float)(fabs(t2-t1));  /* clear -0.0 */
   return t2;
 }  /* end CPUtime */
 
@@ -865,7 +865,7 @@ int streql( char *s1, char *s2 )
   for( ; *s1 && *s2 && *s1 == *s2; ++s1, ++s2 )
     ;
 
-  if( *s1 == *s2 )  // both must equal '\0'
+  if( *s1 == *s2 )  /* both must equal '\0' */
     return 1;
   else
     return 0;
@@ -882,7 +882,7 @@ int streqli( char *s1, char *s2 )
   for( ; *s1 && *s2 && (toupper(*s1) == toupper(*s2)); ++s1, ++s2 )
     ;
 
-  if( *s1 == *s2 )  // both must equal '\0'
+  if( *s1 == *s2 )  /* both must equal '\0' */
     return 1;
   else
     return 0;
@@ -992,10 +992,9 @@ int GetKey( void )
 
 int GetKey( void )
   {
-  int c = getchar();  // ANSI, requies ENTER key also
+  int c = getchar();  /* ANSI, requies ENTER key also */
 
   return c;
 
   }  /* end GetKey */
 #endif
-
