@@ -19,7 +19,7 @@ jobs:
       - run:
           name: Setup Rust
           command: |
-            apt-get install gcc make -y
+            apt-get install curl -y
             curl https://sh.rustup.rs -sSf | sh
       - run:
           name: Build Rust binaries
