@@ -237,7 +237,6 @@ finish:
   if(error( -1, __FILE__, __LINE__, "" )>0){
     error( 3, __FILE__, __LINE__, "Fix errors in input data", "" );
   }
-  fprintf(stderr, "##CountVS3D##epsAdap: %f\n", vfCtrl->epsAdap);
 }  /*  end of CountVS3D  */
 
 
@@ -565,13 +564,7 @@ InData InDataFromRaw(RawInData *rawInData) {
   /* The InData we will return */
   InData inData;
   /* convert across all the vertices */
-  fprintf(stderr, "rawInData->nVertices: %d\n", rawInData->nVertices);
   /* Important to remember vertices are indexed from 1 */
-  for (i = 1; i <= rawInData->nVertices; i++) {
-    fprintf(stderr, "vert[%d]: %f %f %f\n", i, rawInData->vertices[i].x,
-      rawInData->vertices[i].y,
-      rawInData->vertices[i].z);
-  }
 
   int nSrf;
   int nSrf0;
@@ -584,7 +577,6 @@ InData InDataFromRaw(RawInData *rawInData) {
   vfCtrl.maxRecursALI = rawInData->opts.maxRecursALI; /* maximum number of recursion levels */
   vfCtrl.minRecursion = rawInData->opts.minRecursion;  /* minimum number of recursion levels */
   vfCtrl.maxRecursion = rawInData->opts.maxRecursion;  /* maximum number of recursion levels */
-  fprintf(stderr, "rawInData->opts.enclosure: %d\n", rawInData->opts.enclosure);
   vfCtrl.enclosure = rawInData->opts.enclosure;  
   vfCtrl.emittances = rawInData->opts.emittances;  
   vfCtrl.row = rawInData->opts.row;  
@@ -603,15 +595,10 @@ InData InDataFromRaw(RawInData *rawInData) {
   /* inData.title = title; */
 
   nSrf = nSrf0 = vfCtrl.nRadSrf;
-  fprintf(stderr, "vfCtrl.nVertices: %d\n", vfCtrl.nVertices);
-  fprintf(stderr, "vfCtrl.nRadSrf: %d\n", vfCtrl.nRadSrf);
-  fprintf(stderr, "vfCtrl.nObstrSrf: %d\n", vfCtrl.nObstrSrf);
-  fprintf(stderr, "vfCtrl.nAllSrf: %d\n", vfCtrl.nAllSrf);
 
   if(vfCtrl.format == 4)vfCtrl.nVertices = 4 * vfCtrl.nAllSrf;
   /* Allocate memory for all of the surfaces. These will need to be resized as */
   /* the data is read in. */
-  fprintf(stderr, "Allocating memory for inData\n");
   inData.name = Alc_MC(1, nSrf0, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
   inData.area = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
   inData.emit = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
@@ -623,11 +610,9 @@ InData InDataFromRaw(RawInData *rawInData) {
   inData.cmbn = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
   inData.xyz = Alc_V( 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
   inData.srf = Alc_V( 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
-  fprintf(stderr, "Running init procedures\n");
   /* TODO: this should only be run once. */
   InitTmpVertMem();  /* polygon operations in GetDat() and View3D() */
   InitPolygonMem(0, 0);
-  fprintf(stderr, "Done init procedures\n");
 
   /* Convert vertices */
   for (i = 1; i <= rawInData->nVertices; i++) {
@@ -635,7 +620,6 @@ InData InDataFromRaw(RawInData *rawInData) {
   }
   /* For each surface we want to put the data into the arrays. */
   for (i = 1; i <= rawInData->nRadSrf; i++) {
-    fprintf(stderr, "Converting surf: %s\n", rawInData->surfaces[i].name);
     /* Restrict emittance to not 0 and not 1 (somewhere in between) */
     inData.emit[rawInData->surfaces[i].nr] = rawInData->surfaces[i].emit;
     if( inData.emit[rawInData->surfaces[i].nr] > 0.99901 ){
@@ -656,17 +640,12 @@ InData InDataFromRaw(RawInData *rawInData) {
     inData.srf[rawInData->surfaces[i].nr].type = rawInData->surfaces[i].type;
     
     /* Vec3 *v[MAXNV];  */ /* pointers to coordinates of up to MAXNV vertices */
-    fprintf(stderr, "\tvertices(%d):\n", inData.srf[rawInData->surfaces[i].nr].nv);
     for (n = 0; n < inData.srf[rawInData->surfaces[i].nr].nv; n++) {
       inData.srf[rawInData->surfaces[i].nr].v[n] = &inData.xyz[rawInData->surfaces[i].vertexIndices[n]];
-      fprintf(stderr, "\t\tvertex[%d]: (%f,%f,%f)\n",n, inData.srf[rawInData->surfaces[i].nr].v[n]->x
-        , inData.srf[rawInData->surfaces[i].nr].v[n]->y
-        , inData.srf[rawInData->surfaces[i].nr].v[n]->z);
     }
     
     /* area, rc, dc, ctd, and shape are defined using SetPlane */
     SetPlane(&inData.srf[rawInData->surfaces[i].nr]);
-    fprintf(stderr, "\tarea: %f\n", inData.srf[rawInData->surfaces[i].nr].area);
     /* TODO: It appears these values are not set here, but in the View3D 
     (calculation) routine. */
     /*

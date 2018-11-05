@@ -70,7 +70,7 @@ extern VFResultsC calculateVFs(RawInData rawInData);
 /* extern void printVFs(int format, FILE *file, InData inData, VFResultsC results); */
 
 /* Extra API (for convenience, to be deprecated) */
-VFResultsC processPaths(char *inFile, char *outFile);
+extern VFResultsC processPaths(char *inFile, char *outFile);
 
 /*
 void printVFs(int format, FILE *file, InData inData, VFResultsC results) {
@@ -92,7 +92,6 @@ RawInData parseIn(FILE *inHandle) {
 
   CountVS3D(inHandle, title, &vfCtrl );
   /* Copy vfCtrl data to opts */
-  fprintf(stderr, "##parseIn##epsAdap: %f\n", vfCtrl.epsAdap);
   rawInData.opts.epsAdap = vfCtrl.epsAdap;
   rawInData.opts.enclosure = vfCtrl.enclosure;
   rawInData.opts.emittances = vfCtrl.emittances;
