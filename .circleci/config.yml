@@ -7,7 +7,7 @@ jobs:
       - checkout
       - run:
           name: Setup
-          command: sudo apt-get install build-essential
+          command: apt-get install build-essential
       - run:
           name: Build lib
           command: make lib
