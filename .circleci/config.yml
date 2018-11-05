@@ -20,7 +20,8 @@ jobs:
           name: Setup Rust
           command: |
             apt-get install curl -y
-            curl https://sh.rustup.rs -sSf | sh
+            curl https://sh.rustup.rs -sSf | sh -s -- -y
+            source $HOME/.cargo/env
       - run:
           name: Build Rust binaries
           command: cargo build
