@@ -16,3 +16,10 @@ jobs:
       - run:
           name: Build binaries
           command: make
+      - run:
+          name: Setup Rust
+          command: |
+            curl https://sh.rustup.rs -sSf | sh
+      - run:
+          name: Build Rust binaries
+          command: cargo build
