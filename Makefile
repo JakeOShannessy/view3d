@@ -23,10 +23,11 @@ all: view2d.exe view3d.exe viewht.exe
 lib: $(LIBNAME)
 
 $(LIBNAME): $(OBJS) config.h
-	gcc -o msys-view3d.dll -Wl,-no-undefined -g -shared \
-		-Wl,--out-implib=$@ -Wl,--export-all-symbols \
-		-Wl,--enable-auto-import -Wl,--whole-archive $(OBJS) \
-		-Wl,--no-whole-archive -lm
+	ar rcs $@ $<
+	# gcc -o msys-view3d.dll -Wl,-no-undefined -g -shared \
+	# 	-Wl,--out-implib=$@ -Wl,--export-all-symbols \
+	# 	-Wl,--enable-auto-import -Wl,--whole-archive $(OBJS) \
+	# 	-Wl,--no-whole-archive -lm
 
 config.h:
 	echo "#ifndef V3D_CONFIG_H" > config.h
