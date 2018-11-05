@@ -43,6 +43,9 @@ static float ReportAF(const int nSrf, const int encl, const char *title
 	, const float *area, const float *emit, const int *base, double **AF, float *eMax
 );
 
+int processPaths2d(char *inFile, char *outFile);
+int processHandles2d(FILE *inHandle, FILE *outHandle);
+
 /*------------------------------------------------------------------------------
   VIEW2D driver
 */
@@ -57,29 +60,11 @@ void usage(const char *progname){
 
 #ifndef LIBONLY
 int main( int argc, char **argv ){
-  char program[]="View2D";   /* program name */
-  char version[]=V3D_VERSION;      /* program version */
   char inFile[_MAX_PATH]=""; /* input file name */
   char outFile[_MAX_PATH]="";/* output file name */
-  char title[LINELEN];  /* project title */
-  char **name;       /* surface names [1:nSrf][0:NAMELEN] */
-  SRFDAT2D *srf;   /* vector of surface data structures [1:nSrf] */
-  View2DControlData vfCtrl;   /* VF calculation control parameters */
-  double **AF;         /* triangular array of area*view factor values [1:nSrf][] */
-  float *area;        /* vector of surface areas [1:nSrf0] */
-  float *emit;        /* vector of surface emittances [1:nSrf0] */
-  int *base;        /* vector of base surface numbers [1:nSrf0] */
-  int *cmbn;        /* vector of combine surface numbers [1:nSrf0] */
-  float *vtmp;        /* temporary vector [1:nSrf0] */
   struct tm *curtime; /* time structure */
   time_t bintime;  /* seconds since 00:00:00 GMT, 1/1/70 */
-  float time0, time1; /* elapsed time values */
-  int nSrf;         /* current number of surfaces */
-  int nSrf0;        /* initial number of surfaces */
-  int encl;         /* 1 = surfaces form enclosure */
-  float eMax=0.0;     /* maximum row error, if enclosure */
-  float eRMS=0.0;     /* RMS row error, if enclosure */
-  int n, flag;
+
 
 	char c;
 	while((c=getopt(argc,argv,"?"))!=-1){
@@ -145,7 +130,7 @@ int main( int argc, char **argv ){
 
   return processPaths2d(inFile, outFile);
 
-  }  /* end of main */
+}  /* end of main */
 #endif
 
 int processPaths2d(char *inFile, char *outFile) {
@@ -165,8 +150,6 @@ int processPaths2d(char *inFile, char *outFile) {
 int processHandles2d(FILE *inHandle, FILE *outHandle) {
   char program[]="View2D";   /* program name */
   char version[]=V3D_VERSION;      /* program version */
-  char inFile[_MAX_PATH]=""; /* input file name */
-  char outFile[_MAX_PATH]="";/* output file name */
   char title[LINELEN];  /* project title */
   char **name;       /* surface names [1:nSrf][0:NAMELEN] */
   SRFDAT2D *srf;   /* vector of surface data structures [1:nSrf] */
