@@ -27,10 +27,6 @@
 #include "getdat.h"
 #include "test3d.h"
 
-/* Temporary hack */
-#define _MAX_PATH 256
-#define _MAX_FNAME 256
-
 /* forward decls */
 
 void FindFile(char *msg, char *name, char *type);
