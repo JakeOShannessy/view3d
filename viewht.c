@@ -13,6 +13,10 @@
 #include "heap.h"
 #include "misc.h"
 
+/* Temporary hack */
+#define _MAX_PATH 256
+#define _MAX_FNAME 256
+
 /* type definitions */
 
 /** structure for common surface data */
