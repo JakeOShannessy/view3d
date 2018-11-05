@@ -31,6 +31,7 @@
 #include "getdat.h"
 #include "savevf.h"
 
+/* Temporary hack */
 #define _MAX_PATH 256
 
 /*  Main program for batch processing of 2-D view factors.  */

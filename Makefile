@@ -37,7 +37,7 @@ ifeq ($(OS),Windows_NT)
 		-Wl,--enable-auto-import -Wl,--whole-archive $(OBJS) \
 		-Wl,--no-whole-archive -lm
 else
-	ar rcs $@ $<
+	ar rcs $@ $^
 endif
 
 config.h:

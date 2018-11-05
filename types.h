@@ -28,5 +28,4 @@
 /* replace _MAX_DRIVE, _MAX_EXT VisualC++ values */
 #endif
 
-#define MAX_PATH 256
 #endif
