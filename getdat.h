@@ -21,4 +21,3 @@ V3D_API void GetVS2D( FILE *inHandle, char **name, float *emit, int *base, int *
   SRFDAT2D *srf, View2DControlData *vfCtrl );
 
 #endif
-

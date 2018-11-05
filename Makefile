@@ -6,13 +6,10 @@ CC = gcc
 #  -Wall turns on most, but not all, compiler warnings
 CFLAGS  = -g -Wall -DANSI -D_DEBUG
 
-# the build MAIN executable:
-MAIN = view2d.exe
-
 SRCS =  ctrans.c  heap.c  polygn.c  savevf.c  viewobs.c  viewunob.c \
 	getdat.c  misc.c  readvf.c  readvs.c  test3d.c view3d.c viewpp.c \
 	common.c \
-	view2d.c test2d.c
+	view2d.c test2d.c v3lib.c
 
 OBJS = $(SRCS:.c=.o)
 
@@ -26,7 +23,6 @@ all: view2d.exe view3d.exe viewht.exe
 lib: $(LIBNAME)
 
 $(LIBNAME): $(OBJS) config.h
-	# ar rcs $@ $^
 	gcc -o msys-view3d.dll -Wl,-no-undefined -g -shared \
 		-Wl,--out-implib=$@ -Wl,--export-all-symbols \
 		-Wl,--enable-auto-import -Wl,--whole-archive $(OBJS) \

@@ -40,7 +40,7 @@ fn main() {
         .file("test2d.c")
         .file("misc.c")
         // .file("v2main.c")
-        .file("v3main.c")
+        .file("v3lib.c")
         .include(".")
         .define("LIBONLY", Some("1"))
         .compile("view3d");
@@ -68,4 +68,3 @@ fn main() {
         .define("LIBONLY", Some("1"))
         .compile("view2d");
 }
-

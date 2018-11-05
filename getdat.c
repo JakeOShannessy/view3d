@@ -237,7 +237,7 @@ finish:
   if(error( -1, __FILE__, __LINE__, "" )>0){
     error( 3, __FILE__, __LINE__, "Fix errors in input data", "" );
   }
-
+  fprintf(stderr, "##CountVS3D##epsAdap: %f\n", vfCtrl->epsAdap);
 }  /*  end of CountVS3D  */
 
 
@@ -389,6 +389,61 @@ void GetSrfD( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
 
 }  /* end GetSrfD */
 
+/*
+	Function to read common surface data
+*/
+void GetSrfDNew(FILE *inHandle, RawSurf *surface, int ns, RawInData *inData) {
+  int n;
+
+  n = ReadIX( inHandle, 0 );              /* base surface number */
+  surface->base = n;
+  if( n<0 || n>inData->nAllSrf ) error( 2, __FILE__, __LINE__,
+    "Improper base surface number:", IntStr(n), "" );
+
+  if(n > 0){
+    if( surface->type == OBSO )
+      error( 2, __FILE__, __LINE__,
+        "Base surface not permitted for surface ", IntStr(ns), "" );
+    if( surface->type == MASK || surface->type == NULS )
+      if( n<=0 || n>=ns ) error( 2, __FILE__, __LINE__,
+        "A valid base surface number is required for surface ", IntStr(ns), "" );
+    if( surface->type == RSRF && n<=inData->nRadSrf )
+      if( n>=ns ) error( 2, __FILE__, __LINE__, "Subsurface ", IntStr(ns),
+        "Must be after base surface ", IntStr(n), "" );
+    if( surface->type != MASK && surface->type != NULS )
+      surface->type = SUBS;
+  }
+
+  n = ReadIX( inHandle, 0 );              /* combine surface number */
+  surface->cmbn = n;
+  if( n<0 || n>inData->nRadSrf ) error( 2, __FILE__, __LINE__,
+     "Improper combine surface number:", IntStr(n), "" );
+  else if( n > 0 ){
+    if( surface->type == MASK || surface->type == NULS || surface->type == OBSO )
+      error( 2, __FILE__, __LINE__,
+        "Combination not permitted for surface ", IntStr(ns), "" );
+    if( n>=ns ) error( 2, __FILE__, __LINE__,
+       "Must combine surface with previous surface:", IntStr(n), "" );
+  }
+
+  surface->emit = ReadR4( inHandle, 0 );       /* surface emittance */
+  if( surface->emit > 0.99901 ){
+    error( 1, __FILE__, __LINE__,  "Replacing surface ", IntStr(ns),
+       " emittance (", _string, ") with 0.999", "" );
+    surface->emit = 0.999f;
+  }
+  if( surface->emit < 0.00099f ){
+    error( 1, __FILE__, __LINE__,  "Replacing surface ", IntStr(ns),
+       " emittance (", _string, ") with 0.001", "" );
+    surface->emit = 0.001f;
+  }
+
+  NxtWord( inHandle, _string, 0, sizeof(_string) );  /* surface name */
+  _string[NAMELEN-1] = '\0';    /* guarantee termination */
+  strncpy( surface->name, _string, NAMELEN );
+
+}  /* end GetSrfDNew */
+
 
 /*  Function to read the 3-D input file:  Vertex & Surface format */
 
@@ -428,6 +483,7 @@ void GetVS3D( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
            "Obstruction surface: ", IntStr(n), " out of sequence", "" );
         if( c=='S' && n>vfCtrl->nRadSrf ) error( 2, __FILE__, __LINE__,
            "Radiating surface: ", IntStr(n), " out of sequence", "" );
+        // information about the surface types is first created here
         srf[ns].nr = ns;
         if( c == 'S' )
           srf[ns].type = RSRF;
@@ -500,6 +556,269 @@ finish:
     error( 3, __FILE__, __LINE__, "Fix errors in input data", "" );
 
 }  /*  end of GetVS3D  */
+
+// We have raw input data and we want to convert it to InData.
+InData InDataFromRaw(RawInData *rawInData) {
+//   void GetVS3D( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
+// 	,SRFDAT3D *srf, Vec3 *xyz, View3DControlData *vfCtrl
+// ) {
+
+  error( -2, __FILE__, __LINE__, "" );  /* clear error count */
+  // rewind( inHandle );
+
+  // The InData we will return
+  InData inData;
+  // convert across all the vertices
+  fprintf(stderr, "rawInData->nVertices: %d\n", rawInData->nVertices);
+  // Important to remember vertices are indexed from 1
+  for (int i = 1; i <= rawInData->nVertices; i++) {
+    fprintf(stderr, "vert[%d]: %f %f %f\n", i, rawInData->vertices[i].x,
+      rawInData->vertices[i].y,
+      rawInData->vertices[i].z);
+  }
+
+  // First we must allocate some data for these things
+
+  char **name;         /* surface names [1:nSrf][0:NAMELEN] */
+  float *area;         /* vector of surface areas [1:nSrf] */
+  float *emit;         /* vector of surface emittances [1:nSrf] */
+  float *vtmp;         /* temporary vector [1:nSrf] */
+  int *base;           /* vector of base surface numbers [1:nSrf] */
+  int *cmbn;           /* vector of combine surface numbers [1:nSrf] */
+  Vec3 *xyz;           /* vector of vertces [1:nVrt] - for ease in
+  converting V3MAIN to a subroutine */
+  SRFDAT3D *srf;       /* vector of surface data structures [1:nSrf] */
+  // vfCtrl contains control information and information on the numbers of
+  // vertices etc.
+  View3DControlData vfCtrl;
+  char title[LINELEN]; /* project title */
+
+  int nSrf;            /* current number of surfaces */
+  int nSrf0;           /* initial number of surfaces */
+  int encl;            /* 1 = surfaces form enclosure */
+  int n, flag;
+
+  /* initialize control data */
+  memset( &vfCtrl, 0, sizeof(View3DControlData) );
+  // non-zero control values:
+  vfCtrl.epsAdap = rawInData->opts.epsAdap; // convergence for adaptive integration
+  vfCtrl.maxRecursALI = rawInData->opts.maxRecursALI; // maximum number of recursion levels
+  vfCtrl.minRecursion = rawInData->opts.minRecursion;  // minimum number of recursion levels
+  vfCtrl.maxRecursion = rawInData->opts.maxRecursion;  // maximum number of recursion levels
+  fprintf(stderr, "rawInData->opts.enclosure: %d\n", rawInData->opts.enclosure);
+  vfCtrl.enclosure = rawInData->opts.enclosure;  
+  vfCtrl.emittances = rawInData->opts.emittances;  
+  vfCtrl.row = rawInData->opts.row;  
+  vfCtrl.col = rawInData->opts.col;  
+  vfCtrl.prjReverse = rawInData->opts.prjReverse;  
+  vfCtrl.format = 3;
+
+  vfCtrl.nRadSrf = rawInData->nRadSrf;  
+  vfCtrl.nVertices = rawInData->nVertices;  
+  // vfCtrl.nAllSrf = rawInData->nAllSrf;  
+  vfCtrl.nObstrSrf = rawInData->nObstrSrf;
+  vfCtrl.nAllSrf = vfCtrl.nRadSrf + vfCtrl.nObstrSrf;
+
+  // CountVS3D(inHandle, title, &vfCtrl );
+  // TODO: allocate memory and copy title string.
+  // inData.title = title;
+
+  nSrf = nSrf0 = vfCtrl.nRadSrf;
+  fprintf(stderr, "vfCtrl.nVertices: %d\n", vfCtrl.nVertices);
+  fprintf(stderr, "vfCtrl.nRadSrf: %d\n", vfCtrl.nRadSrf);
+  fprintf(stderr, "vfCtrl.nObstrSrf: %d\n", vfCtrl.nObstrSrf);
+  fprintf(stderr, "vfCtrl.nAllSrf: %d\n", vfCtrl.nAllSrf);
+
+  if(vfCtrl.format == 4)vfCtrl.nVertices = 4 * vfCtrl.nAllSrf;
+  // Allocate memory for all of the surfaces. These will need to be resized as
+  // the data is read in.
+  fprintf(stderr, "Allocating memory for inData\n");
+  inData.name = Alc_MC(1, nSrf0, 0, NAMELEN, sizeof(char), __FILE__, __LINE__ );
+  inData.area = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  inData.emit = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+  inData.vtmp = Alc_V(1, nSrf0, sizeof(float), __FILE__, __LINE__ );
+
+  for(n=nSrf0; n; n--)(inData.vtmp)[n] = 1.0;
+
+  inData.base = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
+  inData.cmbn = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
+  inData.xyz = Alc_V( 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
+  inData.srf = Alc_V( 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
+  fprintf(stderr, "Running init procedures\n");
+  // TODO: this should only be run once.
+  InitTmpVertMem();  /* polygon operations in GetDat() and View3D() */
+  InitPolygonMem(0, 0);
+  fprintf(stderr, "Done init procedures\n");
+
+  // Convert vertices
+  for (int i = 1; i <= rawInData->nVertices; i++) {
+    inData.xyz[i] = rawInData->vertices[i];
+  }
+  // For each surface we want to put the data into the arrays.
+  for (int i = 1; i <= rawInData->nRadSrf; i++) {
+    fprintf(stderr, "Converting surf: %s\n", rawInData->surfaces[i].name);
+    // Restrict emittance to not 0 and not 1 (somewhere in between)
+    inData.emit[rawInData->surfaces[i].nr] = rawInData->surfaces[i].emit;
+    if( inData.emit[rawInData->surfaces[i].nr] > 0.99901 ){
+      error( 1, __FILE__, __LINE__,  "Replacing surface ", IntStr(i),
+        " emittance (", _string, ") with 0.999", "" );
+      inData.emit[rawInData->surfaces[i].nr] = 0.999f;
+    }
+    if( inData.emit[rawInData->surfaces[i].nr] < 0.00099f ){
+      error( 1, __FILE__, __LINE__,  "Replacing surface ", IntStr(i),
+        " emittance (", _string, ") with 0.001", "" );
+      inData.emit[rawInData->surfaces[i].nr] = 0.001f;
+    }
+    inData.base[rawInData->surfaces[i].nr] = rawInData->surfaces[i].base;
+    inData.cmbn[rawInData->surfaces[i].nr] = rawInData->surfaces[i].cmbn;
+    strcpy(inData.name[rawInData->surfaces[i].nr], rawInData->surfaces[i].name);
+    inData.srf[rawInData->surfaces[i].nr].nr = rawInData->surfaces[i].nr;
+    inData.srf[rawInData->surfaces[i].nr].nv = rawInData->surfaces[i].nv;
+    inData.srf[rawInData->surfaces[i].nr].type = rawInData->surfaces[i].type;
+    
+    /* Vec3 *v[MAXNV];  */ /* pointers to coordinates of up to MAXNV vertices */
+    fprintf(stderr, "\tvertices(%d):\n", inData.srf[rawInData->surfaces[i].nr].nv);
+    for (int n = 0; n < inData.srf[rawInData->surfaces[i].nr].nv; n++) {
+      inData.srf[rawInData->surfaces[i].nr].v[n] = &inData.xyz[rawInData->surfaces[i].vertexIndices[n]];
+      fprintf(stderr, "\t\tvertex[%d]: (%f,%f,%f)\n",n, inData.srf[rawInData->surfaces[i].nr].v[n]->x
+        , inData.srf[rawInData->surfaces[i].nr].v[n]->y
+        , inData.srf[rawInData->surfaces[i].nr].v[n]->z);
+    }
+    
+    /* area, rc, dc, ctd, and shape are defined using SetPlane */
+    SetPlane(&inData.srf[rawInData->surfaces[i].nr]);
+    fprintf(stderr, "\tarea: %f\n", inData.srf[rawInData->surfaces[i].nr].area);
+    /* TODO: It appears these values are not set here, but in the View3D 
+    (calculation) routine. */
+    /*
+    int NrelS;
+    int MrelS;
+    */
+    
+  }
+
+  // reads the  file a second time
+  /* read v/s data file */
+  if(_list>2)
+  _echo = 1;
+  for( n=nSrf; n; n-- )
+  (inData.area)[n] = (float)(inData.srf)[n].area;
+  inData.vfCtrl = vfCtrl;
+
+  return inData;
+}
+
+void GetVS3DNew( FILE *inHandle, RawInData *inData) {
+  int c;       /* first character in line */
+  int nv=0;    /* number of vertices */
+  int ns=0;    /* number of surfaces */
+  int n;
+  int flag=0;  /* NxtWord flag: 0 for first word of first line */
+
+  error( -2, __FILE__, __LINE__, "" );  /* clear error count */
+  rewind( inHandle );
+  while( NxtWord( inHandle, _string, flag, sizeof(_string) ) != NULL ){
+    c = toupper( _string[0] );
+    switch( c ){
+      case 'V':
+        n = ReadIX( inHandle, 0 );
+        nv += 1;
+        inData->nVertices++;
+        if( n!= nv ) error( 2, __FILE__, __LINE__,
+          "Vertex: ", IntStr(n), " out of sequence", "" );
+        inData->vertices[nv].x = ReadR8( inHandle, 0 );
+        inData->vertices[nv].y = ReadR8( inHandle, 0 );
+        inData->vertices[nv].z = ReadR8( inHandle, 0 );
+        break;
+      case 'M':               /* masking surface */
+      case 'N':               /* "null" surface */
+      case 'S':
+      case 'O':
+        n = ReadIX( inHandle, 0 );
+        ns += 1;
+        inData->nRadSrf++;
+        if (ns > 255) error( 2, __FILE__, __LINE__,
+          "Exceeded maximum number of surface", "" );
+        if( n!= ns ) error( 2, __FILE__, __LINE__,
+          "Surface: ", IntStr(n), " out of sequence", "" );
+        if( c=='O' && n<=inData->nRadSrf ) error( 2, __FILE__, __LINE__,
+           "Obstruction surface: ", IntStr(n), " out of sequence", "" );
+        if( c=='S' && n>inData->nRadSrf ) error( 2, __FILE__, __LINE__,
+           "Radiating surface: ", IntStr(n), " out of sequence", "" );
+        inData->surfaces[ns].nr = ns;
+        if( c == 'S' )
+          inData->surfaces[ns].type = RSRF;
+        else if( c == 'O' )
+          inData->surfaces[ns].type = OBSO;
+        else if( c == 'N' )
+          inData->surfaces[ns].type = NULS;
+        else if( c == 'M' )
+          inData->surfaces[ns].type = MASK;
+
+        // Read in the vertices
+        n = ReadIX( inHandle, 0 );
+        if( n<=0 || n>inData->nVertices ) error( 2, __FILE__, __LINE__,
+          "Surface ", IntStr(ns), "- improper first vertex:", IntStr(n), "" );
+        else
+          inData->surfaces[ns].vertexIndices[0] = n;
+
+        n = ReadIX( inHandle, 0 );
+        if( n<=0 || n>inData->nVertices ) error( 2, __FILE__, __LINE__,
+          "Surface ", IntStr(ns), "- improper second vertex:", IntStr(n), "" );
+        else
+          inData->surfaces[ns].vertexIndices[1] = n;
+
+        n = ReadIX( inHandle, 0 );
+        if( n<=0 || n>inData->nVertices ) error( 2, __FILE__, __LINE__,
+          "Surface ", IntStr(ns), "- improper third vertex:", IntStr(n), "" );
+        else
+          inData->surfaces[ns].vertexIndices[2] = n;
+
+        n = ReadIX( inHandle, 0 );
+        if( n<0 || n>inData->nVertices ) error( 2, __FILE__, __LINE__,
+          "Surface ", IntStr(ns), "- improper fourth vertex:", IntStr(n), "" );
+        if( n == 0 )
+          inData->surfaces[ns].nv = 3;
+        else{
+          inData->surfaces[ns].nv = 4;
+          inData->surfaces[ns].vertexIndices[3] = n;
+        }
+
+        // SetPlane( inData->srf+ns );          /* compute plane polygon values */
+
+
+        if( c!='O' )
+          GetSrfDNew(inHandle, &inData->surfaces[ns], ns, inData);
+
+        break;
+
+      case '/':               /* comment */
+      case '!':
+      case 'T':               /* title */
+      case 'F':               /* geometry */
+      case 'C':               /* control */
+      case 'X':               /* coordinate transformation */
+        break;
+
+      case 'E':               /* end of data */
+      case '*':
+        goto finish;
+
+      default:
+        error( 1, __FILE__, __LINE__,
+          "Undefined input identifier: ", _string, "" );
+        break;
+    }
+    flag = 1;
+  }
+
+finish:
+  // TestSubSrf( srf, base, vfCtrl );
+
+  if( error( -1, __FILE__, __LINE__, "" )>0 )
+    error( 3, __FILE__, __LINE__, "Fix errors in input data", "" );
+
+}  /*  end of GetVS3DNew  */
 
 
 /*
@@ -946,4 +1265,3 @@ finish:
     error( 3, __FILE__, __LINE__, "Fix errors in input data", "" );
 
 }  /*  end of GetVS2D  */
-

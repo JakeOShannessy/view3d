@@ -124,7 +124,8 @@ typedef struct srfdat2d       /* structure for 2D surface data */
 typedef struct Line_struct{           /* structure for 1-D lines */
   struct Line_struct *next; /* pointer to next line */
   double xl;   /* minimum X-coordinate */
-  double xr;   /* maximum X-coordinate */} LINE;
+  double xr;   /* maximum X-coordinate */
+} LINE;
 
 
 typedef struct srf2d          /* structure for limited surface data */
@@ -285,5 +286,72 @@ int ProjectionDirection( SRFDAT3D *srf, SRFDATNM *srfn, SRFDATNM *srfm,
   int *los, View3DControlData *vfCtrl );
 int errorf( int severity, char *file, int line, ... );
 
-#endif
+/* The result type for view3d. */
+typedef struct  {
+    int n_surfs;
+    int encl;
+    float *area;
+    float *emit;
+    double *values;
+} VFResultsC;
 
+// typedef struct {
+//   int encl;
+//   int didemit;
+//   int nSrf;
+//   float *area;
+//   float *emit;
+//   double **AF;
+// } VFResults;
+
+/* The input type for view3d. */
+typedef struct {
+  View3DControlData vfCtrl;
+  char **name;
+  float *area;
+  float *emit;
+  float *vtmp;
+  char title[LINELEN]; /* project title */
+  int *base;
+  int *cmbn;
+  Vec3 *xyz;
+  SRFDAT3D *srf;
+} InData;
+
+typedef struct {
+  char *title;
+  float epsAdap;
+  int maxRecursALI;
+  int minRecursion;
+  int maxRecursion;
+  int enclosure;
+  int emittances;
+  int row;
+  int col;
+  int prjReverse;
+} RawInOptions;
+
+typedef struct {
+  int nr;
+  int nv;
+  int type;
+  int base;
+  int cmbn;
+  float emit;
+  int vertexIndices[4];
+  char name[NAMELEN];
+} RawSurf;
+
+/* The raw information from the input file */
+typedef struct {
+  RawInOptions opts;
+  int nAllSrf;
+  int nRadSrf;
+  int nObstrSrf;
+  int nVertices;
+  Vec3 vertices[256];
+  RawSurf surfaces[256];
+} RawInData;
+
+
+#endif

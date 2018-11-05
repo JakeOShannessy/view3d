@@ -5,6 +5,7 @@
 #define V3D_BUILD
 #include "savevf.h"
 
+#include "config.h"
 #include <stdio.h>
 #include <string.h>
 #include "types.h"
@@ -157,15 +158,44 @@ void SaveVF( FILE *file, char *program, char *version,
   }
 } /* end SaveVF */
 
-typedef struct {
-  char *program;
-  char *program_version;
-  int format;
-  int encl;
-  int didemit;
-  int nSrf;
-  float *area;
-  float *emit;
-  double **AF;
-} VFResults;
+/*  Save computed view factors.  */
 
+/**  Save the computed view factors.
+ *  @param file   the handle to which to save the values
+ *  @param format 0 = simple text format, 1 = simple binary format
+ *  @param encl  
+ *  @param didemit
+ *  @param nSrf
+ *  @param area
+ *  @param emit
+ *  @param AF
+ *  @param vtmp
+*/
+void SaveVFNew(FILE *file, int format, int encl, int didemit, int nSrf,
+             float *area, float *emit, double **AF, float *vtmp
+){
+  char header[32];
+  int j;
+  char version[] = V3D_VERSION;
+  char program[] = "View3D";
+
+  /* fill output file header line */
+  sprintf( header, "%s %s %d %d %d %d", program, version, format, encl, didemit, nSrf );
+  for( j=strlen(header); j<30; j++ ){
+    header[j] = ' ';
+  }
+  header[30] = '\n';
+  header[31] = '\0';
+
+  if( format == 0 ){  /* simple text file */
+    SaveF0( file, header, nSrf, area, emit, AF, vtmp );
+
+  }else if( format == 1 ){  /* simple binary file */
+    header[30] = '\r';
+    header[31] = '\n';
+    SaveF1( file, header, nSrf, area, emit, AF, vtmp );
+
+  }else{
+    error( 3, __FILE__, __LINE__, "Undefined format: ", IntStr(format), "" );
+  }
+} /* end SaveVFNew */
