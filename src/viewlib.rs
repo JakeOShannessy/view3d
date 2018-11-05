@@ -19,11 +19,8 @@ pub fn process_paths(infile: String, outfile: String) -> VFResults {
     // Convert these arguments to C strings to use in FFI
     let infile_c = CString::new(infile).expect("CString::new failed");
     let outfile_c = CString::new(outfile).expect("CString::new failed");
-    println!("processing paths");
     unsafe {
-    println!("l0");
         let vf_res = processPaths(infile_c.as_ptr(), outfile_c.as_ptr());
-    println!("l1");
 
         // Convert the view factor values to a vector
         let af_arr_ptr = vf_res.values;
@@ -32,7 +29,6 @@ pub fn process_paths(infile: String, outfile: String) -> VFResults {
         let res2 = res.clone();
         let vec = res2.to_vec();
 
-    println!("l2");
         // Convert the area values to a vector
         let area_ptr = vf_res.area;
         assert!(!area_ptr.is_null());
@@ -40,7 +36,6 @@ pub fn process_paths(infile: String, outfile: String) -> VFResults {
         let area_raw2 = area_raw.clone();
         let areas = area_raw2.to_vec();
 
-    println!("l3");
         // Convert the emissivity values to a vector
         let emit_ptr = vf_res.emit;
         assert!(!emit_ptr.is_null());
@@ -48,11 +43,9 @@ pub fn process_paths(infile: String, outfile: String) -> VFResults {
         let emit_raw2 = emit_raw.clone();
         let emit = emit_raw2.to_vec();
 
-    println!("l4");
         // Convert the enclosure flag to a bool
         let encl = if vf_res.encl == 0 { false } else { true };
 
-    println!("l5");
         VFResults {
             n_surfs: vf_res.n_surfs as u32,
             encl,
