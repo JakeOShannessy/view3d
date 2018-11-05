@@ -7,7 +7,9 @@ jobs:
       - checkout
       - run:
           name: Setup
-          command: apt-get install gcc make -y
+          command: |
+            apt-get update
+            apt-get install gcc make -y
       - run:
           name: Build lib
           command: make lib
