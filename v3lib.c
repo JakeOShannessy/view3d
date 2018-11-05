@@ -430,7 +430,6 @@ VFResultsC processPaths(char *inFile, char *outFile) {
   }
   VFResultsC res = processHandlesSimple(inHandle, outHandle);
   fclose(inHandle);
-  fclose(outHandle);
   return res;
 }
 
