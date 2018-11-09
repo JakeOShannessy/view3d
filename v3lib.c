@@ -83,7 +83,7 @@ void printVFs(int format, FILE *file, InData inData, VFResultsC results) {
 RawInData parseIn(FILE *inHandle) {
   View3DControlData vfCtrl;
   char title[LINELEN]; /* project title */
-  RawInData rawInData;
+  RawInData rawInData = {0};
 
   /* non-zero control values: */
   vfCtrl.epsAdap = 1.0e-4f; /* convergence for adaptive integration */
@@ -162,11 +162,11 @@ void printInData(InData *inData) {
     }
     /* fprintf(stderr, "\tctd:(%f,%f,%f)\n", i, inData->srf[i].ctd.x, inData->srf[i].ctd.y, inData->srf[i].ctd.z); */
 
-  /* DirCos dc; */        /* direction cosines of surface normal */ 
+  /* DirCos dc; */        /* direction cosines of surface normal */
   /* int NrelS; */        /* orientation of srf N relative to S: */
                           /*    -1: N behind S; +1: N in front of S; */
-                          /*     0: part of N behind S, part in front */ 
-  /* int MrelS; */          /* orientation of srf M relative to S */ 
+                          /*     0: part of N behind S, part in front */
+  /* int MrelS; */          /* orientation of srf M relative to S */
   }
 }
 
