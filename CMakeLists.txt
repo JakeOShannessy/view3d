@@ -1,6 +1,8 @@
 cmake_minimum_required (VERSION 2.6)
 project (View3D)
 
+set (V3D_VERSION 3.5)
+
 add_library (View3DLib v3lib.c
                        ctrans.c
                        heap.c
@@ -21,5 +23,12 @@ add_library (View3DLib v3lib.c
                        v2lib.c
                        v3lib.c
                        )
+
+# produce config.h
+configure_file (
+  "${PROJECT_SOURCE_DIR}/config.h.in"
+  "${PROJECT_SOURCE_DIR}/config.h"
+  )
+
 add_executable (view3d v3main.c)
 target_link_libraries (view3d View3DLib)
