@@ -44,3 +44,9 @@ jobs:
             cd build-dir
             cmake ..
             make
+
+workflows:
+    build-testing:
+        jobs:
+          - build
+          - build-cmake
