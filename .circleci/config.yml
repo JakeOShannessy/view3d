@@ -27,3 +27,20 @@ jobs:
           command: |
             source $HOME/.cargo/env
             cargo build
+  build-cmake:
+    docker:
+      - image: debian:stretch
+    steps:
+      - checkout
+      - run:
+          name: Setup
+          command: |
+            apt-get update
+            apt-get install gcc make cmake -y
+      - run:
+          name: Build binaries
+          command: |
+            mkdir build-dir
+            cd build-dir
+            cmake ..
+            make
