@@ -44,6 +44,27 @@ jobs:
             cd build-dir
             cmake ..
             make
+  build-rust:
+    docker:
+      - image: debian:stretch
+    steps:
+      - checkout
+      - run:
+          name: Setup
+          command: |
+            apt-get update
+            apt-get install gcc make -y
+      - run:
+          name: Setup Rust
+          command: |
+            apt-get install curl -y
+            curl https://sh.rustup.rs -sSf | sh -s -- -y
+            source $HOME/.cargo/env
+      - run:
+          name: Build Rust binaries
+          command: |
+            source $HOME/.cargo/env
+            cargo build
 
 workflows:
   version: 2
@@ -51,3 +72,4 @@ workflows:
       jobs:
         - build
         - build-cmake
+        - build-rust
