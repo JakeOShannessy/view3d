@@ -36,7 +36,7 @@ jobs:
           name: Setup
           command: |
             apt-get update
-            apt-get install gcc make cmake -y
+            apt-get install gcc g++ make cmake -y
       - run:
           name: Build binaries
           command: |
