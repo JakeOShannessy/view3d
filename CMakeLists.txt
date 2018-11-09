@@ -1,3 +1,4 @@
+INCLUDE (CheckLibraryExists)
 cmake_minimum_required (VERSION 2.6)
 project (View3D)
 
@@ -32,4 +33,8 @@ configure_file (
 
 add_executable (view3d v3main.c)
 target_link_libraries (view3d View3DLib)
-target_link_libraries (view3d m)
+
+find_library(MATH_LIB m)
+if(MATH_LIB)
+  target_link_libraries (view3d m)
+endif()
