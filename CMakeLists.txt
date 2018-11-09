@@ -32,3 +32,4 @@ configure_file (
 
 add_executable (view3d v3main.c)
 target_link_libraries (view3d View3DLib)
+target_link_libraries (view3d m)
