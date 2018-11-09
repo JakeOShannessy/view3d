@@ -46,7 +46,8 @@ jobs:
             make
 
 workflows:
-    build-testing:
-        jobs:
-          - build
-          - build-cmake
+  version: 2
+  build-testing:
+      jobs:
+        - build
+        - build-cmake
