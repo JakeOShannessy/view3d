@@ -67,6 +67,7 @@ int main( int argc, char **argv ){
 
 
 	char c;
+	/* TODO: getopt (and unistd.h) is not available on Windows without MinGW */
 	while((c=getopt(argc,argv,"?"))!=-1){
 		switch(c){
 			case '?':
