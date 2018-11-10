@@ -6,6 +6,8 @@ nmake
 cd ..
 goto :EOF
 
+:: Run the "vsvarsall.bat" script provided by Visual Studio. This will place
+:: cl.exe, link.exe, into the path.
 :LoadVCVars
 call "%VS150COMNTOOLS%\..\..\VC\vcvarsall.bat"
 if not ERRORLEVEL 1 goto DoneLoadVCVars

@@ -10,19 +10,39 @@ This repo consists of 4 parts:
 - A Rust binding to the library.
 - Rust executables using the library.
 
-## Building
+## Building C Library and Executables
 
-To build the C library, use:
+A Makefile is provided as an example, but the preferred method of building is
+with CMake.
 
-```sh
-make lib
-```
-
-And to make the C executables use:
+### GCC, Bash, etc.
 
 ```sh
-make all
+# Make a build directory
+mkdir build
+cd build
+# Generate the makefile using cmake
+cmake ..
+# Run the makefile
+make
 ```
+
+### MSVC and CMD
+
+Scripts are provided for convenience. These scripts will find and set up the
+Visual Studio compiler where it is able. To build use:
+
+```cmd
+build
+```
+
+And to clean the build files use:
+
+```cmd
+clean
+```
+
+## Building Rust Library and Executables
 
 To build the Rust library and bindings use:
 
@@ -30,7 +50,7 @@ To build the Rust library and bindings use:
 cargo build
 ```
 
-Cargo will handle the building of the C library for linking.
+Cargo will handle the building of the C library for linking on most platforms.
 
 ## Differences from the Original
 
