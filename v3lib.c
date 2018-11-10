@@ -81,7 +81,7 @@ void printVFs(int format, FILE *file, InData inData, VFResultsC results) {
 */
 
 RawInData parseIn(FILE *inHandle) {
-  View3DControlData vfCtrl;
+  View3DControlData vfCtrl = {0};
   char title[LINELEN]; /* project title */
   RawInData rawInData = {0};
 
