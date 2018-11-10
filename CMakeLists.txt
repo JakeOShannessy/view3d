@@ -35,6 +35,7 @@ add_executable (view2d v2main.c)
 target_link_libraries (view2d View3DLib)
 
 add_executable (view3d v3main.c)
+add_definitions(-DMAIN)
 target_link_libraries (view3d View3DLib)
 
 find_library(MATH_LIB m)
