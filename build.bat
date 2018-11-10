@@ -1,4 +1,5 @@
-call :LoadVCVars
+CL.exe >nul 2>&1
+if ERRORLEVEL 1 call :LoadVCVars
 mkdir build
 cd build
 cmake .. -G "NMake Makefiles"
