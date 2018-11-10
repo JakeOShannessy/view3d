@@ -17,10 +17,6 @@
 #include <math.h>   /* prototype: sqrt */
 #include <time.h>   /* prototypes: time, localtime, asctime; define: tm, time_t */
 
-#ifndef LIBONLY
-#include <unistd.h>
-#include <getopt.h>
-#endif
 #include <stdlib.h>
 
 #include "types.h"
@@ -38,6 +34,8 @@ FILE *_uout; /* output file */
 /* forward decls */
 
 void FindFile( char *msg, char *name, char *type );
+void CheckFileWritable(char *fileName);
+void CheckFileReadable(char *fileName);
 
 static float ReportAF(const int nSrf, const int encl, const char *title
 	, char * const *const name
@@ -65,34 +63,31 @@ int main( int argc, char **argv ){
   struct tm *curtime; /* time structure */
   time_t bintime;  /* seconds since 00:00:00 GMT, 1/1/70 */
 
-
-	char c;
-	/* TODO: getopt (and unistd.h) is not available on Windows without MinGW */
-	while((c=getopt(argc,argv,"?"))!=-1){
-		switch(c){
-			case '?':
-				usage(argv[0]);
-				exit(1);
-		}
-	}
-
-	if(optind != argc - 2){
+	/* If argc is less than 2, (i.e. 1) we have no arguments */
+	if(argc < 2){
 		fprintf(stderr,"ERROR: missing command-line arguments\n");
 		usage(argv[0]);
 		exit(1);
 	}
-
-	strcpy( inFile, argv[optind++] );
-	strcpy( outFile, argv[optind++] );
-
-	/* check that files exist */
-	FILE *f;
-	f = fopen(inFile,"r");
-	if(f==NULL){
-		fprintf(stderr,"ERROR: failed to open input file '%s' for reading!\n",inFile);
-		exit(1);
+	/* If "?" is the first argument, print usage and quit */
+	if (argc > 1 && argv[1][0] == '?') {
+		usage(argv[0]);
+		exit(0);
 	}
-	fclose(f);
+
+	/* Load the input file argument */
+	if( argc > 1 ){
+    strcpy( inFile, argv[1] );
+    CheckFileReadable(inFile);
+  }
+
+	/* Load the output file argument, if it exists */
+	if( argc > 2 ) {
+    strcpy( outFile, argv[2] );
+    CheckFileWritable(outFile);
+  } else {
+    /* outFile = NULL; */
+  }
 
 	/* open log file */
 	_ulog = fopen( "View2D.log", "w" );
@@ -175,3 +170,31 @@ tryagain:
 
   }  /*  end of OpenFile  */
 #endif
+
+/* Currently does not open the file. */
+void CheckFileWritable(char *fileName){
+
+  FILE  *pfile=NULL;
+
+  if(fileName!=NULL && strlen(fileName)>0){
+    /* try to open file */
+    pfile = fopen( fileName, "w");
+    if( pfile == NULL )
+      fprintf( stderr, "Error! Failed to open: %s\nTry again.\n", fileName );
+  }
+  fclose( pfile );
+}
+
+/* Currently does not open the file. */
+void CheckFileReadable(char *fileName){
+
+  FILE  *pfile=NULL;
+
+  if(fileName!=NULL && strlen(fileName)>0){
+    /* try to open file */
+    pfile = fopen( fileName, "r");
+    if( pfile == NULL )
+      fprintf( stderr, "Error! Failed to open: %s\nTry again.\n", fileName );
+  }
+  fclose( pfile );
+}
