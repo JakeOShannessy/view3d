@@ -20,11 +20,9 @@ extern "C" {
     pub fn freeVFResultsC(results: VFResultsC);
 }
 
-
-pub fn process_paths(infile: String, outfile: String) -> VFResults {
+pub fn process_path(infile: String) -> VFResults {
     // Convert these arguments to C strings to use in FFI
     let infile_c = CString::new(infile).expect("CString::new failed");
-    let outfile_c = CString::new(outfile).expect("CString::new failed");
     unsafe {
 
         let in_data = parseInPath(infile_c.as_ptr());
@@ -53,14 +51,15 @@ pub fn process_paths(infile: String, outfile: String) -> VFResults {
 
         // Convert the enclosure flag to a bool
         let encl = if vf_res.encl == 0 { false } else { true };
-
-        VFResults {
+        let final_res = VFResults {
             n_surfs: vf_res.n_surfs as u32,
             encl,
             areas,
             emit,
             values: vec,
-        }
+        };
+        freeVFResultsC(vf_res);
+        final_res
     }
 }
 
@@ -74,6 +73,8 @@ pub struct VFResultsC {
     pub emit: *const c_float,
     pub values: *const c_double,
     pub AF: *const *const c_double,
+    pub row: i32,
+    pub nSrf0: i32,
 }
 
 // #[derive(Debug)]
