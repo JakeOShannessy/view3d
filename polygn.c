@@ -521,6 +521,8 @@ void FreeTmpVertMem( void )
   Fre_V( _tempVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
   Fre_V( _rightVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
   Fre_V( _leftVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+  /* Set _u to NULL to indicate it was freed */
+  _u = NULL;
 
   }  /*  end FreeTmpVertMem  */
 
