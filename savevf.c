@@ -57,6 +57,45 @@ static void SaveF0( FILE *vfout, char *header, int nSrf,
   fprintf( vfout, "\n" );
 } /* end of SaveF0 */
 
+static void SaveF0New( FILE *vfout, char *header, VFResultsC res) {
+  int n; /* row */
+  int m; /* column */
+  float *F = malloc(sizeof(float)*(res.n_surfs+1)); /* Alc_V( 1, res.n_surfs+1, sizeof(float), __FILE__, __LINE__ ); */
+  /* TODO: work out why this style of allocation was causing issues */
+  /* float *F = Alc_V( 1, res.n_surfs+1, sizeof(float), __FILE__, __LINE__ ); */
+
+  fprintf( vfout, "%s", header );
+  fprintf( vfout, "%g", res.area[1-1] );
+  for( n=2; n<=res.n_surfs; n++ )
+    fprintf( vfout, " %g", res.area[n-1] );
+  fprintf( vfout, "\n" );
+
+  for(n=1; n<=res.n_surfs; n++){
+    /* process AF values for row n */
+    double Ainv = 1.0 / res.area[n-1];
+    for(m=1; m<=res.n_surfs; m++){
+      /* process column values */
+      if(m < n){
+        F[m] = (float)(res.AF[n][m] * Ainv);
+      }else{
+        F[m] = (float)(res.AF[m][n] * Ainv);
+      }
+    }
+    /* write row */
+    fprintf(vfout, "%.6f", F[1]);
+    for(m=2; m<=res.n_surfs; m++){
+      fprintf( vfout, " %.6f", F[m]);
+    }
+    fprintf(vfout, "\n");
+  }
+
+  fprintf( vfout, "%.3f", res.emit[1-1] );
+  for( n=2; n<=res.n_surfs; n++ ){
+    fprintf( vfout, " %.3f", res.emit[n-1] );
+  }
+  fprintf( vfout, "\n" );
+} /* end of SaveF0 */
+
 /***  SaveF1.c  **************************************************************/
 
 /*  Save view factors as square array; binary format. */
@@ -163,7 +202,7 @@ void SaveVF( FILE *file, char *program, char *version,
 /**  Save the computed view factors.
  *  @param file   the handle to which to save the values
  *  @param format 0 = simple text format, 1 = simple binary format
- *  @param encl  
+ *  @param encl
  *  @param didemit
  *  @param nSrf
  *  @param area
@@ -171,16 +210,15 @@ void SaveVF( FILE *file, char *program, char *version,
  *  @param AF
  *  @param vtmp
 */
-void SaveVFNew(FILE *file, int format, int encl, int didemit, int nSrf,
-             float *area, float *emit, double **AF, float *vtmp
-){
+void SaveVFNew( FILE *file, VFResultsC res) {
   char header[32];
   int j;
   char version[] = V3D_VERSION;
   char program[] = "View3D";
+  int format = 0;
 
   /* fill output file header line */
-  sprintf( header, "%s %s %d %d %d %d", program, version, format, encl, didemit, nSrf );
+  sprintf( header, "%s %s %d %d %d %d", program, version, format, res.encl, res.didemit, res.n_surfs );
   for( j=strlen(header); j<30; j++ ){
     header[j] = ' ';
   }
@@ -188,12 +226,12 @@ void SaveVFNew(FILE *file, int format, int encl, int didemit, int nSrf,
   header[31] = '\0';
 
   if( format == 0 ){  /* simple text file */
-    SaveF0( file, header, nSrf, area, emit, AF, vtmp );
+    SaveF0New(file, header, res);
 
   }else if( format == 1 ){  /* simple binary file */
     header[30] = '\r';
     header[31] = '\n';
-    SaveF1( file, header, nSrf, area, emit, AF, vtmp );
+    // SaveF1( file, header, nSrf, area, emit, AF, vtmp );
 
   }else{
     error( 3, __FILE__, __LINE__, "Undefined format: ", IntStr(format), "" );

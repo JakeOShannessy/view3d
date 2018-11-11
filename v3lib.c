@@ -380,19 +380,16 @@ VFResultsC calculateVFs(RawInData rawInData){
   VFResultsC res_struct;
   res_struct.n_surfs = nSrf0;
   res_struct.encl = encl;
+  res_struct.didemit = vfCtrl.emittances;
   res_struct.area = areas0;
   res_struct.emit = emit0;
   res_struct.values = ret;
-
-  /* Rather hacky way to main the old executable style work */
-#ifdef MAIN
-  fflush(stderr);
-  fflush(stdout);
-  SaveVF( stdout, "View3D", "3.5", vfCtrl.outFormat, vfCtrl.enclosure,
-          vfCtrl.emittances, nSrf, area, emit, AF, vtmp );
-#endif
+  res_struct.AF = AF;
 
   /* Begin: Free memory of data structures */
+  /* We no longer want to free AF as we pass it out of the function */
+  /* TODO: make sure we free AF later */
+  /*
   if( vfCtrl.row ){
     Fre_MC( AF, vfCtrl.row, vfCtrl.row, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
   }else{
@@ -402,6 +399,7 @@ VFResultsC calculateVFs(RawInData rawInData){
     Fre_MSC( (void **)AF, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
 #endif
   }
+  */
   Fre_V( srf, 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
   Fre_V( cmbn, 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
   Fre_V( base, 1, nSrf0, sizeof(int), __FILE__, __LINE__ );

@@ -44,7 +44,7 @@ typedef struct Vec3_struct{       /* structure for a 3D vertex or vector */
 #define VECTOR(a,b,c)   \
     c->x = b->x - a->x; \
     c->y = b->y - a->y; \
-    c->z = b->z - a->z; 
+    c->z = b->z - a->z;
 
 /*  VCOPY:  copy elements from vertex/vector A to B.  */
 #define VCOPY(a,b)  { b->x = a->x; b->y = a->y; b->z = a->z; }
@@ -53,7 +53,7 @@ typedef struct Vec3_struct{       /* structure for a 3D vertex or vector */
 #define VMID(a,b,c)   \
     c->x = 0.5 * (a->x + b->x); \
     c->y = 0.5 * (a->y + b->y); \
-    c->z = 0.5 * (a->z + b->z); 
+    c->z = 0.5 * (a->z + b->z);
 
 /*  VDOT:  compute dot product of vectors A and B.  */
 #define VDOT(a,b)   (a->x * b->x + a->y * b->y + a->z * b->z)
@@ -68,13 +68,13 @@ typedef struct Vec3_struct{       /* structure for a 3D vertex or vector */
 #define VCROSS(a,b,c)   \
     c->x = a->y * b->z - a->z * b->y; \
     c->y = a->z * b->x - a->x * b->z; \
-    c->z = a->x * b->y - a->y * b->x; 
+    c->z = a->x * b->y - a->y * b->x;
 
 /*  VSCALE:  vector B = scalar C times vector A.  */
 #define VSCALE(c,a,b)  \
     b->x = c * a->x; \
     b->y = c * a->y; \
-    b->z = c * a->z; 
+    b->z = c * a->z;
 
 typedef struct DirCos_struct{         /* structure for direction cosines */
   double  x;  /* X-direction cosine */
@@ -181,7 +181,7 @@ typedef struct{    /* structure for Gaussian division of polygon edge */
 
 typedef struct{          /* view factor calculation control values */
   int nAllSrf;       /* total number of surfaces */
-  int nRadSrf;       /* number of radiating surfaces; 
+  int nRadSrf;       /* number of radiating surfaces;
                          initially includes mask & null surfaces */
   int nMaskSrf;      /* number of mask & null surfaces */
   int nObstrSrf;     /* number of obstruction surfaces */
@@ -214,7 +214,7 @@ typedef struct{          /* view factor calculation control values */
   int failConverge;  /* 1 if any calculation failed to converge */
   SRFDAT3X srf1T;   /* participating surface; transformed coordinates */
   SRFDAT3X srf2T;   /* participating surface; transformed coordinates;
-                       view from srf1T toward srf2T. */ 
+                       view from srf1T toward srf2T. */
   SRFDAT3X *srfOT;  /* pointer to array of view obstrucing surfaces;
                        dimensioned from 0 to maxSrfT in View3d();
                        coordinates transformed relative to srf2T. */
@@ -241,7 +241,7 @@ typedef struct{         /* view factor calculation control values */
   int failConverge;  /* 1 if any calculation failed to converge */
   SRFDAT2D srf1T;   /* participating surface; transformed coordinates */
   SRFDAT2D srf2T;   /* participating surface; transformed coordinates;
-                        view from srf1T toward srf2T. */ 
+                        view from srf1T toward srf2T. */
   SRF2D *srfOT;     /* pointer to array of view obstrucing surfaces;
                         dimensioned from 0 to maxSrfT in View3d();
                         coordinates transformed relative to srf2T. */
@@ -289,9 +289,12 @@ int errorf( int severity, char *file, int line, ... );
 typedef struct  {
     int n_surfs;
     int encl;
+    int didemit;
     float *area;
     float *emit;
     double *values;
+    double **AF;
+    View3DControlData *vfCtrl;
 } VFResultsC;
 
 /*

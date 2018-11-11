@@ -119,7 +119,10 @@ int main( int argc, char **argv ){
 	"a government program.\n"
 	, stderr
   );
-  processPaths(inFile, outFile);
+  VFResultsC res = processPaths(inFile, outFile);
+  fflush(stderr);
+  fflush(stdout);
+  SaveVFNew(stdout, res);
   return 0;
 }
 
