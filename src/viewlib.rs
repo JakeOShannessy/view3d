@@ -5,14 +5,19 @@ extern crate libc;
 use std::ffi::{CString};
 use std::os::raw::c_char;
 use std::f64;
-use libc::{c_double, c_float};
+use libc::{c_double, c_float, FILE};
 use std::slice;
+use std::fs::File;
+use std::io::stdout;
 
 // Link in the C lib via FFI
 #[link(name = "view3d", kind = "static")]
 extern "C" {
-    pub fn processPaths(infile: *const c_char, outfile: *const c_char) -> VFResultsC;
+    pub fn parseInPath(infile: *const c_char) -> RawInData;
+    pub fn calculateVFs(rawInData: RawInData) -> VFResultsC;
     pub fn processPaths2d(infile: *const c_char, outfile: *const c_char);
+    pub fn printVFs(format: i32, file: *mut FILE, results: VFResultsC);
+    pub fn freeVFResultsC(results: VFResultsC);
 }
 
 
@@ -21,8 +26,10 @@ pub fn process_paths(infile: String, outfile: String) -> VFResults {
     let infile_c = CString::new(infile).expect("CString::new failed");
     let outfile_c = CString::new(outfile).expect("CString::new failed");
     unsafe {
-        let vf_res = processPaths(infile_c.as_ptr(), outfile_c.as_ptr());
 
+        let in_data = parseInPath(infile_c.as_ptr());
+        let vf_res = calculateVFs(in_data);
+        println!("{:?}", vf_res);
         // Convert the view factor values to a vector
         let af_arr_ptr = vf_res.values;
         assert!(!af_arr_ptr.is_null());
@@ -62,9 +69,60 @@ pub fn process_paths(infile: String, outfile: String) -> VFResults {
 pub struct VFResultsC {
     pub n_surfs: i32,
     pub encl: i32,
+    pub didemit: i32,
     pub area: *const c_float,
     pub emit: *const c_float,
     pub values: *const c_double,
+    pub AF: *const *const c_double,
+}
+
+// #[derive(Debug)]
+#[repr(C)]
+pub struct RawInData {
+  pub opts: RawInOptions,
+  pub nAllSrf: i32,
+  pub nRadSrf: i32,
+  pub nObstrSrf: i32,
+  pub nVertices: i32,
+  pub vertices: [Vec3; 256],
+  pub surfaces: [RawSurf; 256],
+}
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct RawInOptions {
+  pub title: *const c_char,
+  pub epsAdap: c_float,
+  pub maxRecursALI: i32,
+  pub minRecursion: i32,
+  pub maxRecursion: i32,
+  pub enclosure: i32,
+  pub emittances: i32,
+  pub row: i32,
+  pub col: i32,
+  pub prjReverse: i32,
+}
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct RawSurf {
+  pub nr: i32,
+  pub nv: i32,
+  pub type_: i32,
+  pub base: i32,
+  pub cmbn: i32,
+  pub emit: c_float,
+  pub vertexIndices: [i32; 4],
+  pub name: [c_char; 16],
+//   char name[NAMELEN];
+}
+
+#[derive(Debug)]
+#[repr(C)]
+pub  struct Vec3 {
+  x: c_double,
+  y: c_double,
+  z: c_double,
 }
 
 #[derive(Debug)]

@@ -129,6 +129,35 @@ static void SaveF1( FILE *vfout, char *header, int nSrf,
 
 }  /* end of SaveF1 */
 
+/* TODO: this is incomplete and likely erroneous */
+static void SaveF1New( FILE *vfout, char *header, VFResultsC res){
+  int n;    /* row */
+  float *F = malloc(sizeof(float)*(res.n_surfs+1));
+
+  /* fprintf(stderr,"Saving view factors to file '%s' in format '1' (square array, binary format)...\n",fileName); */
+/* TODO: remember to open for binary writing here */
+  /* vfout = fopen( fileName, "wb" ); */
+  fwrite( header, sizeof(char), 32, vfout );
+  fwrite( res.area+1, sizeof(float), res.n_surfs, vfout );
+
+  for( n=1; n<=res.n_surfs; n++ )      /* process AF values for row n */
+    {
+    int m;    /* column */
+    double Ainv = 1.0 / res.area[n-1];
+    for( m=1; m<=res.n_surfs; m++ )      /* process column values */
+      {
+      if( m < n )
+        F[m] = (float)(res.AF[n][m] * Ainv);
+      else
+        F[m] = (float)(res.AF[m][n] * Ainv);
+      }
+    fwrite( F+1, sizeof(float), res.n_surfs, vfout );   /* write row */
+    }
+
+  fwrite( res.emit+1, sizeof(float), res.n_surfs, vfout );
+
+}  /* end of SaveF1 */
+
 /***  SaveAF.c  **************************************************************/
 
 /*  Save view factors from 3D calculations.  */
@@ -167,7 +196,9 @@ void SaveAF( FILE *vfout, char *header, int nSrf, char *title, char **name,
 /***  SaveVF.c  **************************************************************/
 
 /*  Save computed view factors.  */
-
+/* TODO: this still kept because it is used in View2D, but once it is removed
+ * from there it can be deleted.
+ */
 void SaveVF( FILE *file, char *program, char *version,
              int format, int encl, int didemit, int nSrf,
              float *area, float *emit, double **AF, float *vtmp
@@ -231,7 +262,7 @@ void SaveVFNew( FILE *file, VFResultsC res) {
   }else if( format == 1 ){  /* simple binary file */
     header[30] = '\r';
     header[31] = '\n';
-    // SaveF1( file, header, nSrf, area, emit, AF, vtmp );
+    SaveF1New( file, header, res);
 
   }else{
     error( 3, __FILE__, __LINE__, "Undefined format: ", IntStr(format), "" );

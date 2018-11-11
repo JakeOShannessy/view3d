@@ -63,21 +63,47 @@ InData InDataFromRaw(RawInData *rawInData);
 
 
 /* Main External API */
+/* TODO: include API to free the memory allocated by these functions */
 extern RawInData parseIn(FILE *file);
 extern RawInData parseInPath(char *path);
 extern VFResultsC calculateVFs(RawInData rawInData);
-/* TODO: need to work out some things about the results format before that */
-/* can be completed. */
-/* extern void printVFs(int format, FILE *file, InData inData, VFResultsC results); */
+extern void printVFs(int format, FILE *file, VFResultsC results);
 
+/* extern void freeRawInData(RawInData rawInData); */
+extern void freeVFResultsC(VFResultsC results);
 
+void printVFs(int format, FILE *file, VFResultsC results) {
+  return SaveVFNew(file, results);
+}
+
+/* TODO: currently RawInData does not need to be freed as it uses static arrays
+ * and is simply copied. Ideally, it should use allocated arrays, and when it
+ * does, this function will need to be implemented.
+ */
 /*
-void printVFs(int format, FILE *file, InData inData, VFResultsC results) {
-  return SaveVFNew(file, inData.vfCtrl.outFormat, inData.vfCtrl.enclosure,
-          inData.vfCtrl.emittances, results.nSrf, inData.area, inData.emit,
-          results.AF, inData.vtmp );
+void freeRawInData(RawInData rawInData) {
+
 }
 */
+
+void freeVFResultsC(VFResultsC results) {
+  if( results.row ){
+    Fre_MC( results.AF, results.row, results.row, 1, results.nSrf0, sizeof(double), __FILE__, __LINE__ );
+  }else{
+#ifdef __TURBOC__
+    Fre_MSR( (void **)results.AF, 1, results.nSrf0, sizeof(double), __FILE__, __LINE__ );
+#else
+    Fre_MSC( (void **)results.AF, 1, results.nSrf0, sizeof(double), __FILE__, __LINE__ );
+#endif
+  }
+  /* These values are currently just malloc'd rather than using the special
+   * allocation functions provided in heap.c, therefore they can be simply
+   * freed with free.
+   */
+  free(results.area);
+  free(results.emit);
+  free(results.values);
+}
 
 RawInData parseInPath(char *path) {
   FILE *inHandle = NxtOpenHndl(path, __FILE__, __LINE__ );
@@ -236,11 +262,13 @@ VFResultsC calculateVFs(RawInData rawInData){
   vfCtrl.nPossObstr = SetPosObstr3D( vfCtrl.nAllSrf, srf, possibleObstr );
 
   /* If row is specified (i.e. we are only interested in the view factors of
-     one surface) then we allocate an array big enough for those values. */
+   * one surface) then we allocate an array big enough for those values.
+   */
   if( vfCtrl.row ){  /* may not work with some compilers. GNW 2008/01/22 */
     AF = Alc_MC( vfCtrl.row, vfCtrl.row, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
   /* Otherwise we want every surface to every surface and must allocate a
-     sufficiently sized array. */
+   * sufficiently sized array.
+   */
   } else {
 #ifdef __TURBOC__
     AF = Alc_MSR( 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
@@ -383,6 +411,8 @@ VFResultsC calculateVFs(RawInData rawInData){
   res_struct.emit = emit0;
   res_struct.values = ret;
   res_struct.AF = AF;
+  res_struct.row = rawInData.opts.row;
+  res_struct.nSrf0 = nSrf0;
 
   /* Begin: Free memory of data structures */
   /* We no longer want to free AF as we pass it out of the function */

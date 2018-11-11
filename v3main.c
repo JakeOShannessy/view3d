@@ -137,6 +137,7 @@ int main( int argc, char **argv ){
     outHandle = fopen(outFile, "w");
   }
   SaveVFNew(outHandle, res);
+  freeVFResultsC(res);
   return 0;
 }
 

@@ -295,9 +295,15 @@ typedef struct  {
     /* TODO: values and AF both include the results, just in different formats.
      * It is probably better to keep both formats, but in different structs
      * with conversion functions between them.
-    */
+     */
     double *values;
     double **AF;
+    /* These two values (row and nSrf0) aren't really part of the results, but
+     * they determine the size of AF and are necessary to free it. They are
+     * included here for that purpose only.
+     */
+    int row;
+    int nSrf0;
 } VFResultsC;
 
 /* The input type for view3d. */
