@@ -21,12 +21,11 @@ fn main() {
             .get_matches();
 
     let infile = matches.value_of("INFILE").expect("Input file not provided");
-    // If no outfile is specified, pass an empty string and the library will
-    // understand that it means direct to stdout
     let outfile = matches.value_of("OUTFILE").unwrap_or("");
-
     let vf_results = process_path(infile.to_string());
+    // TODO: redirect to file if requested
     print_vf_results(&vf_results);
     println!("1->8: {:}", vf_results.vf(1,8));
     println!("8->1: {:}", vf_results.vf(8,1));
+
 }
