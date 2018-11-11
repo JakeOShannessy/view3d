@@ -129,6 +129,7 @@ int main( int argc, char **argv ){
   fflush(stderr);
   fflush(stdout);
 
+  /* Open the output for results. If no output path is specified use stdout */
   FILE *outHandle;
   if(strlen(outFile) == 0 || outFile == NULL) {
     outHandle = stdout;
