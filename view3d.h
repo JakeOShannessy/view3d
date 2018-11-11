@@ -292,21 +292,13 @@ typedef struct  {
     int didemit;
     float *area;
     float *emit;
+    /* TODO: values and AF both include the results, just in different formats.
+     * It is probably better to keep both formats, but in different structs
+     * with conversion functions between them.
+    */
     double *values;
     double **AF;
-    View3DControlData *vfCtrl;
 } VFResultsC;
-
-/*
-typedef struct {
-  int encl;
-  int didemit;
-  int nSrf;
-  float *area;
-  float *emit;
-  double **AF;
-} VFResults;
-*/
 
 /* The input type for view3d. */
 typedef struct {
