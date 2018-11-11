@@ -33,7 +33,7 @@ void FindFile(char *msg, char *name, char *type);
 void CheckFileWritable(char *fileName);
 void CheckFileReadable(char *fileName);
 double VolPrism(Vec3 *a, Vec3 *b, Vec3 *c);
-VFResultsC processPaths(char *inFile, char *outFile);
+VFResultsC processPaths(char *inFile);
 
 void ReportAF( const int nSrf, const int encl, const char *title, char **name,
   const float *area, const float *emit, const int *base, double **AF, int flag
@@ -119,10 +119,17 @@ int main( int argc, char **argv ){
 	"a government program.\n"
 	, stderr
   );
-  VFResultsC res = processPaths(inFile, outFile);
+  VFResultsC res = processPaths(inFile);
   fflush(stderr);
   fflush(stdout);
-  SaveVFNew(stdout, res);
+
+  FILE *outHandle;
+  if(strlen(outFile) == 0 || outFile == NULL) {
+    outHandle = stdout;
+  } else {
+    outHandle = fopen(outFile, "w");
+  }
+  SaveVFNew(outHandle, res);
   return 0;
 }
 

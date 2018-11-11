@@ -70,7 +70,7 @@ extern VFResultsC calculateVFs(RawInData rawInData);
 /* extern void printVFs(int format, FILE *file, InData inData, VFResultsC results); */
 
 /* Extra API (for convenience, to be deprecated) */
-extern VFResultsC processPaths(char *inFile, char *outFile);
+extern VFResultsC processPaths(char *inFile);
 
 /*
 void printVFs(int format, FILE *file, InData inData, VFResultsC results) {
@@ -203,7 +203,7 @@ double getEnclosureVolume(View3DControlData vfCtrl, SRFDAT3D *srf) {
 }
 
 /* deprecated */
-VFResultsC processHandlesSimple(FILE *inHandle, FILE *outHandle) {
+VFResultsC processHandlesSimple(FILE *inHandle) {
   RawInData rawInData = parseIn(inHandle);
   return calculateVFs(rawInData);
 }
@@ -415,18 +415,10 @@ VFResultsC calculateVFs(RawInData rawInData){
 
 /* deprecated */
 /* TODO: this extra file-based API should be behind a flag for portability */
-VFResultsC processPaths(char *inFile, char *outFile) {
+VFResultsC processPaths(char *inFile) {
   FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
   _unxt = inHandle;
-  /* Write the results to the output file. */
-  /* TODO: if saving to binary format, open for binary write */
-  FILE *outHandle;
-  if(strlen(outFile) == 0 || outFile == NULL) {
-    outHandle = stdout;
-  } else {
-    outHandle = fopen(outFile, "w");
-  }
-  VFResultsC res = processHandlesSimple(inHandle, outHandle);
+  VFResultsC res = processHandlesSimple(inHandle);
   fclose(inHandle);
   return res;
 }
@@ -451,7 +443,7 @@ int processStrings(char *inString, char *outFile) {
   } else {
     outHandle = fopen(outFile, "w");
   }
-  processHandlesSimple(inHandle, outHandle);
+  processHandlesSimple(inHandle);
   return 0;
 }
 
