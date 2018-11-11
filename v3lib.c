@@ -378,7 +378,7 @@ VFResultsC calculateVFs(RawInData rawInData){
   }
 
   VFResultsC res_struct;
-  res_struct.n_surfs = nSrf0;
+  res_struct.n_surfs = nSrf;
   res_struct.encl = encl;
   res_struct.didemit = vfCtrl.emittances;
   res_struct.area = areas0;
