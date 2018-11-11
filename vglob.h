@@ -2,7 +2,6 @@
 /*  VGLOB:  global variables for VIEWCHK  */
 
 FILE *_ulog=stderr; /* log file */
-FILE *_unxt=NULL; /* input file */
 int _echo=0;       /* true = echo input file */
 I1 _vdrive[_MAX_DRIVE];   /* drive letter for program ViewGrX.exe */
 I1 _vdir[_MAX_DIR];       /* directory path for program ViewGrX.exe */
@@ -13,7 +12,7 @@ int _encl;    /* true = surfaces form an enclosure */
 int _list;    /* output control, higher value = more output */
 
 int _nAllSrf;       /* total number of surfaces */
-int _nRadSrf;       /* number of radiating surfaces; 
+int _nRadSrf;       /* number of radiating surfaces;
                       initially includes mask & null surfaces */
 int _nMaskSrf;      /* number of mask & null surfaces */
 int _nObstrSrf;     /* number of obstruction surfaces */
@@ -46,7 +45,7 @@ unsigned long _totVpt;        /* total number of view points */
 int _failConverge;  /* 1 if any calculation failed to converge */
 SRFDAT3X _srf1T;   /* participating surface; transformed coordinates */
 SRFDAT3X _srf2T;   /* participating surface; transformed coordinates;
-                      view from srf1T toward srf2T. */ 
+                      view from srf1T toward srf2T. */
 SRFDAT3X *_srfOT;  /* pointer to array of view obstrucing surfaces;
                        dimensioned from 0 to maxSrfT in View3d();
                        coordinates transformed relative to srf2T. */

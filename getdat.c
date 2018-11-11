@@ -22,6 +22,7 @@
 #include "ctrans.h"
 #include "heap.h"
 #include "test2d.h"
+#include "readvs.h"
 
 #define PI 3.141592653589793238
 #define deg2rad(x)  ((x)*PI/180.) /* angle: degrees -> radians */
@@ -577,15 +578,15 @@ InData InDataFromRaw(RawInData *rawInData) {
   vfCtrl.maxRecursALI = rawInData->opts.maxRecursALI; /* maximum number of recursion levels */
   vfCtrl.minRecursion = rawInData->opts.minRecursion;  /* minimum number of recursion levels */
   vfCtrl.maxRecursion = rawInData->opts.maxRecursion;  /* maximum number of recursion levels */
-  vfCtrl.enclosure = rawInData->opts.enclosure;  
-  vfCtrl.emittances = rawInData->opts.emittances;  
-  vfCtrl.row = rawInData->opts.row;  
-  vfCtrl.col = rawInData->opts.col;  
-  vfCtrl.prjReverse = rawInData->opts.prjReverse;  
+  vfCtrl.enclosure = rawInData->opts.enclosure;
+  vfCtrl.emittances = rawInData->opts.emittances;
+  vfCtrl.row = rawInData->opts.row;
+  vfCtrl.col = rawInData->opts.col;
+  vfCtrl.prjReverse = rawInData->opts.prjReverse;
   vfCtrl.format = 3;
 
-  vfCtrl.nRadSrf = rawInData->nRadSrf;  
-  vfCtrl.nVertices = rawInData->nVertices;  
+  vfCtrl.nRadSrf = rawInData->nRadSrf;
+  vfCtrl.nVertices = rawInData->nVertices;
   /* vfCtrl.nAllSrf = rawInData->nAllSrf;   */
   vfCtrl.nObstrSrf = rawInData->nObstrSrf;
   vfCtrl.nAllSrf = vfCtrl.nRadSrf + vfCtrl.nObstrSrf;
@@ -638,21 +639,21 @@ InData InDataFromRaw(RawInData *rawInData) {
     inData.srf[rawInData->surfaces[i].nr].nr = rawInData->surfaces[i].nr;
     inData.srf[rawInData->surfaces[i].nr].nv = rawInData->surfaces[i].nv;
     inData.srf[rawInData->surfaces[i].nr].type = rawInData->surfaces[i].type;
-    
+
     /* Vec3 *v[MAXNV];  */ /* pointers to coordinates of up to MAXNV vertices */
     for (n = 0; n < inData.srf[rawInData->surfaces[i].nr].nv; n++) {
       inData.srf[rawInData->surfaces[i].nr].v[n] = &inData.xyz[rawInData->surfaces[i].vertexIndices[n]];
     }
-    
+
     /* area, rc, dc, ctd, and shape are defined using SetPlane */
     SetPlane(&inData.srf[rawInData->surfaces[i].nr]);
-    /* TODO: It appears these values are not set here, but in the View3D 
+    /* TODO: It appears these values are not set here, but in the View3D
     (calculation) routine. */
     /*
     int NrelS;
     int MrelS;
     */
-    
+
   }
 
   /* reads the  file a second time */
@@ -801,7 +802,7 @@ void GetVS3Da( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
   int j, n;
 
   error( -2, __FILE__, __LINE__, "" );  /* clear error count */
-  rewind( _unxt );
+  rewind( inHandle );
   NxtWord( inHandle, _string, -1, sizeof(_string) );
 
   while( NxtWord( inHandle, _string, 1, sizeof(_string) ) != NULL ){
@@ -1097,7 +1098,7 @@ void GetVS2D( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
   int n;
 
   error( -2, __FILE__, __LINE__, "" );  /* clear error count */
-  rewind( _unxt );
+  rewind( inHandle);
   xy = Alc_V( 1, vfCtrl->nVertices, sizeof(Vec2), __FILE__, __LINE__ );
 
   while( NxtWord( inHandle, _string, flag, sizeof(_string) ) != NULL )

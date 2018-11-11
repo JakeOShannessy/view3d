@@ -4,6 +4,9 @@
 #include "common.h"
 #include "view3d.h"
 
+char *NxtLine(FILE *f, char *str, int maxlen );
+char *NxtWord(FILE *inHandle, char *str, int flag, int maxlen );
+
 /* unified data types for reading vertex/surface data both 2D and 3D */
 
 struct VertexSurfaceData_2D_struct{
@@ -25,7 +28,7 @@ typedef struct VertexSurfaceData_struct{
 	unsigned nvert; /* number of vertices */
 	unsigned nrad; /* radiation surfaces */
 	unsigned nobst;
-	unsigned nall; /* all surfaces (including obstructions, null surfaces) */ 
+	unsigned nall; /* all surfaces (including obstructions, null surfaces) */
 	unsigned format;
 	unsigned row, col; /* row and column of view factor matrix that is to be reported */
 	int echo;
@@ -47,4 +50,3 @@ V3D_API VertexSurfaceData *read_vertex_surface_data(const char *filename);
 V3D_API void vertex_surface_data_destroy(VertexSurfaceData *V);
 
 #endif
-

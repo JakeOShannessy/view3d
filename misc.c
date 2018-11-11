@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <stdarg.h> /* variable argument list macro definitions */
 #include "types.h"  /* define unsigned char, short, etc. */
+#include "readvs.h"
 
 #define NMAX 4      /* maximum number of calls to xxxStr at one time */
 #define NXTBUF 1    /* buffer size (if > 1023) */
@@ -258,7 +259,7 @@ void PathMerge( char *fullpath, int szfp, char *drv, char *path, char *name, cha
     fullpath[szfp-1] = '\0';
     }
 
-#if( DEBUG > 0 ) 
+#if( DEBUG > 0 )
   if( _ulog )
     {
     fprintf( _ulog, "Merge path: %s\n", fullpath );
@@ -284,7 +285,7 @@ void PathMerge( char *fullpath, int szfp, char *drv, char *path, char *name, cha
  *  A null drv will leave the drive as part of the path.  */
 
 void PathSplit( char *fullpath, char *drv, int szd, char *path, int szp
-		,char *name, int szn, char *ext, int sze 
+		,char *name, int szn, char *ext, int sze
 ){
   char *c, /* position in fullpath */
      *p; /* pointer to special charactor */
@@ -325,7 +326,7 @@ void PathSplit( char *fullpath, char *drv, int szd, char *path, int szp
       }
     c = p + 1;  /* c = start of name in fullpath */
     }
-  
+
   p = strrchr( c, '.' );
   if( name )
     {
@@ -369,7 +370,7 @@ void PathSplit( char *fullpath, char *drv, int szd, char *path, int szp
 
 /***  PathCWD.c  *************************************************************/
 
-/*  Determine component parts of Current Working Directory.  
+/*  Determine component parts of Current Working Directory.
  *    Visual C's _getcwd()  defined in <direct.h>
  *    Turbo C's getcwd()  defined in <dir.h>
  *    These functions do not produce the trailing directory character.
@@ -398,43 +399,8 @@ void PathCWD( char *path, int szp ){
 
 }  /* end PathCWD */
 
-extern FILE *_unxt = NULL;   /* NXT input file */
 extern int _echo;      /* if true, echo NXT input file */
 char *_nxtbuf;   /* large buffer for NXT input file */
-
-
-
-/*  Open file_name as UNXT file.  */
-
-int NxtOpen(const char *file_name, const char *file, int line ){
-/* file;  source code file name: __FILE__
- * line;  line number: __LINE__ */
-  int result=0;
-
-  if( _unxt ) error( 3, file, line, "_UNXT already open", "" );
-  _unxt = fopen( file_name, "r" );  /* = NULL if no file */
-  if( !_unxt ){
-    error( 2, file, line, "Could not open file: ", file_name, "" );
-    result = 1;
-  }
-
-  return result;
-
-}  /* end NxtOpen */
-
-
-
-/*  Close _unxt.  */
-
-void NxtClose( void ){
-  if( _unxt )
-    {
-    if( fclose( _unxt ) )
-      error( 2, __FILE__, __LINE__, "Problem while closing _UNXT", "" );
-    _unxt = NULL;
-    }
-
-}  /* end NxtClose */
 
 /*  Open file_name and return the handle.  */
 
@@ -459,177 +425,6 @@ void NxtCloseHndl(FILE *handle){
     if( fclose(handle) )
       error( 2, __FILE__, __LINE__, "Problem while closing handle", "" );
 }
-  
-
-
-
-/*  Get characters to end of line (\n --> \0); used by NxtWord().  */
-
-char *NxtLine( char *str, int maxlen ){
-  int c=0;       /* character read from _unxt */
-  int i=0;       /* current position in str */
-
-  while( c!='\n' )
-    {
-    c = getc( _unxt );
-    if( c==EOF ) return NULL;
-    if( _echo ) putc( c, _ulog );
-    if( maxlen < 1 ) continue;   /* do not fill buffer */
-    if( c == '\r' ) continue;    /* 2007/10/07 Linux EOL = \n\r */
-    str[i++] = (char)c;
-    if( i == maxlen )
-      {
-      str[i-1] = '\0';
-      error( 3, __FILE__, __LINE__, "Buffer overflow: ", str, "" );
-      }
-    }
-  if( i )
-    str[i-1] = '\0';
-  else
-    str[0] = '\0';
-
-  return str;
-
-}  /* end NxtLine */
-
-
-/*  Get the next word from file _unxt.  Return NULL at end-of-file.
- *  Assuming standard word separators (blank, comma, tab),
- *  comment identifiers (! to end-of-line), and
- *  end of data (* or end-of-file). */
-/*  Major change October 2007:  ContamX uses NxtWord to read multiple files
- *  which are open simultaneously. The old static variable "newl" may cause
- *  an error. It has been replaced by using ungetc() to note end-of-word (EOW)
- *  which may also be end-of-line (EOL) character.
- *  Initialization with flag = -1 in now invalid - debug checked. */
-
-char *NxtWord( FILE *inHandle, char *str, int flag, int maxlen )
-/* str;   buffer where word is stored; return pointer.
- * flag:  0:  get next word from current position in _unxt;
-          1:  get 1st word from next line of _unxt;
-          2:  get remainder of current line from _unxt (\n --> \0);
-          3:  get next data line from _unxt (\n --> \0);
-          4:  get next line (even if comment) (\n --> \0).
- * maxlen: length of buffer to test for overflow. */
-  {
-  int c;         /* character read from _unxt */
-  int i=0;       /* current position in str */
-  int done=0;    /* true when start of word is found or word is complete */
-
-#ifdef _DEBUG
-  if( !inHandle )
-    error( 3, __FILE__, __LINE__, "inHandle not open", "" );
-  if( maxlen < 16 )
-    error( 3, __FILE__, __LINE__, "Invalid maxlen: ", IntStr(maxlen), "" );
-#endif
-  c = getc( inHandle );
-  if( flag > 0 )
-    {
-    if( c != '\n' )  /* last call did not end at EOL; ready to read next char. */
-      {                /* would miss first char if reading first line of file. */
-      if( flag == 2 )
-        {
-        if( ftell( inHandle) == 1 ) /* 2008/01/16 */
-          ungetc( c, inHandle );  /* restore first char of first line */
-        NxtLine( str, maxlen );  /* read to EOL filling buffer */
-        }
-      else
-        NxtLine( str, 0 );       /* skip to EOL; fix size 2008/01/16 */
-        /* if flag = 1; continue to read first word on next line */
-      }
-    if( flag > 1 )
-      {
-        /* if flag = 2; return (partial?) line just read */
-      if( flag > 2 )
-        {
-        /* if flag > 2; return all of next line (must fit in buffer) */
-        NxtLine( str, maxlen );
-        if( flag == 3 )  /* skip comment lines */
-          while( str[0] == '!' )
-            NxtLine( str, maxlen );
-#ifdef _DEBUG
-        if( flag > 4 )
-          error( 3, __FILE__, __LINE__,
-            "Invalid flag: ", IntStr(flag), "" );
-#endif
-        }
-      ungetc( '\n', inHandle );  /* restore EOL character for next call */
-      return str;
-      }
-    }
-  else  /* flag == 0 */
-    {
-#ifdef _DEBUG
-    if( flag < 0 )
-      error( 3, __FILE__, __LINE__,
-        "Invalid flag: ", IntStr(flag), "" );
-#endif
-    if( c == ' ' || c == ',' || c == '\n' || c == '\t' )
-      ; /* skip EOW char saved at last call */
-    else
-      ungetc( c, inHandle );  /* restore first char of first line */
-    }
-
-  while( !done )   /* search for start of next word */
-    {
-    c = getc( inHandle );
-    if( c==EOF ) return NULL;
-    if( _echo ) putc( c, _ulog );
-    switch( c )
-      {
-      case ' ':          /* skip word separators */
-      case ',':
-      case '\n':
-      case '\r':
-      case '\t':
-      case '\0':
-        break;
-      case '!':          /* begin comment; skip to EOL */
-        NxtLine( str, 0 );
-        break;
-      case '*':          /* end-of-file indicator */
-        NxtClose();
-        return NULL;
-      default:           /* first character of word found */
-        str[i++] = (char)c;
-        done = 1;
-        break;
-      }
-    }  /* end start-of-word search */
-
-  done = 0;
-  while( !done )   /* search for end-of-word (EOW) */
-    {
-    c = getc( inHandle );
-    if( c==EOF ) return NULL;
-    if( _echo ) putc( c, _ulog );
-    switch( c )
-      {
-      case '\n':   /* EOW characters */
-      case ' ':
-      case ',':
-      case '\t':
-        str[i] = '\0';
-        done = 1;
-        break;
-      case '\r':   /* 2004/01/14 here for Linux: EOL = \n\r */
-      case '\0':
-        break;
-      default:     /* accumulate word in buffer */
-        str[i++] = (char)c;
-        if( i == maxlen )  /* with overflow test */
-          {
-          str[i-1] = '\0';
-          error( 3, __FILE__, __LINE__, "Buffer overflow: ", str, "" );
-          }
-        break;
-      }
-    }  /* end EOW search */
-  ungetc( c, inHandle ); /* save EOW character for next call */
-
-  return str;
-
-}  /* end NxtWord */
 
 #include <float.h>  /* define: FLT_MAX, FLT_MIN */
 
@@ -662,7 +457,7 @@ int DblCon( char *str, double *f )
   else
     *f = value;
   return eflag;
-  
+
   }  /* end of DblCon */
 
 /***  FltCon.c  **************************************************************/
@@ -686,7 +481,7 @@ int FltCon( char *str, float *f )
   else
     *f = (float)value;
   return eflag;
-  
+
   }  /* end of FltCon */
 
 /***  FltStr.c  **************************************************************/
@@ -694,7 +489,7 @@ int FltCon( char *str, float *f )
 /*  Convert a float number to a string of characters;
  *  n significant digits; uses ANSI sprintf().
  *  Static string required to retain results in calling function.
- *  NMAX allows up to NMAX calls to IntStr() in one statement. 
+ *  NMAX allows up to NMAX calls to IntStr() in one statement.
  *  Replaces nonstandard GCVT function.  */
 
 char *FltStr( double f, int n )
@@ -728,7 +523,7 @@ double ReadR8( FILE *inHandle, int flag )
 
 /***  ReadR4.c  **************************************************************/
 
-/*  Convert next word from file _unxt to float real. */
+/*  Convert next word from file inHandle to float real. */
 
 float ReadR4( FILE *inHandle, int flag )
   {
@@ -773,7 +568,7 @@ int LongCon( char *str, long *i )
   else
     *i = value;
   return eflag;
-  
+
   }  /* end of LongCon */
 
 /***  IntCon.c  **************************************************************/
@@ -797,7 +592,7 @@ int IntCon( char *str, int *i )
   else
     *i = (int)value;
   return eflag;
-  
+
   }  /* end of IntCon */
 
 /***  IntStr.c  **************************************************************/
@@ -805,7 +600,7 @@ int IntCon( char *str, int *i )
 /*  Convert an integer to a string of characters.
  *  Can handle short or long integers by conversion to long.
  *  Static variables required to retain results in calling function.
- *  NMAX allows up to NMAX calls to IntStr() in one statement. 
+ *  NMAX allows up to NMAX calls to IntStr() in one statement.
  *  Replaces nonstandard ITOA & LTOA functions for radix 10.  */
 
 char *IntStr( long i )
@@ -824,7 +619,7 @@ char *IntStr( long i )
 
 /***  ReadIX.c  **************************************************************/
 
-/*  Convert next word from file _unxt to int integer. */
+/*  Convert next word from file inHandle to int integer. */
 
 int ReadIX( FILE *inHandle, int flag )
   {

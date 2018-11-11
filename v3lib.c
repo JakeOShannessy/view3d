@@ -64,13 +64,12 @@ InData InDataFromRaw(RawInData *rawInData);
 
 /* Main External API */
 extern RawInData parseIn(FILE *file);
+extern RawInData parseInPath(char *path);
 extern VFResultsC calculateVFs(RawInData rawInData);
 /* TODO: need to work out some things about the results format before that */
 /* can be completed. */
 /* extern void printVFs(int format, FILE *file, InData inData, VFResultsC results); */
 
-/* Extra API (for convenience, to be deprecated) */
-extern VFResultsC processPaths(char *inFile);
 
 /*
 void printVFs(int format, FILE *file, InData inData, VFResultsC results) {
@@ -80,16 +79,21 @@ void printVFs(int format, FILE *file, InData inData, VFResultsC results) {
 }
 */
 
+RawInData parseInPath(char *path) {
+  FILE *inHandle = NxtOpenHndl(path, __FILE__, __LINE__ );
+  RawInData rawInData = parseIn(inHandle);
+  fclose(inHandle);
+  return rawInData;
+}
+
 RawInData parseIn(FILE *inHandle) {
   View3DControlData vfCtrl = {0};
   char title[LINELEN]; /* project title */
   RawInData rawInData = {0};
-
   /* non-zero control values: */
   vfCtrl.epsAdap = 1.0e-4f; /* convergence for adaptive integration */
   vfCtrl.maxRecursALI = 12; /* maximum number of recursion levels */
   vfCtrl.maxRecursion = 8;  /* maximum number of recursion levels */
-
   CountVS3D(inHandle, title, &vfCtrl );
   /* Copy vfCtrl data to opts */
   rawInData.opts.epsAdap = vfCtrl.epsAdap;
@@ -200,12 +204,6 @@ double getEnclosureVolume(View3DControlData vfCtrl, SRFDAT3D *srf) {
   }
   volume /= -6.0;        /* see VolPrism() */
   return volume;
-}
-
-/* deprecated */
-VFResultsC processHandlesSimple(FILE *inHandle) {
-  RawInData rawInData = parseIn(inHandle);
-  return calculateVFs(rawInData);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -412,40 +410,6 @@ VFResultsC calculateVFs(RawInData rawInData){
   return res_struct;
 
 } /* end of processHandlesSimple() */
-
-/* deprecated */
-/* TODO: this extra file-based API should be behind a flag for portability */
-VFResultsC processPaths(char *inFile) {
-  FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
-  _unxt = inHandle;
-  VFResultsC res = processHandlesSimple(inHandle);
-  fclose(inHandle);
-  return res;
-}
-
-/* deprecated */
-int processStrings(char *inString, char *outFile) {
-  /* Windows does not support fmemopen, so write to a temporary file and open
-     that. */
-  char *tmpPath = "temp.txt";
-  FILE *tmp = fopen(tmpPath, "w");
-  fwrite(inString, 1, strlen(inString), tmp);
-  fclose(tmp);
-
-  /* FILE *inHandle = fmemopen(inString, strlen(inString), "r"); */
-  FILE *inHandle = NxtOpenHndl(tmpPath, __FILE__, __LINE__ );
-  _unxt = inHandle;
-  /* Write the results to the output file. */
-  /* TODO: if saving to binary format, open for binary write */
-  FILE *outHandle;
-  if(strlen(outFile) == 0 || outFile == NULL) {
-    outHandle = stdout;
-  } else {
-    outHandle = fopen(outFile, "w");
-  }
-  processHandlesSimple(inHandle);
-  return 0;
-}
 
 /**
 	@TODO DOCUMENT THIS

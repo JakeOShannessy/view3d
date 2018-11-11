@@ -30,6 +30,7 @@
 #include "viewpp.h"
 #include "getdat.h"
 #include "savevf.h"
+#include "readvs.h"
 
 /* forward decls */
 
@@ -43,7 +44,6 @@ int processHandles2d(FILE *inHandle, FILE *outHandle);
 
 int processPaths2d(char *inFile, char *outFile) {
   FILE *inHandle = NxtOpenHndl(inFile, __FILE__, __LINE__ );
-  _unxt = inHandle;
   /* Write the results to the output file. */
   /* TODO: if saving to binary format, open for binary write */
   FILE *outHandle;
@@ -115,7 +115,7 @@ int processHandles2d(FILE *inHandle, FILE *outHandle) {
   memset( &vfCtrl, 0, sizeof(View2DControlData) );
 
                  /* read Vertex/Surface data file */
-  CountVS2D( _unxt, title, &vfCtrl );
+  CountVS2D( inHandle, title, &vfCtrl );
   fprintf( _ulog, "Title: %s\n", title );
   fprintf( _ulog, "Control values for 2-D view factor calculations:\n" );
   fprintf( _ulog, "     enclosure designator: %3d \n", vfCtrl.enclosure );
@@ -145,10 +145,10 @@ int processHandles2d(FILE *inHandle, FILE *outHandle) {
     _echo = 0;
   else if( _list>3 )
     _echo = 1;
-  GetVS2D( _unxt, name, emit, base, cmbn, srf, &vfCtrl );
+  GetVS2D( inHandle, name, emit, base, cmbn, srf, &vfCtrl );
   for( n=1; n<=nSrf; n++ )
     area[n] = (float)srf[n].area;
-  NxtClose();
+  NxtCloseHndl(inHandle);
 
   if( encl )    /* determine volume of enclosure */
     {

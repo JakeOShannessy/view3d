@@ -28,7 +28,6 @@
 V3D_API const char *methods[7]; /* method abbreviations */
 V3D_API char _string[LINELEN + 1]; /* buffer for a character string */
 V3D_API int _maxNVT;   /* maximum number of temporary polygon overlap vertices */
-extern FILE *_unxt; /* input file */
 V3D_API FILE *_ulog; /* log file */
 V3D_API int _echo;  /* true = echo input file */
 V3D_API int _list;  /* output control, higher value = more output:

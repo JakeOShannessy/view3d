@@ -30,9 +30,7 @@ int IntCon( char *str, int *i );
 
 V3D_API int NxtOpen(const char *file_name, const char *file, int line);
 FILE *NxtOpenHndl(const char *file_name, const char *file, int line );
-void NxtCloseHndl(FILE *file);
-V3D_API void NxtClose( void );
-char *NxtWord( FILE* inHandle, char *str, int flag, int maxlen );
+void NxtCloseHndl(FILE *handle);
 
 float ReadR4( FILE *inHandle, int flag );
 
@@ -43,4 +41,3 @@ V3D_API int NoYes( char *question );
 
 
 #endif
-

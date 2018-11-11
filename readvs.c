@@ -4,21 +4,11 @@
 #include "getdat.h"
 #include "heap.h"
 #include "test2d.h"
-/* #include "misc.h" */
-/* NOTE: do not add misc.h here, see below */
 
 #include <ctype.h>
 #include <string.h>
 #include <float.h>
 
-/*------------------------------------------------------------------------------
-	COPY OF 'NxtWord' and related functions, so that this file does not depend
-	on routines in 'misc.c'. We want to migrate to some parser code that does
-	not depend on global variables, if possible, so that it can be more easily
-	reused in larger programs.
-*/
-
-extern FILE *_unxt;   /* NXT input file */
 extern  int _echo;      /* if true, echo NXT input file */
 extern char *_nxtbuf;   /* large buffer for NXT input file */
 
@@ -45,8 +35,8 @@ int DblCon( char *str, double *f );
 
 /*  Get characters to end of line (\n --> \0); used by NxtWord().  */
 
-static char *NxtLine(FILE *f, char *str, int maxlen ){
-  int c=0;       /* character read from _unxt */
+char *NxtLine(FILE *f, char *str, int maxlen ) {
+  int c=0;       /* character read from f */
   int i=0;       /* current position in str */
 
   while( c!='\n' ){
@@ -71,7 +61,7 @@ static char *NxtLine(FILE *f, char *str, int maxlen ){
 }  /* end NxtLine */
 
 
-/*  Get the next word from file _unxt.  Return NULL at end-of-file.
+/*  Get the next word from file inHandle.  Return NULL at end-of-file.
  *  Assuming standard word separators (blank, comma, tab),
  *  comment identifiers (! to end-of-line), and
  *  end of data (* or end-of-file). */
@@ -81,19 +71,18 @@ static char *NxtLine(FILE *f, char *str, int maxlen ){
  *  which may also be end-of-line (EOL) character.
  *  Initialization with flag = -1 in now invalid - debug checked. */
 
-static char *NxtWord(FILE *inHandle, char *str, int flag, int maxlen )
+char *NxtWord(FILE *inHandle, char *str, int flag, int maxlen )
 /* str;   buffer where word is stored; return pointer.
- * flag:  0:  get next word from current position in _unxt;
-          1:  get 1st word from next line of _unxt;
-          2:  get remainder of current line from _unxt (\n --> \0);
-          3:  get next data line from _unxt (\n --> \0);
+ * flag:  0:  get next word from current position in inHandle;
+          1:  get 1st word from next line of inHandle;
+          2:  get remainder of current line from inHandle (\n --> \0);
+          3:  get next data line from inHandle (\n --> \0);
           4:  get next line (even if comment) (\n --> \0).
  * maxlen: length of buffer to test for overflow. */
   {
-  int c;         /* character read from _unxt */
+  int c;         /* character read from inHandle */
   int i=0;       /* current position in str */
   int done=0;    /* true when start of word is found or word is complete */
-
   c = getc(inHandle);
   if( flag > 0 )
     {
@@ -499,7 +488,7 @@ static int GetVS(FILE *inHandle, VertexSurfaceData *V){
         n = ReadIX(inHandle);              /* obstruction surface number */
         if( n>0 )
           V->d2.srf[ns].type = -2;
-        if( n<0 || (n <= V->nrad && n>0) || n > V->nall) 
+        if( n<0 || (n <= V->nrad && n>0) || n > V->nall)
           ERROR2("Improper obstruction surface number: '%d'",n);
 
         n = ReadIX(inHandle);              /* base surface number */
