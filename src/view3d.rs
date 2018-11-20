@@ -6,6 +6,11 @@ use clap::{Arg, App};
 
 mod viewlib;
 use viewlib::*;
+use std::error::Error;
+use std::fs::File;
+use std::io::prelude::*;
+use std::path::Path;
+use std::io::{stdout, Write};
 
 fn main() {
     let matches = App::new("View3d")
@@ -21,11 +26,36 @@ fn main() {
             .get_matches();
 
     let infile = matches.value_of("INFILE").expect("Input file not provided");
-    let outfile = matches.value_of("OUTFILE").unwrap_or("");
     let vf_results = process_path(infile.to_string());
     // TODO: redirect to file if requested
-    print_vf_results(&vf_results);
-    println!("1->8: {:}", vf_results.vf(1,8));
-    println!("8->1: {:}", vf_results.vf(8,1));
-
+    let outfile = matches.value_of("OUTFILE").unwrap_or("");
+    let res: std::io::Result<()> = if outfile == "" {
+        let stdout = std::io::stdout();
+        let mut handle = stdout.lock();
+        print_vf_results(&mut handle, &vf_results)
+    } else {
+        let outpath = Path::new(outfile);
+        let mut file = match File::create(&outpath) {
+            Err(why) => panic!("couldn't create {}: {}",
+                            outpath.display(),
+                            why.description()),
+            Ok(file) => file,
+        };
+        // Write the data to the file
+        match print_vf_results(&mut file, &vf_results) {
+            Err(e) => Err(e),
+            // Ensure all data is completely written to disk
+            Ok(_) => file.sync_all(),
+        }
+    };
+    println!("1->8: {:?}", vf_results.vf(1,8));
+    println!("8->1: {:?}", vf_results.vf(8,1));
+    match res {
+        Ok(_) => (),
+        Err(e) => {
+            println!("filed to write results");
+            println!("{}", e);
+            panic!(e);
+        }
+    }
 }

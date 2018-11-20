@@ -8,7 +8,7 @@ use std::f64;
 use libc::{c_double, c_float, FILE};
 use std::slice;
 use std::fs::File;
-use std::io::stdout;
+use std::io::{stdout, Write};
 
 // Link in the C lib via FFI
 #[link(name = "view3d", kind = "static")]
@@ -136,8 +136,13 @@ pub struct VFResults {
 }
 
 impl VFResults {
-    pub fn vf(&self, a: usize, b: usize) -> f64 {
-        self.values[(a-1)*(self.n_surfs as usize)+(b-1)]
+    pub fn vf(&self, a: usize, b: usize) -> Option<f64> {
+        let index = (a-1)*(self.n_surfs as usize)+(b-1);
+        if (index < self.values.len()) {
+            Some(self.values[index])
+        } else {
+            None
+        }
     }
 }
 // pub struct VFResultsC {
@@ -152,44 +157,47 @@ impl VFResults {
 //     double **AF,
 // }
 
-pub fn print_vf_results(results: &VFResults) {
-    println!("encl: {}", results.encl);
+pub fn print_vf_results<T: Write>(handle: &mut T,  results: &VFResults) -> std::io::Result<()> {
+    let mut res_str = "";
+    // handle.write_all(b"goodbye");
+    write!(handle, "encl: {}\n", results.encl)?;
     // Print column numbering
-    print!("      ");
+    write!(handle, "      ")?;
     for i in 1..=(results.n_surfs as usize) {
-        print!("{:^8} ", i);
+        write!(handle, "{:^8} ", i)?;
     }
-    println!("");
+    write!(handle, "\n")?;
     // Print areas
-    print!("area: ");
+    write!(handle, "area: ")?;
     for area in results.areas.iter() {
-        print!("{:.*} ", 6, area);
+        write!(handle, "{:.*} ", 6, area)?;
     }
-    println!("");
+    write!(handle, "\n")?;
     // Print emissivities
-    print!("emit: ");
+    write!(handle, "emit: ")?;
     for emit in results.emit.iter() {
-        print!("{:.*} ", 6, emit);
+        write!(handle, "{:.*} ", 6, emit)?;
     }
-    println!("");
+    write!(handle, "\n")?;
     // Print separator
-    print!("      ");
+    write!(handle, "      ")?;
     for _ in 1..=(results.n_surfs as usize) {
-        print!("---------");
+        write!(handle, "---------")?;
     }
-    println!("");
+    write!(handle, "\n")?;
     // Print view factors
     for (i, value) in results.values.iter().enumerate() {
         if i % (results.n_surfs as usize) == 0 {
-            print!("{:4}: ", (i /(results.n_surfs as usize)) + 1);
+            write!(handle, "{:4}: ", (i /(results.n_surfs as usize)) + 1)?;
         }
-        print!("{:.*}", 6, value);
+        write!(handle, "{:.*}", 6, value)?;
         if (i + 1) % (results.n_surfs as usize) == 0 {
-            println!("");
+            write!(handle, "\n")?;
         } else {
-            print!(" ");
+            write!(handle, " ")?;
         }
     }
+    Ok(())
 }
 
 pub fn analytic_1(width: f64, height: f64) -> f64 {
