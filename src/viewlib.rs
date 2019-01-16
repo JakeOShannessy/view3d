@@ -126,7 +126,6 @@ pub struct VFResultsC {
     pub n_srf0: i32,
 }
 
-// #[derive(Debug)]
 #[repr(C)]
 pub struct RawInData {
     pub opts: RawInOptions,
