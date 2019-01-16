@@ -1,7 +1,3 @@
-extern crate clap;
-extern crate time;
-extern crate libc;
-
 use clap::{Arg, App};
 use std::ffi::{CString};
 

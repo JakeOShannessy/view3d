@@ -1,10 +1,3 @@
-extern crate clap;
-extern crate time;
-extern crate libc;
-
-#[cfg(test)]
-extern crate quickcheck;
-
 use clap::{Arg, App};
 
 mod viewlib;
