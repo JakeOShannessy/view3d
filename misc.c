@@ -513,10 +513,11 @@ char *FltStr( double f, int n )
 double ReadR8( FILE *inHandle, int flag )
   {
   double value;
-
-  NxtWord( inHandle, _string, flag, sizeof(_string) );
-  if( DblCon( _string, &value ) )
-    error( 2, __FILE__, __LINE__, _string, " is not a (valid) number", "" );
+  char string[LINELEN + 1]; /* buffer for a character string */
+  
+  NxtWord( inHandle, string, flag, sizeof(string) );
+  if( DblCon( string, &value ) )
+    error( 2, __FILE__, __LINE__, string, " is not a (valid) number", "" );
   return value;
 
   }  /* end ReadR8 */
@@ -528,10 +529,11 @@ double ReadR8( FILE *inHandle, int flag )
 float ReadR4( FILE *inHandle, int flag )
   {
   double value;
+  char string[LINELEN + 1]; /* buffer for a character string */
 
-  NxtWord( inHandle, _string, flag, sizeof(_string) );
-  if( DblCon( _string, &value ) || value > FLT_MAX || value < -FLT_MAX )
-    error( 2, __FILE__, __LINE__, "Bad float value: ", _string, "" );
+  NxtWord( inHandle, string, flag, sizeof(string) );
+  if( DblCon( string, &value ) || value > FLT_MAX || value < -FLT_MAX )
+    error( 2, __FILE__, __LINE__, "Bad float value: ", string, "" );
 
   return (float)value;
 
@@ -624,11 +626,12 @@ char *IntStr( long i )
 int ReadIX( FILE *inHandle, int flag )
   {
   long value;
-
-  NxtWord( inHandle, _string, flag, sizeof(_string) );
-  if( LongCon( _string, &value ) ||
+  char string[LINELEN + 1]; /* buffer for a character string */
+  
+  NxtWord( inHandle, string, flag, sizeof(string) );
+  if( LongCon( string, &value ) ||
       value > INT_MAX || value < INT_MIN )  /* max/min depends on compiler */
-    error( 2, __FILE__, __LINE__, "Bad integer: ", _string, "" );
+    error( 2, __FILE__, __LINE__, "Bad integer: ", string, "" );
 
   return (int)value;
 

@@ -587,6 +587,7 @@ void IntersectionTest( SRFDATNM *srfN, SRFDATNM *srfM )
   int nVrtN; /* number of vertices - surface N */
   int nVrtM; /* number of vertices - surface M */
   int n, m;  /* vertex indices on surfaces N and M */
+  char string[LINELEN + 1]; /* buffer for a character string */
 
   if( srfN->rc > srfM->rc )
     eps = 1.0e-6f * srfN->rc;
@@ -659,10 +660,10 @@ void IntersectionTest( SRFDATNM *srfN, SRFDATNM *srfM )
     {
     errorf( 1, __FILE__, __LINE__, "Surfaces may intersect", "" );
 #if( DEBUG > 0 )
-    sprintf( _string, "Surface %d:", srfN->nr );
-    DumpP3D( _string, nVrtN, srfN->v );
-    sprintf( _string, "Surface %d:", srfM->nr );
-    DumpP3D( _string, nVrtM, srfM->v );
+    sprintf( string, "Surface %d:", srfN->nr );
+    DumpP3D( string, nVrtN, srfN->v );
+    sprintf( string, "Surface %d:", srfM->nr );
+    DumpP3D( string, nVrtM, srfM->v );
     fprintf( _ulog, "Intersection:\n" );
     for( n=0; n<nip; n++ )
       fprintf( _ulog, "  %d %12.7f %12.7f %12.7f\n",

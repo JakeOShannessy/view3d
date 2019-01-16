@@ -185,12 +185,13 @@ void GetCtrl( char *str, View3DControlData *vfCtrl){
 void CountVS3D(FILE *inHandle, char *title, View3DControlData *vfCtrl){
   int c;     /* first character in line */
   int flag=0;  /* NxtWord flag: 0 for first word of first line */
+  char string[LINELEN + 1]; /* buffer for a character string */
 
   error( -2, __FILE__, __LINE__, "" );  /* clear error count */
   vfCtrl->nRadSrf = vfCtrl->nObstrSrf = 0;
 
-  while( NxtWord( inHandle, _string, flag, sizeof(_string) ) != NULL ){
-    c = toupper( _string[0] );
+  while( NxtWord( inHandle, string, flag, sizeof(string) ) != NULL ){
+    c = toupper( string[0] );
     switch(c){
       case 'S':               /* surface */
         vfCtrl->nRadSrf += 1;
@@ -207,19 +208,19 @@ void CountVS3D(FILE *inHandle, char *title, View3DControlData *vfCtrl){
         vfCtrl->nObstrSrf += 1;
         break;
       case 'T':               /* title */
-        NxtWord( inHandle, title, 2, sizeof(_string) );
+        NxtWord( inHandle, title, 2, sizeof(string) );
         break;
       case 'F':               /* input file format: geometry */
-        NxtWord( inHandle, _string, 0, sizeof(_string) );
+        NxtWord( inHandle, string, 0, sizeof(string) );
         vfCtrl->format = 0;
-        if( streql( _string, "3"  ) ) vfCtrl->format = 3;
-        if( streqli( _string, "3a" ) ) vfCtrl->format = 4;
+        if( streql( string, "3"  ) ) vfCtrl->format = 3;
+        if( streqli( string, "3a" ) ) vfCtrl->format = 4;
         if( vfCtrl->format < 3 ) error( 2, __FILE__, __LINE__,
-          "Invalid input geometry: ", _string, "" );
+          "Invalid input geometry: ", string, "" );
         break;
       case 'C':               /* C run control data */
-        NxtWord( inHandle, _string, 2, sizeof(_string) );
-        GetCtrl( _string, vfCtrl );
+        NxtWord( inHandle, string, 2, sizeof(string) );
+        GetCtrl( string, vfCtrl );
         break;
       case 'E':
         goto finish;
@@ -254,11 +255,12 @@ void CountVS2D(FILE *inHandle, char *title, View2DControlData *vfCtrl){
   int c;     /* first character in line */
   int ctrl=0;
   int flag=0;  /* NxtWord flag: 0 for first word of first line */
+  char string[LINELEN + 1]; /* buffer for a character string */
 
   vfCtrl->nRadSrf = vfCtrl->nObstrSrf = 0;
 
-  while( NxtWord( inHandle, _string, flag, sizeof(_string) ) != NULL ){
-    c = toupper( _string[0] );
+  while( NxtWord( inHandle, string, flag, sizeof(string) ) != NULL ){
+    c = toupper( string[0] );
     switch(c){
       case 'S':               /* surface */
         vfCtrl->nRadSrf += 1;
@@ -270,7 +272,7 @@ void CountVS2D(FILE *inHandle, char *title, View2DControlData *vfCtrl){
         vfCtrl->nVertices += 1;
         break;
       case 'T':               /* title */
-        NxtWord( inHandle, title, 2, sizeof(_string) );
+        NxtWord( inHandle, title, 2, sizeof(string) );
         break;
       case 'G':               /* geometry */
         c = ReadIX( inHandle, 0 );
@@ -339,7 +341,8 @@ void GetSrfD( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
 	,SRFDAT3D *srf, View3DControlData *vfCtrl, int ns
 ){
   int n;
-
+  char string[LINELEN + 1]; /* buffer for a character string */
+  
   n = ReadIX( inHandle, 0 );              /* base surface number */
   base[ns] = n;
   if( n<0 || n>vfCtrl->nAllSrf ) error( 2, __FILE__, __LINE__,
@@ -377,18 +380,18 @@ void GetSrfD( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
   emit[ns] = ReadR4( inHandle, 0 );       /* surface emittance */
   if( emit[ns] > 0.99901 ){
     error( 1, __FILE__, __LINE__,  "Replacing surface ", IntStr(ns),
-       " emittance (", _string, ") with 0.999", "" );
+       " emittance (", string, ") with 0.999", "" );
     emit[ns] = 0.999f;
   }
   if( emit[ns] < 0.00099f ){
     error( 1, __FILE__, __LINE__,  "Replacing surface ", IntStr(ns),
-       " emittance (", _string, ") with 0.001", "" );
+       " emittance (", string, ") with 0.001", "" );
     emit[ns] = 0.001f;
   }
 
-  NxtWord( inHandle, _string, 0, sizeof(_string) );  /* surface name */
-  _string[NAMELEN-1] = '\0';    /* guarantee termination */
-  strncpy( name[ns], _string, NAMELEN );
+  NxtWord( inHandle, string, 0, sizeof(string) );  /* surface name */
+  string[NAMELEN-1] = '\0';    /* guarantee termination */
+  strncpy( name[ns], string, NAMELEN );
 
 }  /* end GetSrfD */
 
@@ -397,6 +400,7 @@ void GetSrfD( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
 */
 void GetSrfDNew(FILE *inHandle, RawSurf *surface, int ns, RawInData *inData) {
   int n;
+  char string[LINELEN + 1]; /* buffer for a character string */
 
   n = ReadIX( inHandle, 0 );              /* base surface number */
   surface->base = n;
@@ -432,18 +436,18 @@ void GetSrfDNew(FILE *inHandle, RawSurf *surface, int ns, RawInData *inData) {
   surface->emit = ReadR4( inHandle, 0 );       /* surface emittance */
   if( surface->emit > 0.99901 ){
     error( 1, __FILE__, __LINE__,  "Replacing surface ", IntStr(ns),
-       " emittance (", _string, ") with 0.999", "" );
+       " emittance (", string, ") with 0.999", "" );
     surface->emit = 0.999f;
   }
   if( surface->emit < 0.00099f ){
     error( 1, __FILE__, __LINE__,  "Replacing surface ", IntStr(ns),
-       " emittance (", _string, ") with 0.001", "" );
+       " emittance (", string, ") with 0.001", "" );
     surface->emit = 0.001f;
   }
 
-  NxtWord( inHandle, _string, 0, sizeof(_string) );  /* surface name */
-  _string[NAMELEN-1] = '\0';    /* guarantee termination */
-  strncpy( surface->name, _string, NAMELEN );
+  NxtWord( inHandle, string, 0, sizeof(string) );  /* surface name */
+  string[NAMELEN-1] = '\0';    /* guarantee termination */
+  strncpy( surface->name, string, NAMELEN );
 
 }  /* end GetSrfDNew */
 
@@ -458,12 +462,13 @@ void GetVS3D( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
   int ns=0;    /* number of surfaces */
   int n;
   int flag=0;  /* NxtWord flag: 0 for first word of first line */
+  char string[LINELEN + 1]; /* buffer for a character string */
 
   error( -2, __FILE__, __LINE__, "" );  /* clear error count */
   rewind( inHandle );
 
-  while( NxtWord( inHandle, _string, flag, sizeof(_string) ) != NULL ){
-    c = toupper( _string[0] );
+  while( NxtWord( inHandle, string, flag, sizeof(string) ) != NULL ){
+    c = toupper( string[0] );
     switch( c ){
       case 'V':
         n = ReadIX( inHandle, 0 );
@@ -546,7 +551,7 @@ void GetVS3D( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
 
       default:
         error( 1, __FILE__, __LINE__,
-          "Undefined input identifier: ", _string, "" );
+          "Undefined input identifier: ", string, "" );
         break;
     }
     flag = 1;
@@ -626,12 +631,12 @@ InData InDataFromRaw(RawInData *rawInData) {
     inData.emit[rawInData->surfaces[i].nr] = rawInData->surfaces[i].emit;
     if( inData.emit[rawInData->surfaces[i].nr] > 0.99901 ){
       error( 1, __FILE__, __LINE__,  "Replacing surface ", IntStr(i),
-        " emittance (", _string, ") with 0.999", "" );
+        " emittance with 0.999", "" );
       inData.emit[rawInData->surfaces[i].nr] = 0.999f;
     }
     if( inData.emit[rawInData->surfaces[i].nr] < 0.00099f ){
       error( 1, __FILE__, __LINE__,  "Replacing surface ", IntStr(i),
-        " emittance (", _string, ") with 0.001", "" );
+        " emittance with 0.001", "" );
       inData.emit[rawInData->surfaces[i].nr] = 0.001f;
     }
     inData.base[rawInData->surfaces[i].nr] = rawInData->surfaces[i].base;
@@ -674,11 +679,12 @@ void GetVS3DNew( FILE *inHandle, RawInData *inData) {
   int ns=0;    /* number of surfaces */
   int n;
   int flag=0;  /* NxtWord flag: 0 for first word of first line */
+  char string[LINELEN + 1]; /* buffer for a character string */
 
   error( -2, __FILE__, __LINE__, "" );  /* clear error count */
   rewind( inHandle );
-  while( NxtWord( inHandle, _string, flag, sizeof(_string) ) != NULL ){
-    c = toupper( _string[0] );
+  while( NxtWord( inHandle, string, flag, sizeof(string) ) != NULL ){
+    c = toupper( string[0] );
     switch( c ){
       case 'V':
         n = ReadIX( inHandle, 0 );
@@ -766,7 +772,7 @@ void GetVS3DNew( FILE *inHandle, RawInData *inData) {
 
       default:
         error( 1, __FILE__, __LINE__,
-          "Undefined input identifier: ", _string, "" );
+          "Undefined input identifier: ", string, "" );
         break;
     }
     flag = 1;
@@ -801,13 +807,14 @@ void GetVS3Da( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
   int nv=0;    /* number of vertices */
   int ns=0;    /* number of surfaces */
   int j, n;
+  char string[LINELEN + 1]; /* buffer for a character string */
 
   error( -2, __FILE__, __LINE__, "" );  /* clear error count */
   rewind( inHandle );
-  NxtWord( inHandle, _string, -1, sizeof(_string) );
+  NxtWord( inHandle, string, -1, sizeof(string) );
 
-  while( NxtWord( inHandle, _string, 1, sizeof(_string) ) != NULL ){
-    c = toupper( _string[0] );
+  while( NxtWord( inHandle, string, 1, sizeof(string) ) != NULL ){
+    c = toupper( string[0] );
     switch( c ){
       case 'S':
       case 'O':
@@ -831,8 +838,8 @@ void GetVS3Da( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
         else if( c == 'M' )
           srf[ns].type = MASK;
 
-        NxtWord( inHandle, _string, 0, sizeof(_string) );
-        s = toupper( _string[0] );
+        NxtWord( inHandle, string, 0, sizeof(string) );
+        s = toupper( string[0] );
 
         if( c!='O' )
           GetSrfD( inHandle, name, emit, base, cmbn, srf, vfCtrl, ns );
@@ -899,7 +906,7 @@ void GetVS3Da( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
 
       default:
         error( 1, __FILE__, __LINE__,
-          "Undefined input identifier: ", _string, "" );
+          "Undefined input identifier: ", string, "" );
         break;
     }
   }
@@ -1097,14 +1104,15 @@ void GetVS2D( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
   int flag=0;  /* NxtWord flag: 0 for first word of first line */
   Vec2 *xy;  /* vector of vertces [1:nVertices] */
   int n;
+  char string[LINELEN + 1]; /* buffer for a character string */
 
   error( -2, __FILE__, __LINE__, "" );  /* clear error count */
   rewind( inHandle);
   xy = Alc_V( 1, vfCtrl->nVertices, sizeof(Vec2), __FILE__, __LINE__ );
 
-  while( NxtWord( inHandle, _string, flag, sizeof(_string) ) != NULL )
+  while( NxtWord( inHandle, string, flag, sizeof(string) ) != NULL )
   {
-    c = toupper( _string[0] );
+    c = toupper( string[0] );
     switch( c )
     {
       case 'V':
@@ -1186,17 +1194,17 @@ void GetVS2D( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
         emit[ns] = ReadR4( inHandle, 0 );       /* surface emittance */
         if( emit[ns] > 0.99901 ){
           error( 1, __FILE__, __LINE__,  " Replacing surface ", IntStr(ns),
-             " emittance (", _string, ") with 0.999", "" );
+             " emittance (", string, ") with 0.999", "" );
           emit[ns] = 0.999f;
         }
         if( emit[ns] < 0.00099 ){
           error( 1, __FILE__, __LINE__,  " Replacing surface ", IntStr(ns),
-             " emittance (", _string, ") with 0.001", "" );
+             " emittance (", string, ") with 0.001", "" );
           emit[ns] = 0.001f;
         }
 
-        NxtWord( inHandle, _string, 0, sizeof(_string) );        /* surface name */
-        strncpy( name[ns], _string, NAMELEN );
+        NxtWord( inHandle, string, 0, sizeof(string) );        /* surface name */
+        strncpy( name[ns], string, NAMELEN );
         name[ns][NAMELEN-1] = '\0';  /* guarantee termination */
         break;
 

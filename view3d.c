@@ -663,25 +663,26 @@ int errorf( int severity, char *file, int line, ... ){
                          "*** warning ***",
                          " *** error *** ",
                          " *** fatal *** " };
+  char string[LINELEN + 1]; /* buffer for a character string */
 /*  char name[16]; */
   int n=1;
 
   if( severity >= 0 )
     {
     if( severity>3 ) severity = 3;
-/*    PathSplit( file, _string, _string, name, _string ); */
-    sprintf( _string, "%s  (file %s, line %d)\n", head[severity], sfname( file ), line );
+/*    PathSplit( file, string, string, name, string ); */
+    sprintf( string, "%s  (file %s, line %d)\n", head[severity], sfname( file ), line );
     fputs( "\n", stderr );
-    fputs( _string, stderr );
+    fputs( string, stderr );
     if( _ulog != NULL && _ulog != stderr )
       {
-      fputs( _string, _ulog );
+      fputs( string, _ulog );
       fflush( _ulog );
       }
 
     msg = start;   /* merge message strings */
-    sprintf( _string, "row %d, col %d; ", _row, _col );
-    s = _string;
+    sprintf( string, "row %d, col %d; ", _row, _col );
+    s = string;
     while( *s )
       s++;
     va_start( argp, line );
@@ -695,9 +696,9 @@ int errorf( int severity, char *file, int line, ... ){
     *s = '\0';
     va_end( argp );
 
-    fputs( _string, stderr );
+    fputs( string, stderr );
     if( _ulog != NULL && _ulog != stderr )
-      fputs( _string, _ulog );
+      fputs( string, _ulog );
     }
 
   if( severity>2 ) exit( 1 );

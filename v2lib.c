@@ -77,6 +77,7 @@ int processHandles2d(FILE *inHandle, FILE *outHandle) {
   float eMax=0.0;     /* maximum row error, if enclosure */
   float eRMS=0.0;     /* RMS row error, if enclosure */
   int n, flag;
+  char string[LINELEN + 1]; /* buffer for a character string */
 
 
 	/* open log file */
@@ -242,7 +243,7 @@ int processHandles2d(FILE *inHandle, FILE *outHandle) {
   fprintf( _ulog, "%7.2f seconds to adjust view factors.\n", CPUtime(time1) );
 
 #ifdef MEMTEST
-  fprintf( _ulog, "Current %s\n", MemRem(_string) );
+  fprintf( _ulog, "Current %s\n", MemRem(string) );
 #endif
   if( vfCtrl.emittances )
     {
@@ -271,9 +272,9 @@ int processHandles2d(FILE *inHandle, FILE *outHandle) {
 
   SaveVF( outHandle, program, version, vfCtrl.outFormat, vfCtrl.enclosure,
           vfCtrl.emittances, nSrf, area, emit, AF, vtmp );
-  sprintf( _string, "%7.2f seconds to write view factors.\n", CPUtime(time1) );
-  fputs( _string, stderr );
-  fputs( _string, _ulog );
+  sprintf( string, "%7.2f seconds to write view factors.\n", CPUtime(time1) );
+  fputs( string, stderr );
+  fputs( string, _ulog );
 
 
   Fre_V( cmbn, 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
@@ -314,6 +315,7 @@ float ReportAF(const int nSrf, const int encl, const char *title
     int n;     /* row number */
     } elist[MAXEL+1];
   int i;
+  char string[LINELEN + 1]; /* buffer for a character string */
 
   fprintf( _ulog, "\n%s\n", title );
   if( encl && _list>0 )
@@ -360,9 +362,9 @@ float ReportAF(const int nSrf, const int encl, const char *title
           F = AF[m][n] * invArea;
         else
           F = AF[n][m] * invArea;
-        sprintf( _string, "%8.6f ", F );
-        if( m%10==0 )  _string[8] = '\n';
-        fprintf( _ulog, "%s", _string+1 );
+        sprintf( string, "%8.6f ", F );
+        if( m%10==0 )  string[8] = '\n';
+        fprintf( _ulog, "%s", string+1 );
         }
       if( m%10!=1 ) fputc( '\n', _ulog );
       }

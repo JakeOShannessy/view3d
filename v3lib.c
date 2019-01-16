@@ -458,6 +458,7 @@ void ReportAF( const int nSrf, const int encl, const char *title, char **name,
     int n;         /* row number */
   }elist[MAXEL+1];
   int i;
+  char string[LINELEN + 1]; /* buffer for a character string */
 
   fprintf( _ulog, "\n%s\n", title );
   if(encl && _list>0)fprintf( _ulog, "          #        name   SUMj Fij (encl err)\n" );
@@ -496,18 +497,18 @@ void ReportAF( const int nSrf, const int encl, const char *title, char **name,
       /* print row n values */
       double invArea = 1.0 / area[n];
       for( m=1; m<=nSrf; m++ ){
-        char *s = _string;
+        char *s = string;
         if( m>=n )
           F = AF[m][n] * invArea;
         else
           F = AF[n][m] * invArea;
-        sprintf( _string, "%8.6f ", F );
-        if( _string[0] == '0' ){
+        sprintf( string, "%8.6f ", F );
+        if( string[0] == '0' ){
           s += 1;
-          if( m%10==0 ) _string[8] = '\n';
+          if( m%10==0 ) string[8] = '\n';
         }else{
-          sprintf( _string, "%7.5f ", F );  /* handle F = 1.0 */
-          if( m%10==0 ) _string[7] = '\n';
+          sprintf( string, "%7.5f ", F );  /* handle F = 1.0 */
+          if( m%10==0 ) string[7] = '\n';
         }
         fprintf( _ulog, "%s", s );
       }
