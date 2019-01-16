@@ -5,17 +5,17 @@
 #include "view3d.h"
 
 /* polygon processing */
-int PolygonOverlap( const Polygon *p1, Polygon *p2, const int flagOP, int freeP2 );
+int PolygonOverlap( char *memPoly, const Polygon *p1, Polygon *p2, const int flagOP, int freeP2 );
 void FreePolygons( Polygon *first, Polygon *last );
-Polygon *SetPolygonHC( const int nVrt, const Vec2 *polyVrt, const double trns );
+Polygon *SetPolygonHC( char *memPoly, const int nVrt, const Vec2 *polyVrt, const double trns );
 int GetPolygonVrt2D( const Polygon *pp, Vec2 *polyVrt );
 int GetPolygonVrt3D( const Polygon *pp, Vec3 *srfVrt );
-Polygon *GetPolygonHC( void );
-PolygonVertexEdge *GetVrtEdgeHC( void );
+Polygon *GetPolygonHC( char *memPoly );
+PolygonVertexEdge *GetVrtEdgeHC( char *memPoly);
 void NewPolygonStack( void );
 Polygon *TopOfPolygonStack( void );
-V3D_API void InitPolygonMem( const double epsDist, const double epsArea );
-V3D_API void FreePolygonMem( void );
+V3D_API char *InitPolygonMem( const double epsDist, const double epsArea );
+V3D_API void FreePolygonMem(char *memPoly);
 int LimitPolygon( int nVrt, Vec2 polyVrt[],
   const double maxX, const double minX, const double maxY, const double minY );
 void DumpHC( char *title, const Polygon *pfp, const Polygon *plp );

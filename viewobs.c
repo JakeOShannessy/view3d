@@ -115,8 +115,8 @@ double ViewObstructed( View3DControlData *vfCtrl, int nv1, Vec3 v1[], double are
     fflush( _ulog );
 #endif
         /* begin with cleared small structures area - memBlock */
-    InitPolygonMem( epsDist, epsArea );
-    stack = SetPolygonHC( nvb, vb, 1.0 );  /* convert surface 2 to HC */
+    char *memPoly = InitPolygonMem( epsDist, epsArea );
+    stack = SetPolygonHC( memPoly, nvb, vb, 1.0 );  /* convert surface 2 to HC */
 #if( DEBUG > 1 )
     DumpHC( "BASE SURFACE:", stack, NULL );
 #endif
@@ -185,7 +185,7 @@ double ViewObstructed( View3DControlData *vfCtrl, int nv1, Vec3 v1[], double are
       }
 #endif
       NewPolygonStack( );
-      shade = SetPolygonHC( nvs, vs, 0.0 );
+      shade = SetPolygonHC( memPoly,nvs, vs, 0.0 );
       if( shade )
         {
 #if( DEBUG > 1 )
@@ -197,7 +197,7 @@ double ViewObstructed( View3DControlData *vfCtrl, int nv1, Vec3 v1[], double are
         for( pp=stack; pp; pp=next ) /* determine portions of old polygons */
           {                          /* outside the shadow polygon. */
           next = pp->next;              /* must save next to pop old stack */
-          k = PolygonOverlap( shade, pp, 3, 1 ); /* 1 = popping old stack */
+          k = PolygonOverlap( memPoly,  shade, pp, 3, 1 ); /* 1 = popping old stack */
           if( k == -999)
             break;
           }
@@ -255,6 +255,7 @@ double ViewObstructed( View3DControlData *vfCtrl, int nv1, Vec3 v1[], double are
       vpt[np].x, vpt[np].y, vpt[np].z, dFv );
 #endif
     AFu += dFv * weight[np];
+    FreePolygonMem(memPoly);
     }  /* end of view points (np) loop */
 
 #if( DEBUG > 0 )
