@@ -2,13 +2,15 @@ extern crate clap;
 extern crate time;
 extern crate libc;
 
-use std::ffi::{CString};
+use std::ffi::{CString, CStr};
 use std::os::raw::c_char;
 use std::f64;
 use libc::{c_double, c_float, FILE};
 use std::slice;
 use std::fs::File;
 use std::io::{Write};
+#[cfg(test)]
+use quickcheck::*;
 
 // Link in the C lib via FFI
 #[link(name = "view3d", kind = "static")]
@@ -26,8 +28,50 @@ pub fn process_path(infile: String) -> VFResults {
     unsafe {
 
         let in_data = parseInPath(infile_c.as_ptr());
+        // println!("{:?}", in_data);
         let vf_res = calculateVFs(in_data);
-        println!("{:?}", vf_res);
+        // From here we copy the data into a Rust native struct. This is more
+        // expensive then simply abstracting over the underlying C type, but it
+        // requires us to implement a lot less and is less error prone.
+        // Convert the view factor values to a vector
+        let af_arr_ptr = vf_res.values;
+        assert!(!af_arr_ptr.is_null());
+        let res: &[f64] = slice::from_raw_parts(af_arr_ptr, (vf_res.n_surfs*vf_res.n_surfs) as usize);
+        let res2 = res.clone();
+        let vec = res2.to_vec();
+
+        // Convert the area values to a vector
+        let area_ptr = vf_res.area;
+        assert!(!area_ptr.is_null());
+        let area_raw: &[f32] = slice::from_raw_parts(area_ptr, vf_res.n_surfs as usize);
+        let area_raw2 = area_raw.clone();
+        let areas = area_raw2.to_vec();
+
+        // Convert the emissivity values to a vector
+        let emit_ptr = vf_res.emit;
+        assert!(!emit_ptr.is_null());
+        let emit_raw: &[f32] = slice::from_raw_parts(emit_ptr, vf_res.n_surfs as usize);
+        let emit_raw2 = emit_raw.clone();
+        let emit = emit_raw2.to_vec();
+
+        // Convert the enclosure flag to a bool
+        let encl = if vf_res.encl == 0 { false } else { true };
+        let final_res = VFResults {
+            n_surfs: vf_res.n_surfs as u32,
+            encl,
+            areas,
+            emit,
+            values: vec,
+        };
+        freeVFResultsC(vf_res);
+        final_res
+    }
+}
+
+pub fn process_v3d(in_data: InData) -> VFResults {
+    unsafe {
+        // Run the calculation. We convert the in_data into the C type before we do this.
+        let vf_res = calculateVFs(in_data.into());
         // From here we copy the data into a Rust native struct. This is more
         // expensive then simply abstracting over the underlying C type, but it
         // requires us to implement a lot less and is less error prone.
@@ -85,13 +129,97 @@ pub struct VFResultsC {
 // #[derive(Debug)]
 #[repr(C)]
 pub struct RawInData {
-  pub opts: RawInOptions,
-  pub n_all_srf: i32,
-  pub n_rad_srf: i32,
-  pub n_obstr_srf: i32,
-  pub n_vertices: i32,
-  pub vertices: [Vec3; 256],
-  pub surfaces: [RawSurf; 256],
+    pub opts: RawInOptions,
+    pub n_all_srf: i32,
+    pub n_rad_srf: i32,
+    pub n_obstr_srf: i32,
+    pub n_vertices: i32,
+    pub vertices: [Vec3; 256],
+    pub surfaces: [RawSurf; 256],
+}
+
+impl std::fmt::Debug for RawInData {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "RawInData {{
+    opts: {:?},
+    n_all_srf: {:?},
+    n_rad_srf: {:?},
+    n_obstr_srf: {:?},
+    n_vertices: {:?},
+    vertices: [Vec3; 256],
+    surfaces: [RawSurf; 256],
+}}", self.opts, self.n_all_srf, self.n_rad_srf, self.n_obstr_srf, self.n_vertices);
+        for vertex in self.vertices.iter() {
+            write!(formatter, "{:?}\n", vertex);
+        }
+        for surface in self.surfaces.iter() {
+            write!(formatter, "{:?}\n", surface);
+        }
+        Ok(())
+    }
+    
+}
+
+/// Input data using native Rust types
+pub struct InData {
+    pub opts: InOptions,
+    pub n_all_srf: i32,
+    pub n_rad_srf: i32,
+    pub n_obstr_srf: i32,
+    pub n_vertices: i32,
+    pub vertices: Vec<Vec3>,
+    pub surfaces: Vec<RawSurf>,
+}
+
+impl From<RawInData> for InData {
+    fn from(raw: RawInData) -> Self {
+        let mut vertices = raw.vertices.to_vec();
+        vertices.truncate(raw.n_vertices as usize);
+        let mut surfaces = raw.surfaces.to_vec();
+        surfaces.truncate(raw.n_all_srf as usize);
+        InData {
+            opts: raw.opts.into(),
+            n_all_srf: raw.n_all_srf,
+            n_rad_srf: raw.n_rad_srf,
+            n_obstr_srf: raw.n_obstr_srf,
+            n_vertices: raw.n_vertices,
+            vertices,
+            surfaces,
+        } 
+    }
+}
+
+fn from_slice(bytes: &[u8]) -> [u8; 256] {
+    let mut array = [0; 256];
+    let bytes = &bytes[..array.len()]; // panics if not enough data
+    array.copy_from_slice(bytes); 
+    array
+}
+
+
+
+impl From<InData> for RawInData {
+    fn from(input: InData) -> Self {
+        let mut vertices: [Vec3; 256] = [Vec3 {x: 0_f64, y: 0_f64, z: 0_f64}; 256];
+        let mut surfaces: [RawSurf; 256] = [RawSurf { nr: 0, nv: 0, type_: 0, base: 0, cmbn: 0, emit: 0_f32, vertex_indices: [0; 4], name: [0; 16]}; 256];
+        for (i, vertex) in input.vertices.iter().enumerate() {
+            vertices[i+1] = vertex.clone();
+        }
+        for (i, surface) in input.surfaces.iter().enumerate() {
+            surfaces[i+1] = surface.clone();
+        }
+        // from_slice(input.vertices.as_slice());
+        // let surfaces = from_slice(input.surfaces.as_slice());
+        RawInData {
+            opts: input.opts.into(),
+            n_all_srf: input.n_all_srf,
+            n_rad_srf: input.n_rad_srf,
+            n_obstr_srf: input.n_obstr_srf,
+            n_vertices: input.n_vertices,
+            vertices,
+            surfaces,
+        } 
+    }
 }
 
 #[derive(Debug)]
@@ -110,6 +238,57 @@ pub struct RawInOptions {
 }
 
 #[derive(Debug)]
+pub struct InOptions {
+  pub title: String,
+  pub eps_adap: f32,
+  pub max_recurs_ali: i32,
+  pub min_recursion: i32,
+  pub max_recursion: i32,
+  pub enclosure: bool,
+  pub emittances: bool,
+  pub row: i32,
+  pub col: i32,
+  pub prj_reverse: bool,
+}
+
+impl From<RawInOptions> for InOptions {
+    fn from(raw: RawInOptions) -> Self {
+        InOptions {
+            title: unsafe {CStr::from_ptr(raw.title).to_string_lossy().into_owned()},
+            eps_adap: raw.eps_adap,
+            max_recurs_ali: raw.max_recurs_ali,
+            min_recursion: raw.min_recursion,
+            max_recursion: raw.max_recursion,
+            enclosure: if raw.enclosure == 0 {false} else {true},
+            emittances: if raw.emittances == 0 {false} else {true},
+            row: raw.row,
+            col: raw.col,
+            prj_reverse: if raw.prj_reverse == 0 {false} else {true},
+        } 
+    }
+}
+
+impl From<InOptions> for RawInOptions {
+    fn from(input: InOptions) -> Self {
+        // let s = CString::new(input.title).expect("CString::new failed");
+        // println!("s: {:?}", s);
+        // println!("s.as_ptr(): {:?}", s.as_ptr());
+        RawInOptions {
+            title: CString::new(input.title).expect("CString::new failed").as_ptr(),
+            eps_adap: input.eps_adap,
+            max_recurs_ali: input.max_recurs_ali,
+            min_recursion: input.min_recursion,
+            max_recursion: input.max_recursion,
+            enclosure: if input.enclosure {1} else {0},
+            emittances: if input.emittances {1} else {0},
+            row: input.row,
+            col: input.col,
+            prj_reverse: if input.prj_reverse {1} else {0},
+        } 
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct RawSurf {
   pub nr: i32,
@@ -123,7 +302,7 @@ pub struct RawSurf {
 //   char name[NAMELEN];
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub  struct Vec3 {
   x: c_double,
@@ -205,10 +384,135 @@ pub fn print_vf_results<T: Write>(handle: &mut T,  results: &VFResults) -> std::
     Ok(())
 }
 
+#[cfg(test)]
 pub fn analytic_1(width: f64, height: f64) -> f64 {
+    if width <= 0_f64 || height <= 0_f64 {
+        panic!("Cannot use analytic_1 with non-positive values");
+    }
     let w = width/height;
     let x = (1_f64+w.powi(2)).sqrt();
     let y = (w/x).atan()*x-(w).atan();
     let f12 = (1_f64/(f64::consts::PI*w.powi(2)))*((x.powi(4)/(1_f64+2_f64*w.powi(2))).ln()+4_f64*w*y);
     f12
+}
+
+/// Assert that two numerical values are within epsilon of each other
+#[macro_export]
+macro_rules! assert_eq_err {
+    ($left:expr, $right:expr, $epsilon:expr) => ({
+        match (&$left, &$right, &$epsilon) {
+            (left_val, right_val, epsilon_val) => {
+                if !((*left_val - *right_val).abs() < *epsilon_val) {
+                    panic!(r#"assertion failed: `(left - right).abs() < epsilon`
+  left: `{:?}`,
+ right: `{:?}`,
+  diff: `{:?}`,
+   eps: `{:?}`"#, left_val, right_val, (*left_val - *right_val).abs(), epsilon_val)
+                }
+            }
+        }
+    });
+    ($left:expr, $right:expr, $epsilon:expr,) => ({
+        assert_eq_err!($left, $right, $epsilon)
+    });
+    ($left:expr, $right:expr, $($arg:tt)+) => ({
+        match (&($left), &($right)) {
+            (left_val, right_val) => {
+                if !(*left_val == *right_val) {
+                    panic!(r#"assertion failed: `(left == right)`
+  left: `{:?}`,
+ right: `{:?}`,
+  diff: `{:?}`,
+   eps: `{:?}`: {}"#, left_val, right_val, (*left_val - *right_val).abs(), epsilon_val,
+                           format_args!($($arg)+))
+                }
+            }
+        }
+    });
+}
+
+fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
+    let mut rev = vec!();
+    for x in xs.iter() {
+        rev.insert(0, x.clone())
+    }
+    rev
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn matches_analytic_1() {
+        let analytic_result = analytic_1(1_f64,1_f64);
+        let vf_results = process_path("examples\\ParallelPlanes.vs3".to_string());
+        let numerical_result = vf_results.vf(1,2).unwrap();
+        assert_eq_err!(analytic_result, numerical_result, 0.00000001);
+    }
+    
+    #[test]
+    fn from_file_matches_from_code() {
+        let vf_results_file = process_path("examples\\ParallelPlanes.vs3".to_string());
+
+        let mut name1 = String::new();
+        name1.push_str("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
+        name1.truncate(24);
+        let mut name1_c : [i8; 16] = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        let byte_name: Vec<i8> = name1.into_bytes().into_iter().map(|x| x as i8).collect();
+        name1_c.clone_from_slice(&byte_name[..16]);
+        let name2_c = name1_c.clone();
+        let indata_code = InData {
+            opts: InOptions {
+                title: String::from("test"),
+                eps_adap: 1.0e-4_f32,
+                max_recurs_ali: 12,
+                min_recursion: 0,
+                max_recursion: 8,
+                enclosure: false,
+                emittances: false,
+                row: 0,
+                col: 0,
+                prj_reverse: false,
+            },
+            n_all_srf: 2,
+            n_rad_srf: 2,
+            n_obstr_srf: 0,
+            n_vertices: 8,
+            vertices: vec![
+                Vec3 {x: 0_f64, y: 0_f64, z: 0_f64},
+                Vec3 {x: 1_f64, y: 0_f64, z: 0_f64},
+                Vec3 {x: 1_f64, y: 1_f64, z: 0_f64},
+                Vec3 {x: 0_f64, y: 1_f64, z: 0_f64},
+                Vec3 {x: 0_f64, y: 0_f64, z: 1_f64},
+                Vec3 {x: 1_f64, y: 0_f64, z: 1_f64},
+                Vec3 {x: 1_f64, y: 1_f64, z: 1_f64},
+                Vec3 {x: 0_f64, y: 1_f64, z: 1_f64},
+                ],
+            surfaces: vec![
+                RawSurf { nr: 1, nv: 4, type_: 0, base: 0, cmbn: 0, emit: 0.9, vertex_indices: [1,2,3,4], name: name1_c},
+                RawSurf { nr: 2, nv: 4, type_: 0, base: 0, cmbn: 0, emit: 0.9, vertex_indices: [8,7,6,5], name: name2_c},
+            ],
+        };
+        // let rawindata_code: RawInData = indata_code.into();
+        // println!("{:?}", &rawindata_code);
+        let vf_results_code = process_v3d(indata_code);
+        let vf_results_file_12 = vf_results_file.vf(1,2).unwrap();
+        let vf_results_code_12 = vf_results_code.vf(1,2).unwrap();
+        assert_eq!(vf_results_file_12, vf_results_code_12);
+    }
+
+    quickcheck! {
+        fn matches_analytic_1_prop(width: f64, height: f64) -> TestResult {
+            if width <= 0_f64 || height <= 0_f64 {
+                return TestResult::discard()
+            }
+            print!("width: {} m, height: {} m > ", width, height);
+            let analytic_result = analytic_1(width, height);
+            let vf_results = process_path("examples\\ParallelPlanes.vs3".to_string());
+            let numerical_result = vf_results.vf(1,2).unwrap();
+            let epsilon = 0.00000001_f64;
+            println!("analytic: {}, numerical: {}, {:?}", analytic_result, numerical_result,((analytic_result - numerical_result).abs() < epsilon));
+            TestResult::from_bool((analytic_result - numerical_result).abs() < epsilon)
+        }
+    }
 }

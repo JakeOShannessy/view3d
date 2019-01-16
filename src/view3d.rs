@@ -2,10 +2,14 @@ extern crate clap;
 extern crate time;
 extern crate libc;
 
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
+
 use clap::{Arg, App};
 
 mod viewlib;
-use viewlib::*;
+use ::viewlib::*;
 use std::error::Error;
 use std::fs::File;
 use std::path::Path;

@@ -6,7 +6,7 @@ use clap::{Arg, App};
 use std::ffi::{CString};
 
 mod viewlib;
-use viewlib::*;
+use ::viewlib::*;
 
 fn main() {
     let matches = App::new("View2d")
