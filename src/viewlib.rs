@@ -431,29 +431,26 @@ macro_rules! assert_eq_err {
     });
 }
 
-fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
-    let mut rev = vec!();
-    for x in xs.iter() {
-        rev.insert(0, x.clone())
-    }
-    rev
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn matches_analytic_1() {
+    fn matches_analytic_1a() {
         let analytic_result = analytic_1(1_f64,1_f64);
         let vf_results = process_path("examples\\ParallelPlanes.vs3".to_string());
         let numerical_result = vf_results.vf(1,2).unwrap();
-        assert_eq_err!(analytic_result, numerical_result, 0.00000001);
+        assert_eq_err!(analytic_result, numerical_result, 0.0000001);
     }
-    
-    #[test]
-    fn from_file_matches_from_code() {
-        let vf_results_file = process_path("examples\\ParallelPlanes.vs3".to_string());
 
+    #[test]
+    fn matches_analytic_1b() {
+        let analytic_result = analytic_1(1_f64,2_f64);
+        let vf_results = process_path("examples\\ParallelPlanes2.vs3".to_string());
+        let numerical_result = vf_results.vf(1,2).unwrap();
+        assert_eq_err!(analytic_result, numerical_result, 0.0000001);
+    }
+
+    fn create_parallel_planes_example(width: f64, height: f64) -> InData {
         let mut name1 = String::new();
         name1.push_str("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
         name1.truncate(24);
@@ -461,7 +458,7 @@ mod tests {
         let byte_name: Vec<i8> = name1.into_bytes().into_iter().map(|x| x as i8).collect();
         name1_c.clone_from_slice(&byte_name[..16]);
         let name2_c = name1_c.clone();
-        let indata_code = InData {
+        InData {
             opts: InOptions {
                 title: String::from("test"),
                 eps_adap: 1.0e-4_f32,
@@ -480,21 +477,25 @@ mod tests {
             n_vertices: 8,
             vertices: vec![
                 Vec3 {x: 0_f64, y: 0_f64, z: 0_f64},
-                Vec3 {x: 1_f64, y: 0_f64, z: 0_f64},
-                Vec3 {x: 1_f64, y: 1_f64, z: 0_f64},
-                Vec3 {x: 0_f64, y: 1_f64, z: 0_f64},
-                Vec3 {x: 0_f64, y: 0_f64, z: 1_f64},
-                Vec3 {x: 1_f64, y: 0_f64, z: 1_f64},
-                Vec3 {x: 1_f64, y: 1_f64, z: 1_f64},
-                Vec3 {x: 0_f64, y: 1_f64, z: 1_f64},
+                Vec3 {x: width, y: 0_f64, z: 0_f64},
+                Vec3 {x: width, y: width, z: 0_f64},
+                Vec3 {x: 0_f64, y: width, z: 0_f64},
+                Vec3 {x: 0_f64, y: 0_f64, z: height},
+                Vec3 {x: width, y: 0_f64, z: height},
+                Vec3 {x: width, y: width, z: height},
+                Vec3 {x: 0_f64, y: width, z: height},
                 ],
             surfaces: vec![
                 RawSurf { nr: 1, nv: 4, type_: 0, base: 0, cmbn: 0, emit: 0.9, vertex_indices: [1,2,3,4], name: name1_c},
                 RawSurf { nr: 2, nv: 4, type_: 0, base: 0, cmbn: 0, emit: 0.9, vertex_indices: [8,7,6,5], name: name2_c},
             ],
-        };
-        // let rawindata_code: RawInData = indata_code.into();
-        // println!("{:?}", &rawindata_code);
+        }
+    }
+    
+    #[test]
+    fn from_file_matches_from_code() {
+        let vf_results_file = process_path("examples\\ParallelPlanes.vs3".to_string());
+        let indata_code = create_parallel_planes_example(1_f64, 1_f64);
         let vf_results_code = process_v3d(indata_code);
         let vf_results_file_12 = vf_results_file.vf(1,2).unwrap();
         let vf_results_code_12 = vf_results_code.vf(1,2).unwrap();
@@ -508,9 +509,9 @@ mod tests {
             }
             print!("width: {} m, height: {} m > ", width, height);
             let analytic_result = analytic_1(width, height);
-            let vf_results = process_path("examples\\ParallelPlanes.vs3".to_string());
+            let vf_results = process_v3d(create_parallel_planes_example(width, height));
             let numerical_result = vf_results.vf(1,2).unwrap();
-            let epsilon = 0.00000001_f64;
+            let epsilon = 0.0001_f64;
             println!("analytic: {}, numerical: {}, {:?}", analytic_result, numerical_result,((analytic_result - numerical_result).abs() < epsilon));
             TestResult::from_bool((analytic_result - numerical_result).abs() < epsilon)
         }
