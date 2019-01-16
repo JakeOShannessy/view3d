@@ -14,6 +14,10 @@
 # endif
 #endif
 
+/* V3D_BUILD is currently always set, as we always build the library 
+   separately */
+#define V3D_BUILD
+
 #ifdef V3D_BUILD
 # define V3D_API extern V3D_EXPORT
 # define V3D_DLL V3D_EXPORT
