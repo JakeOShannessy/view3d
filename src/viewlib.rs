@@ -184,15 +184,6 @@ impl From<RawInData> for InData {
     }
 }
 
-fn from_slice(bytes: &[u8]) -> [u8; 256] {
-    let mut array = [0; 256];
-    let bytes = &bytes[..array.len()]; // panics if not enough data
-    array.copy_from_slice(bytes); 
-    array
-}
-
-
-
 impl From<InData> for RawInData {
     fn from(input: InData) -> Self {
         let mut vertices: [Vec3; 256] = [Vec3 {x: 0_f64, y: 0_f64, z: 0_f64}; 256];

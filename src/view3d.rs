@@ -1,7 +1,8 @@
+extern crate viewlib;
+
 use clap::{Arg, App};
 
-mod viewlib;
-use ::viewlib::*;
+use crate::viewlib::{process_path,print_vf_results};
 use std::error::Error;
 use std::fs::File;
 use std::path::Path;
