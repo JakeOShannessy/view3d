@@ -287,7 +287,6 @@ VFResultsC calculateVFs(RawInData rawInData){
   /* The possibly obstruction surface information is no longer needed after
      this point. */
   Fre_V( possibleObstr, 1, vfCtrl.nAllSrf, sizeof(int), __FILE__, __LINE__ );
-  FreeTmpVertMem();  /* free polygon overlap vertices */
   FreePolygonMem();
   Fre_V( xyz, 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
 

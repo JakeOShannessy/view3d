@@ -14,8 +14,6 @@ Polygon *GetPolygonHC( void );
 PolygonVertexEdge *GetVrtEdgeHC( void );
 void NewPolygonStack( void );
 Polygon *TopOfPolygonStack( void );
-V3D_API void InitTmpVertMem( void );
-V3D_API void FreeTmpVertMem( void );
 V3D_API void InitPolygonMem( const double epsDist, const double epsArea );
 V3D_API void FreePolygonMem( void );
 int LimitPolygon( int nVrt, Vec2 polyVrt[],

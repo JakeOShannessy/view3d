@@ -611,8 +611,6 @@ InData InDataFromRaw(RawInData *rawInData) {
   inData.cmbn = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
   inData.xyz = Alc_V( 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
   inData.srf = Alc_V( 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
-  /* TODO: this should only be run once. */
-  InitTmpVertMem();  /* polygon operations in GetDat() and View3D() */
   InitPolygonMem(0, 0);
 
   /* Convert vertices */

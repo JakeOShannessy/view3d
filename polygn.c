@@ -33,10 +33,6 @@ Polygon *_nextFreePD; /* pointer to next free polygon descripton */
 Polygon *_nextUsedPD; /* pointer to top-of-stack used polygon */
 double _epsDist;   /* minimum distance between vertices */
 double _epsArea;   /* minimum surface area */
-Vec2 *_leftVrt;  /* coordinates of vertices to left of edge */
-Vec2 *_rightVrt; /* coordinates of vertices to right of edge */
-Vec2 *_tempVrt;  /* coordinates of temporary polygon */
-int *_u=NULL;  /* +1 = vertex left of edge; -1 = vertex right of edge */
 
 /*  Extensive use is made of 'homogeneous coordinates' (HC) which are not 
  *  familiar to most engineers.  The important properties of HC are 
@@ -78,11 +74,18 @@ int PolygonOverlap(const Polygon *p1, Polygon *p2, const int savePD, int freeP2)
   int nLeftVrt;  /* number of vertices to left of edge */
   int nRightVrt; /* number of vertices to right of edge */
   int nTempVrt;  /* number of vertices of temporary polygon */
-/*  Vec2 leftVrt[MAXNVT]; */ /* coordinates of vertices to left of edge */
-/*  Vec2 rightVrt[MAXNVT]; */ /* coordinates of vertices to right of edge */
-/*  Vec2 tempVrt[MAXNVT]; */ /* coordinates of temporary polygon */
+  Vec2 *leftVrt;  /* coordinates of vertices to left of edge */
+  Vec2 *rightVrt; /* coordinates of vertices to right of edge */
+  Vec2 *tempVrt;  /* coordinates of temporary polygon */
+  int *u=NULL;  /* +1 = vertex left of edge; -1 = vertex right of edge */
   int overlap=0; /* 0: P2 outside P1; 1: P2 inside P1; 2: part overlap */
   int j, jm1;    /* vertex indices;  jm1 = j - 1 */
+
+  /* Allocate some memory for the vertex coordinates */
+  leftVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+  rightVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+  tempVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+  u = Alc_V( 0, _maxNVT, sizeof(int), __FILE__, __LINE__ );
 
 #if( DEBUG > 1 )
   fprintf( _ulog, "PolygonOverlap:  P1 [%p]  P2 [%p]  flag %d\n",
@@ -90,10 +93,10 @@ int PolygonOverlap(const Polygon *p1, Polygon *p2, const int savePD, int freeP2)
 #endif
 
   initUsedPD = _nextUsedPD;
-  nTempVrt = GetPolygonVrt2D( p2, _tempVrt );
+  nTempVrt = GetPolygonVrt2D( p2, tempVrt );
 
 #if( DEBUG > 1 )
-  DumpP2D( "P2:", nTempVrt, _tempVrt );
+  DumpP2D( "P2:", nTempVrt, tempVrt );
 #endif
 
   pv1 = p1->firstVE;
@@ -112,15 +115,15 @@ int PolygonOverlap(const Polygon *p1, Polygon *p2, const int savePD, int freeP2)
     pv1 = pv1->next;
     for( j=0; j<nTempVrt; j++ )
       {
-      double dot = _tempVrt[j].x * a1 + _tempVrt[j].y * b1 + c1;
+      double dot = tempVrt[j].x * a1 + tempVrt[j].y * b1 + c1;
       if( dot > _epsArea )
-        { _u[j] = 1; right = 0; }
+        { u[j] = 1; right = 0; }
       else if( dot < -_epsArea )
-        { _u[j] = -1; left = 0; }
+        { u[j] = -1; left = 0; }
       else
-        _u[j] = 0;
+        u[j] = 0;
 #if( DEBUG > 1 )
-      fprintf( _ulog, " %d", _u[j] );
+      fprintf( _ulog, " %d", u[j] );
 #endif
       }
 #if( DEBUG > 1 )
@@ -135,12 +138,12 @@ int PolygonOverlap(const Polygon *p1, Polygon *p2, const int savePD, int freeP2)
     jm1 = nTempVrt - 1;
     for( nLeftVrt=nRightVrt=j=0; j<nTempVrt; jm1=j++ )    /* short loop */
       {
-      if( _u[jm1]*_u[j] < 0 )  /* vertices j-1 & j on opposite sides of edge */
+      if( u[jm1]*u[j] < 0 )  /* vertices j-1 & j on opposite sides of edge */
         {                             /* compute intercept of edges */
         double a, b, c, w; /* HC intersection components */
-        a = _tempVrt[jm1].y - _tempVrt[j].y;
-        b = _tempVrt[j].x - _tempVrt[jm1].x;
-        c = _tempVrt[j].y * _tempVrt[jm1].x - _tempVrt[jm1].y * _tempVrt[j].x;
+        a = tempVrt[jm1].y - tempVrt[j].y;
+        b = tempVrt[j].x - tempVrt[jm1].x;
+        c = tempVrt[j].y * tempVrt[jm1].x - tempVrt[jm1].y * tempVrt[j].x;
         w = b * a1 - a * b1;
 #if( DEBUG > 1 )
         if( fabs(w) < _epsArea*(a+b+c) )
@@ -157,24 +160,24 @@ int PolygonOverlap(const Polygon *p1, Polygon *p2, const int savePD, int freeP2)
         if( w == 0.0 ) errorf( 3, __FILE__, __LINE__,
           " Would divide by zero (w=0)", "" );
 #endif
-        _rightVrt[nRightVrt].x = _leftVrt[nLeftVrt].x = ( c*b1 - b*c1 ) / w;
-        _rightVrt[nRightVrt++].y = _leftVrt[nLeftVrt++].y = ( a*c1 - c*a1 ) / w;
+        rightVrt[nRightVrt].x = leftVrt[nLeftVrt].x = ( c*b1 - b*c1 ) / w;
+        rightVrt[nRightVrt++].y = leftVrt[nLeftVrt++].y = ( a*c1 - c*a1 ) / w;
         }
-      if( _u[j] >= 0 )        /* vertex j is on or left of edge */
+      if( u[j] >= 0 )        /* vertex j is on or left of edge */
         {
-        _leftVrt[nLeftVrt].x = _tempVrt[j].x;
-        _leftVrt[nLeftVrt++].y = _tempVrt[j].y;
+        leftVrt[nLeftVrt].x = tempVrt[j].x;
+        leftVrt[nLeftVrt++].y = tempVrt[j].y;
         }
-      if( _u[j] <= 0 )        /* vertex j is on or right of edge */
+      if( u[j] <= 0 )        /* vertex j is on or right of edge */
         {
-        _rightVrt[nRightVrt].x = _tempVrt[j].x;
-        _rightVrt[nRightVrt++].y = _tempVrt[j].y;
+        rightVrt[nRightVrt].x = tempVrt[j].x;
+        rightVrt[nRightVrt++].y = tempVrt[j].y;
         }
       }  /* end of short loop */
 
 #if( DEBUG > 1 )
-    DumpP2D( "Left polygon:", nLeftVrt, _leftVrt );
-    DumpP2D( "Right polygon:", nRightVrt, _rightVrt );
+    DumpP2D( "Left polygon:", nLeftVrt, leftVrt );
+    DumpP2D( "Right polygon:", nRightVrt, rightVrt );
 #endif
 /*    if( nLeftVrt >= _maxNVT || nRightVrt >= _maxNVT ) */
 /*      errorf( 3, __FILE__, __LINE__, "Parameter _maxNVT too small", "" ); */
@@ -182,7 +185,7 @@ int PolygonOverlap(const Polygon *p1, Polygon *p2, const int savePD, int freeP2)
       {
       errorf( 2, __FILE__, __LINE__,
         "Parameter maxV (", IntStr(_maxNVT), ") too small", "" );
-      DumpP2D( "Offending Polygon:", nLeftVrt, _leftVrt );
+      DumpP2D( "Offending Polygon:", nLeftVrt, leftVrt );
       overlap = -999;
       goto finish;
       }
@@ -190,28 +193,28 @@ int PolygonOverlap(const Polygon *p1, Polygon *p2, const int savePD, int freeP2)
       {
       errorf( 2, __FILE__, __LINE__,
         "Parameter maxV (", IntStr(_maxNVT), ") too small", "" );
-      DumpP2D( "Offending Polygon:", nRightVrt, _rightVrt );
+      DumpP2D( "Offending Polygon:", nRightVrt, rightVrt );
       overlap = -999;
       goto finish;
       }
 
     if( savePD > 1 )  /* transfer left vertices to outside polygon */
       {
-      nTempVrt = TransferVrt( _tempVrt, _leftVrt, nLeftVrt );
+      nTempVrt = TransferVrt( tempVrt, leftVrt, nLeftVrt );
 #if( DEBUG > 1 )
-      DumpP2D( "Outside polygon:", nTempVrt, _tempVrt );
+      DumpP2D( "Outside polygon:", nTempVrt, tempVrt );
 #endif
       if( nTempVrt > 2 )
         {
-        SetPolygonHC( nTempVrt, _tempVrt, p2->trns );
+        SetPolygonHC( nTempVrt, tempVrt, p2->trns );
         overlap = 1;
         }
       }
 
                       /* transfer right side vertices to tempVrt */
-    nTempVrt = TransferVrt( _tempVrt, _rightVrt, nRightVrt );
+    nTempVrt = TransferVrt( tempVrt, rightVrt, nRightVrt );
 #if( DEBUG > 1 )
-    DumpP2D( "Inside polygon:", nTempVrt, _tempVrt );
+    DumpP2D( "Inside polygon:", nTempVrt, tempVrt );
 #endif
     if( nTempVrt < 2 ) /* 2 instead of 3 allows degenerate P2; espArea = 0 */
       goto p2_outside_p1;
@@ -223,9 +226,9 @@ int PolygonOverlap(const Polygon *p1, Polygon *p2, const int savePD, int freeP2)
   if( savePD < 3 )    /* save the overlap polygon */
     {
 #if( DEBUG > 1 )
-    DumpP2D( "Overlap polygon:", nTempVrt, _tempVrt );
+    DumpP2D( "Overlap polygon:", nTempVrt, tempVrt );
 #endif
-    pp = SetPolygonHC( nTempVrt, _tempVrt, p2->trns * p1->trns );
+    pp = SetPolygonHC( nTempVrt, tempVrt, p2->trns * p1->trns );
     if( pp==NULL && savePD==2 )   /* overlap area too small */
       goto p2_outside_p1;
     }
@@ -274,6 +277,11 @@ p2_outside_p1:     /* no overlap between P1 and P2 */
 finish:
   if( freeP2 )   /* transfer P2 to free space */
     FreePolygons( p2, p2->next );
+
+  Fre_V( u, 0, _maxNVT, sizeof(int), __FILE__, __LINE__ );
+  Fre_V( tempVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+  Fre_V( rightVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+  Fre_V( leftVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
 
   return overlap;
 
@@ -511,44 +519,6 @@ int GetPolygonVrt3D( const Polygon *pp, Vec3 *polyVrt )
 
   }  /*  end of GetPolygonVrt3D  */
 
-/***  FreeTmpVertMem.c  ******************************************************/
-
-/*  Free vectors for temporary overlap vertices.  */
-
-void FreeTmpVertMem( void )
-  {
-  Fre_V( _u, 0, _maxNVT, sizeof(int), __FILE__, __LINE__ );
-  Fre_V( _tempVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
-  Fre_V( _rightVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
-  Fre_V( _leftVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
-  /* Set _u to NULL to indicate it was freed */
-  _u = NULL;
-
-  }  /*  end FreeTmpVertMem  */
-
-/***  InitTmpVertMem.c  ******************************************************/
-
-/*  Initialize vectors for temporary overlap vertices.  */
-
-void InitTmpVertMem( void )
-  {
-  // if( _u ) error( 3, __FILE__, __LINE__,
-  //   "Temporary vertices already allocated", "" );
-  // If the temporary vertices have been allocated, we will just reallocate
-  // them to avoid changing too much at once.
-  if (_u) {
-    _leftVrt = Fre_V( _leftVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
-    _rightVrt = Fre_V( _rightVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
-    _tempVrt = Fre_V( _tempVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
-    _u = Fre_V( _u, 0, _maxNVT, sizeof(int), __FILE__, __LINE__ );
-  }
-  _leftVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
-  _rightVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
-  _tempVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
-  _u = Alc_V( 0, _maxNVT, sizeof(int), __FILE__, __LINE__ );
-
-  }  /*  end InitTmpVertMem  */
-
 /***  InitPolygonMem.c  ******************************************************/
 
 /*  Initialize polygon processing memory and globals.  */
@@ -601,18 +571,20 @@ int LimitPolygon( int nVrt, Vec2 polyVrt[],
   int n, m;  /* vertex index */
 
                          /* test vertices against maxX */
+  Vec2 *tempVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+
   polyVrt[nVrt].x = polyVrt[0].x;
   polyVrt[nVrt].y = polyVrt[0].y; 
   for( n=m=0; n<nVrt; n++ )
     {
     if( polyVrt[n].x < maxX)
       {
-      _tempVrt[m].x = polyVrt[n].x;
-      _tempVrt[m++].y = polyVrt[n].y;
+      tempVrt[m].x = polyVrt[n].x;
+      tempVrt[m++].y = polyVrt[n].y;
       if( polyVrt[n+1].x > maxX)
         {
-        _tempVrt[m].x = maxX;
-        _tempVrt[m++].y = polyVrt[n].y + (maxX - polyVrt[n].x)
+        tempVrt[m].x = maxX;
+        tempVrt[m++].y = polyVrt[n].y + (maxX - polyVrt[n].x)
           * (polyVrt[n+1].y - polyVrt[n].y) / (polyVrt[n+1].x - polyVrt[n].x);
         }
       }
@@ -620,49 +592,49 @@ int LimitPolygon( int nVrt, Vec2 polyVrt[],
       {
       if ( polyVrt[n+1].x < maxX )
         {
-        _tempVrt[m].x = maxX;
-        _tempVrt[m++].y = polyVrt[n].y + (maxX - polyVrt[n].x)
+        tempVrt[m].x = maxX;
+        tempVrt[m++].y = polyVrt[n].y + (maxX - polyVrt[n].x)
           * (polyVrt[n+1].y - polyVrt[n].y) / (polyVrt[n+1].x - polyVrt[n].x);
         }
       }
     else
       {
-      _tempVrt[m].x = polyVrt[n].x;
-      _tempVrt[m++].y = polyVrt[n].y;
+      tempVrt[m].x = polyVrt[n].x;
+      tempVrt[m++].y = polyVrt[n].y;
       }
     }  /* end of maxX test */
   nVrt = m;
   if( nVrt < 3 )
     return 0;
                          /* test vertices against minX */
-  _tempVrt[nVrt].x = _tempVrt[0].x;
-  _tempVrt[nVrt].y = _tempVrt[0].y; 
+  tempVrt[nVrt].x = tempVrt[0].x;
+  tempVrt[nVrt].y = tempVrt[0].y; 
   for( n=m=0; n<nVrt; n++ )
     {
-    if( _tempVrt[n].x > minX)
+    if( tempVrt[n].x > minX)
       {
-      polyVrt[m].x = _tempVrt[n].x;
-      polyVrt[m++].y = _tempVrt[n].y;
-      if( _tempVrt[n+1].x < minX)
+      polyVrt[m].x = tempVrt[n].x;
+      polyVrt[m++].y = tempVrt[n].y;
+      if( tempVrt[n+1].x < minX)
         {
         polyVrt[m].x = minX;
-        polyVrt[m++].y = _tempVrt[n].y + (minX - _tempVrt[n].x)
-          * (_tempVrt[n+1].y - _tempVrt[n].y) / (_tempVrt[n+1].x - _tempVrt[n].x);
+        polyVrt[m++].y = tempVrt[n].y + (minX - tempVrt[n].x)
+          * (tempVrt[n+1].y - tempVrt[n].y) / (tempVrt[n+1].x - tempVrt[n].x);
         }
       }
-    else if( _tempVrt[n].x < minX )
+    else if( tempVrt[n].x < minX )
       {
-      if ( _tempVrt[n+1].x > minX )
+      if ( tempVrt[n+1].x > minX )
         {
         polyVrt[m].x = minX;
-        polyVrt[m++].y = _tempVrt[n].y + (minX - _tempVrt[n].x)
-          * (_tempVrt[n+1].y - _tempVrt[n].y) / (_tempVrt[n+1].x - _tempVrt[n].x);
+        polyVrt[m++].y = tempVrt[n].y + (minX - tempVrt[n].x)
+          * (tempVrt[n+1].y - tempVrt[n].y) / (tempVrt[n+1].x - tempVrt[n].x);
         }
       }
     else
       {
-      polyVrt[m].x = _tempVrt[n].x;
-      polyVrt[m++].y = _tempVrt[n].y;
+      polyVrt[m].x = tempVrt[n].x;
+      polyVrt[m++].y = tempVrt[n].y;
       }
     }  /* end of minX test */
   nVrt = m;
@@ -675,12 +647,12 @@ int LimitPolygon( int nVrt, Vec2 polyVrt[],
     {
     if( polyVrt[n].y < maxY)
       {
-      _tempVrt[m].y = polyVrt[n].y;
-      _tempVrt[m++].x = polyVrt[n].x;
+      tempVrt[m].y = polyVrt[n].y;
+      tempVrt[m++].x = polyVrt[n].x;
       if( polyVrt[n+1].y > maxY)
         {
-        _tempVrt[m].y = maxY;
-        _tempVrt[m++].x = polyVrt[n].x + (maxY - polyVrt[n].y)
+        tempVrt[m].y = maxY;
+        tempVrt[m++].x = polyVrt[n].x + (maxY - polyVrt[n].y)
           * (polyVrt[n+1].x - polyVrt[n].x) / (polyVrt[n+1].y - polyVrt[n].y);
         }
       }
@@ -688,52 +660,53 @@ int LimitPolygon( int nVrt, Vec2 polyVrt[],
       {
       if ( polyVrt[n+1].y < maxY )
         {
-        _tempVrt[m].y = maxY;
-        _tempVrt[m++].x = polyVrt[n].x + (maxY - polyVrt[n].y)
+        tempVrt[m].y = maxY;
+        tempVrt[m++].x = polyVrt[n].x + (maxY - polyVrt[n].y)
           * (polyVrt[n+1].x - polyVrt[n].x) / (polyVrt[n+1].y - polyVrt[n].y);
         }
       }
     else
       {
-      _tempVrt[m].y = polyVrt[n].y;
-      _tempVrt[m++].x = polyVrt[n].x;
+      tempVrt[m].y = polyVrt[n].y;
+      tempVrt[m++].x = polyVrt[n].x;
       }
     }  /* end of maxY test */
   nVrt = m;
   if( nVrt < 3 )
     return 0;
                          /* test vertices against minY */
-  _tempVrt[nVrt].y = _tempVrt[0].y;
-  _tempVrt[nVrt].x = _tempVrt[0].x; 
+  tempVrt[nVrt].y = tempVrt[0].y;
+  tempVrt[nVrt].x = tempVrt[0].x; 
   for( n=m=0; n<nVrt; n++ )
     {
-    if( _tempVrt[n].y > minY)
+    if( tempVrt[n].y > minY)
       {
-      polyVrt[m].y = _tempVrt[n].y;
-      polyVrt[m++].x = _tempVrt[n].x;
-      if( _tempVrt[n+1].y < minY)
+      polyVrt[m].y = tempVrt[n].y;
+      polyVrt[m++].x = tempVrt[n].x;
+      if( tempVrt[n+1].y < minY)
         {
         polyVrt[m].y = minY;
-        polyVrt[m++].x = _tempVrt[n].x + (minY - _tempVrt[n].y)
-          * (_tempVrt[n+1].x - _tempVrt[n].x) / (_tempVrt[n+1].y - _tempVrt[n].y);
+        polyVrt[m++].x = tempVrt[n].x + (minY - tempVrt[n].y)
+          * (tempVrt[n+1].x - tempVrt[n].x) / (tempVrt[n+1].y - tempVrt[n].y);
         }
       }
-    else if( _tempVrt[n].y < minY )
+    else if( tempVrt[n].y < minY )
       {
-      if ( _tempVrt[n+1].y > minY )
+      if ( tempVrt[n+1].y > minY )
         {
         polyVrt[m].y = minY;
-        polyVrt[m++].x = _tempVrt[n].x + (minY - _tempVrt[n].y)
-          * (_tempVrt[n+1].x - _tempVrt[n].x) / (_tempVrt[n+1].y - _tempVrt[n].y);
+        polyVrt[m++].x = tempVrt[n].x + (minY - tempVrt[n].y)
+          * (tempVrt[n+1].x - tempVrt[n].x) / (tempVrt[n+1].y - tempVrt[n].y);
         }
       }
     else
       {
-      polyVrt[m].y = _tempVrt[n].y;
-      polyVrt[m++].x = _tempVrt[n].x;
+      polyVrt[m].y = tempVrt[n].y;
+      polyVrt[m++].x = tempVrt[n].x;
       }
     }  /* end of minY test */
   nVrt = m;
+  tempVrt = Fre_V( tempVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
   if( nVrt < 3 )
     return 0;
   return nVrt;    /* note: final results are in polyVrt */
