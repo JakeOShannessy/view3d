@@ -230,11 +230,12 @@ static void GetCtrl( char *str, View3DControlData *vfCtrl){
   char *p;
   int i;
   float r;
+  char **context; /* parsing state pointer, needed for thread-safety */
 
-  p = strtok( str, "= ," );
+  p = strtok_r( str, "= ,", context);
   while( p ){
     if( streqli( p, "eps" ) ){
-      p = strtok( NULL, "= ," );
+      p = strtok_r( NULL, "= ,", context );
       if( FltCon( p, &r )){
         ERROR2("Bad float value: '%s'", p);
       }else{
@@ -248,13 +249,13 @@ static void GetCtrl( char *str, View3DControlData *vfCtrl){
       }
     }
     else if( streqli( p, "list" )){
-      p = strtok( NULL, "= ," );
+      p = strtok_r( NULL, "= ,", context );
       if( IntCon( p, &i ) ){
         BAD_INTEGER_VALUE(p);
       }else
         _list = i;
     }else if( streqli( p, "out" ) ){
-      p = strtok( NULL, "= ," );
+      p = strtok_r( NULL, "= ,", context );
       if( IntCon( p, &i ) ){
         BAD_INTEGER_VALUE(p);
       }else{
@@ -265,21 +266,21 @@ static void GetCtrl( char *str, View3DControlData *vfCtrl){
 		}
 	  }
     }else if( streqli( p, "encl" )){
-      p = strtok( NULL, "= ," );
+      p = strtok_r( NULL, "= ,", context );
       if( IntCon( p, &i ) ){
         BAD_INTEGER_VALUE(p);
       }else{
         if( i ) vfCtrl->enclosure = 1;
 	  }
     }else if( streqli( p, "emit" )){
-      p = strtok( NULL, "= ," );
+      p = strtok_r( NULL, "= ,", context );
       if( IntCon( p, &i ) ){
         BAD_INTEGER_VALUE(p);
       }else{
         if( i ) vfCtrl->emittances = 1;
 	  }
     }else if( streqli( p, "maxU" ) ){
-      p = strtok( NULL, "= ," );
+      p = strtok_r( NULL, "= ,", context );
       if( IntCon( p, &i ) ){
         BAD_INTEGER_VALUE(p);
       }else{
@@ -292,7 +293,7 @@ static void GetCtrl( char *str, View3DControlData *vfCtrl){
         vfCtrl->maxRecursALI = i;
       }
     }else if( streqli( p, "maxO" )){
-      p = strtok( NULL, "= ," );
+      p = strtok_r( NULL, "= ,", context );
       if( IntCon( p, &i ) ){
         BAD_INTEGER_VALUE(p);
       }else{
@@ -305,7 +306,7 @@ static void GetCtrl( char *str, View3DControlData *vfCtrl){
         vfCtrl->maxRecursion = i;
       }
     }else if( streqli( p, "minO" )){
-      p = strtok( NULL, "= ," );
+      p = strtok_r( NULL, "= ,", context );
       if( IntCon( p, &i ) )
         BAD_INTEGER_VALUE(p);
       else{
@@ -316,7 +317,7 @@ static void GetCtrl( char *str, View3DControlData *vfCtrl){
         vfCtrl->minRecursion = i;
       }
     }else if( streqli( p, "row" ) ){
-      p = strtok( NULL, "= ," );
+      p = strtok_r( NULL, "= ,", context );
       if( IntCon( p, &i ) )
         BAD_INTEGER_VALUE(p);
       else{
@@ -325,7 +326,7 @@ static void GetCtrl( char *str, View3DControlData *vfCtrl){
         vfCtrl->row = i;
       }
     }else if( streqli( p, "col" ) ){
-      p = strtok( NULL, "= ," );
+      p = strtok_r( NULL, "= ,", context );
       if( IntCon( p, &i ) )
         BAD_INTEGER_VALUE(p);
       else{
@@ -334,23 +335,23 @@ static void GetCtrl( char *str, View3DControlData *vfCtrl){
         vfCtrl->col = i;
       }
     }else if( streqli( p, "prjD" ) ){
-      p = strtok( NULL, "= ," );
+      p = strtok_r( NULL, "= ,", context );
       if( IntCon( p, &i ) )
         BAD_INTEGER_VALUE(p);
       else
         if( i ) vfCtrl->prjReverse = 1;
     }else if( streqli( p, "maxV" ) ){
-      p = strtok( NULL, "= ," );
+      p = strtok_r( NULL, "= ,", context );
       if( IntCon( p, &i ) )
         BAD_INTEGER_VALUE(p);
       else
         _maxNVT = i;
     }else{
       ERROR1("Invalid control word: '%s'", p);
-      p = strtok( NULL, "= ," );
+      p = strtok_r( NULL, "= ,", context );
     }
 
-    p = strtok( NULL, "= ," );    /* get next word */
+    p = strtok_r( NULL, "= ,", context );    /* get next word */
   }
 
   if( vfCtrl->col && !vfCtrl->row )

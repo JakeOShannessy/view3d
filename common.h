@@ -14,6 +14,12 @@
 # endif
 #endif
 
+/* strtok_r is called strtok_s when using Microsofts Visual C compiler,
+   the funcitonality and arguments are identical */
+#ifdef _WIN32
+# define strtok_r strtok_s
+#endif
+
 /* V3D_BUILD is currently always set, as we always build the library 
    separately */
 #define V3D_BUILD
