@@ -20,8 +20,6 @@
 #include "types.h"  /* define unsigned char, short, etc. */
 #include "misc.h"  /* miscellaneous function prototypes */
 
-char _heapmsg[256];     /* buffer for heap messages */
-
 long _bytesAllocated=0L;  /* through Alc_E() */
 long _bytesFreed=0L;      /* through Fre_E() */
 
@@ -39,10 +37,10 @@ long _bytesFreed=0L;      /* through Fre_E() */
 */
 void *Alc_E( long length, const char *file, int line ){
   unsigned char *p;     /* pointer to allocated memory */
-
+  char heapmsg[256];
   if( length < 1 ){
-    sprintf( _heapmsg, "Element too small to allocate: %ld bytes\n", length );
-    error( 3, file, line, _heapmsg, "" );
+    sprintf( heapmsg, "Element too small to allocate: %ld bytes\n", length );
+    error( 3, file, line, heapmsg, "" );
   }
 
   /*TODO use 'calloc' instead? */
@@ -52,8 +50,8 @@ void *Alc_E( long length, const char *file, int line ){
 
   if( p == NULL ){
     MemNet( "Alc_E error" );
-    sprintf( _heapmsg, "Memory allocation failed for %ld bytes\n", length );
-    error( 3, file, line, _heapmsg, "" );
+    sprintf( heapmsg, "Memory allocation failed for %ld bytes\n", length );
+    error( 3, file, line, heapmsg, "" );
   }
 
   memset( p, 0, length );  /* zero allocated memory */
@@ -149,10 +147,11 @@ void *Alc_EC( char **block, long size, const char *file, int line ){
   char *p;  /* pointer to the structure */
   MEMBLOCK *mb, /* current memory block */
            *nb; /* next memory block */
+  char heapmsg[256];
 
   if( size < 1 ){
-    sprintf( _heapmsg, "Element too small to allocate: %ld bytes\n", size );
-    error( 3, file, line, _heapmsg, "" );
+    sprintf( heapmsg, "Element too small to allocate: %ld bytes\n", size );
+    error( 3, file, line, heapmsg, "" );
   }
 
   /* Set memory alignment. */
@@ -161,9 +160,9 @@ void *Alc_EC( char **block, long size, const char *file, int line ){
   mb = (void *)*block;
   if( size > mb->blockSize - (long)sizeof(MEMBLOCK) )
     {
-    sprintf( _heapmsg, "Requested size (%ld) larger than block (%ld)",
+    sprintf( heapmsg, "Requested size (%ld) larger than block (%ld)",
       size, mb->blockSize - (long)sizeof(MEMBLOCK) );
-    error( 3, file, line, _heapmsg, "" );
+    error( 3, file, line, heapmsg, "" );
     }
   if( mb->dataOffset + size > mb->blockSize )
     {
@@ -200,11 +199,12 @@ void *Alc_ECI( long size, const char *file, int line )
  *  line;   line in file. */
   {
   MEMBLOCK *mb;
+  char heapmsg[256];
 
   if( size > UINT_MAX )
     {
-    sprintf( _heapmsg, "Requested size (%ld) larger than unsigned int", size );
-    error( 3, file, line, _heapmsg, "" );
+    sprintf( heapmsg, "Requested size (%ld) larger than unsigned int", size );
+    error( 3, file, line, heapmsg, "" );
     }
 
   mb = Alc_E( size, file, line );
@@ -292,12 +292,13 @@ void *Alc_V( int min_index, long max_index, int size, const char *file, int line
   char *p;      /* pointer to the vector */
   long length = /* length of vector (bytes) */
     (max_index - min_index + 1) * size;
+  char heapmsg[256];
 
   if( length < 1 )
     {
-    sprintf( _heapmsg, "Max index (%ld) < min index (%d)",
+    sprintf( heapmsg, "Max index (%ld) < min index (%d)",
       max_index, min_index );
-    error( 3, file, line, _heapmsg, "" );
+    error( 3, file, line, heapmsg, "" );
     }
 
 #if( ANSIOFFSET > 0 )

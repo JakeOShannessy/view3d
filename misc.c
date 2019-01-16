@@ -400,7 +400,6 @@ void PathCWD( char *path, int szp ){
 }  /* end PathCWD */
 
 extern int _echo;      /* if true, echo NXT input file */
-char *_nxtbuf;   /* large buffer for NXT input file */
 
 /*  Open file_name and return the handle.  */
 
@@ -514,7 +513,7 @@ double ReadR8( FILE *inHandle, int flag )
   {
   double value;
   char string[LINELEN + 1]; /* buffer for a character string */
-  
+
   NxtWord( inHandle, string, flag, sizeof(string) );
   if( DblCon( string, &value ) )
     error( 2, __FILE__, __LINE__, string, " is not a (valid) number", "" );
