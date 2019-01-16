@@ -1,8 +1,6 @@
-extern crate viewlib;
-
 use clap::{Arg, App};
 
-use crate::viewlib::{process_path,print_vf_results};
+use view3d::{process_path,print_vf_results};
 use std::error::Error;
 use std::fs::File;
 use std::path::Path;

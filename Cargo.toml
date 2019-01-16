@@ -7,15 +7,15 @@ edition = "2018"
 
 [[bin]]
 name = "view3d"
-path = "src/view3d.rs"
+path = "src/bin/view3d.rs"
 
 [[bin]]
 name = "view2d"
-path = "src/view2d.rs"
+path = "src/bin/view2d.rs"
 
 [lib]
-name = "viewlib"
-path = "src/viewlib.rs"
+name = "view3d"
+path = "src/lib.rs"
 
 [dependencies]
 clap = "~2.32.0"

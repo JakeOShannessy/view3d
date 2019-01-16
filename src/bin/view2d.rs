@@ -1,9 +1,8 @@
-extern crate viewlib;
 
 use clap::{Arg, App};
 use std::ffi::{CString};
 
-use crate::viewlib::{processPaths2d};
+use view3d::{processPaths2d};
 
 fn main() {
     let matches = App::new("View2d")
