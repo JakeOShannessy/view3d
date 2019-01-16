@@ -173,11 +173,12 @@ void ReadTK( char *fileName, int nSrf, float *TK ){
   int n, n1, n2;
   float Tabs;
   FILE *tfile;
+  char string[LINELEN + 1]; /* buffer for a character string */
 
   tfile = fopen( fileName, "r" );
   for(;;){
-    fgets( _string, LINELEN, tfile );
-    sscanf( _string, "%d %d %f", &n1, &n2, &Tabs );
+    fgets( string, LINELEN, tfile );
+    sscanf( string, "%d %d %f", &n1, &n2, &Tabs );
     if( n1 < 1 ) break;
     if( n2 < 1 ) break;
     if( n1>nSrf )
