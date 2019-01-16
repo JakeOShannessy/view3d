@@ -8,7 +8,7 @@ use std::f64;
 use libc::{c_double, c_float, FILE};
 use std::slice;
 use std::fs::File;
-use std::io::{stdout, Write};
+use std::io::{Write};
 
 // Link in the C lib via FFI
 #[link(name = "view3d", kind = "static")]
@@ -28,6 +28,9 @@ pub fn process_path(infile: String) -> VFResults {
         let in_data = parseInPath(infile_c.as_ptr());
         let vf_res = calculateVFs(in_data);
         println!("{:?}", vf_res);
+        // From here we copy the data into a Rust native struct. This is more
+        // expensive then simply abstracting over the underlying C type, but it
+        // requires us to implement a lot less and is less error prone.
         // Convert the view factor values to a vector
         let af_arr_ptr = vf_res.values;
         assert!(!af_arr_ptr.is_null());
@@ -63,6 +66,8 @@ pub fn process_path(infile: String) -> VFResults {
     }
 }
 
+/// This is the type that the C library returns. This is only used temporarily,
+/// and the data is copied into a native Rust struct for ease of implementation.
 #[derive(Debug)]
 #[repr(C)]
 pub struct VFResultsC {
@@ -72,19 +77,19 @@ pub struct VFResultsC {
     pub area: *const c_float,
     pub emit: *const c_float,
     pub values: *const c_double,
-    pub AF: *const *const c_double,
+    pub af: *const *const c_double,
     pub row: i32,
-    pub nSrf0: i32,
+    pub n_srf0: i32,
 }
 
 // #[derive(Debug)]
 #[repr(C)]
 pub struct RawInData {
   pub opts: RawInOptions,
-  pub nAllSrf: i32,
-  pub nRadSrf: i32,
-  pub nObstrSrf: i32,
-  pub nVertices: i32,
+  pub n_all_srf: i32,
+  pub n_rad_srf: i32,
+  pub n_obstr_srf: i32,
+  pub n_vertices: i32,
   pub vertices: [Vec3; 256],
   pub surfaces: [RawSurf; 256],
 }
@@ -93,15 +98,15 @@ pub struct RawInData {
 #[repr(C)]
 pub struct RawInOptions {
   pub title: *const c_char,
-  pub epsAdap: c_float,
-  pub maxRecursALI: i32,
-  pub minRecursion: i32,
-  pub maxRecursion: i32,
+  pub eps_adap: c_float,
+  pub max_recurs_ali: i32,
+  pub min_recursion: i32,
+  pub max_recursion: i32,
   pub enclosure: i32,
   pub emittances: i32,
   pub row: i32,
   pub col: i32,
-  pub prjReverse: i32,
+  pub prj_reverse: i32,
 }
 
 #[derive(Debug)]
@@ -113,7 +118,7 @@ pub struct RawSurf {
   pub base: i32,
   pub cmbn: i32,
   pub emit: c_float,
-  pub vertexIndices: [i32; 4],
+  pub vertex_indices: [i32; 4],
   pub name: [c_char; 16],
 //   char name[NAMELEN];
 }
@@ -138,7 +143,7 @@ pub struct VFResults {
 impl VFResults {
     pub fn vf(&self, a: usize, b: usize) -> Option<f64> {
         let index = (a-1)*(self.n_surfs as usize)+(b-1);
-        if (index < self.values.len()) {
+        if index < self.values.len() {
             Some(self.values[index])
         } else {
             None
@@ -157,9 +162,9 @@ impl VFResults {
 //     double **AF,
 // }
 
+/// Print the view factor results to Writable handle, e.g. a file open for
+/// writing or stdout etc.
 pub fn print_vf_results<T: Write>(handle: &mut T,  results: &VFResults) -> std::io::Result<()> {
-    let mut res_str = "";
-    // handle.write_all(b"goodbye");
     write!(handle, "encl: {}\n", results.encl)?;
     // Print column numbering
     write!(handle, "      ")?;

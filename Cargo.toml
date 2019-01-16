@@ -12,6 +12,10 @@ path = "src/view3d.rs"
 name = "view2d"
 path = "src/view2d.rs"
 
+[lib]
+name = "viewlib"
+path = "src/viewlib.rs"
+
 [dependencies]
 clap = "~2.32.0"
 time = "0.1"

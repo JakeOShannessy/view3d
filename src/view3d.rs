@@ -8,9 +8,7 @@ mod viewlib;
 use viewlib::*;
 use std::error::Error;
 use std::fs::File;
-use std::io::prelude::*;
 use std::path::Path;
-use std::io::{stdout, Write};
 
 fn main() {
     let matches = App::new("View3d")
