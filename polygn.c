@@ -532,8 +532,16 @@ void FreeTmpVertMem( void )
 
 void InitTmpVertMem( void )
   {
-  if( _u ) error( 3, __FILE__, __LINE__,
-    "Temporary vertices already allocated", "" );
+  // if( _u ) error( 3, __FILE__, __LINE__,
+  //   "Temporary vertices already allocated", "" );
+  // If the temporary vertices have been allocated, we will just reallocate
+  // them to avoid changing too much at once.
+  if (_u) {
+    _leftVrt = Fre_V( _leftVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+    _rightVrt = Fre_V( _rightVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+    _tempVrt = Fre_V( _tempVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
+    _u = Fre_V( _u, 0, _maxNVT, sizeof(int), __FILE__, __LINE__ );
+  }
   _leftVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
   _rightVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
   _tempVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
