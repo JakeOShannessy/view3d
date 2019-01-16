@@ -26,11 +26,9 @@
 #include "heap.h"
 
 static int TransferVrt(Vec2 *toVrt, const Vec2 *fromVrt, int nFromVrt);
- /* TODO: investigate the use of these globals, ensure they are threadsafe,
-    although they probably aren't */
-PolygonVertexEdge *_nextFreeVE; /* pointer to next free vertex/edge */
-Polygon *_nextFreePD; /* pointer to next free polygon descripton */
-Polygon *_nextUsedPD; /* pointer to top-of-stack used polygon */
+
+/* These are just configuration parameters, so change rarely and are unlikely
+   to cause crashes, but ideally they should not be globals. */
 double _epsDist;   /* minimum distance between vertices */
 double _epsArea;   /* minimum surface area */
 
@@ -67,7 +65,7 @@ double _epsArea;   /* minimum surface area */
  *  Return 0 if P2 outside P1, 1 if P2 inside P1, 2 for partial overlap.
  */
 
-int PolygonOverlap(char *memPoly, const Polygon *p1, Polygon *p2, const int savePD, int freeP2){
+int PolygonOverlap(PolyData polyData, const Polygon *p1, Polygon *p2, const int savePD, int freeP2){
   Polygon *pp;     /* pointer to polygon */
   Polygon *initUsedPD;  /* initial top-of-stack pointer */
   PolygonVertexEdge *pv1;    /* pointer to edge of P1 */
@@ -92,7 +90,7 @@ int PolygonOverlap(char *memPoly, const Polygon *p1, Polygon *p2, const int save
     p1, p2, savePD );
 #endif
 
-  initUsedPD = _nextUsedPD;
+  initUsedPD = polyData.nextUsedPD;
   nTempVrt = GetPolygonVrt2D( p2, tempVrt );
 
 #if( DEBUG > 1 )
@@ -206,7 +204,7 @@ int PolygonOverlap(char *memPoly, const Polygon *p1, Polygon *p2, const int save
 #endif
       if( nTempVrt > 2 )
         {
-        SetPolygonHC( memPoly, nTempVrt, tempVrt, p2->trns );
+        SetPolygonHC( polyData, nTempVrt, tempVrt, p2->trns );
         overlap = 1;
         }
       }
@@ -228,7 +226,7 @@ int PolygonOverlap(char *memPoly, const Polygon *p1, Polygon *p2, const int save
 #if( DEBUG > 1 )
     DumpP2D( "Overlap polygon:", nTempVrt, tempVrt );
 #endif
-    pp = SetPolygonHC( memPoly, nTempVrt, tempVrt, p2->trns * p1->trns );
+    pp = SetPolygonHC( polyData, nTempVrt, tempVrt, p2->trns * p1->trns );
     if( pp==NULL && savePD==2 )   /* overlap area too small */
       goto p2_outside_p1;
     }
@@ -242,8 +240,8 @@ p2_outside_p1:     /* no overlap between P1 and P2 */
 #endif
   if( savePD > 1 )    /* save outside polygon - P2 */
     {
-    if( initUsedPD != _nextUsedPD )  /* remove previous outside polygons */
-      FreePolygons( _nextUsedPD, initUsedPD );
+    if( initUsedPD != polyData.nextUsedPD )  /* remove previous outside polygons */
+      FreePolygons( polyData, polyData.nextUsedPD, initUsedPD );
 
     if( freeP2 )         /* transfer P2 to new stack */
       {
@@ -253,15 +251,15 @@ p2_outside_p1:     /* no overlap between P1 and P2 */
     else                 /* copy P2 to new stack */
       {
       PolygonVertexEdge *pv, *pv2;
-      pp = GetPolygonHC(memPoly);      /* get cleared polygon data area */
+      pp = GetPolygonHC(polyData);      /* get cleared polygon data area */
       pp->area = p2->area;      /* copy P2 data */
       pp->trns = p2->trns;
       pv2 = p2->firstVE;
       do{
         if( pp->firstVE )
-          pv = pv->next = GetVrtEdgeHC(memPoly);
+          pv = pv->next = GetVrtEdgeHC(polyData);
         else
-          pv = pp->firstVE = GetVrtEdgeHC(memPoly);
+          pv = pp->firstVE = GetVrtEdgeHC(polyData);
         memcpy( pv, pv2, sizeof(PolygonVertexEdge) );   /* copy vertex/edge data */
         pv2 = pv2->next;
         } while( pv2 != p2->firstVE );
@@ -271,12 +269,12 @@ p2_outside_p1:     /* no overlap between P1 and P2 */
 #endif
       }
     pp->next = initUsedPD;   /* link PP to stack */
-    _nextUsedPD = pp;
+    polyData.nextUsedPD = pp;
     }
 
 finish:
   if( freeP2 )   /* transfer P2 to free space */
-    FreePolygons( p2, p2->next );
+    FreePolygons( polyData, p2, p2->next );
 
   Fre_V( u, 0, _maxNVT, sizeof(int), __FILE__, __LINE__ );
   Fre_V( tempVrt, 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
@@ -328,7 +326,7 @@ int TransferVrt(Vec2 *toVrt, const Vec2 *fromVrt, int nFromVrt){
  *  Return NULL if polygon area too small; otherwise return pointer to polygon.
  */
 
-Polygon *SetPolygonHC( char *memPoly, const int nVrt, const Vec2 *polyVrt, const double trns )
+Polygon *SetPolygonHC( PolyData polyData, const int nVrt, const Vec2 *polyVrt, const double trns )
 /* nVrt    - number of vertices (vertices in clockwise sequence);
  * polyVrt - X,Y coordinates of vertices (1st vertex not repeated at end),
              index from 0 to nVrt-1. */
@@ -338,7 +336,7 @@ Polygon *SetPolygonHC( char *memPoly, const int nVrt, const Vec2 *polyVrt, const
   double area=0.0; /* polygon area */
   int j, jm1;   /* vertex indices;  jm1 = j - 1 */
 
-  pp = GetPolygonHC(memPoly);      /* get cleared polygon data area */
+  pp = GetPolygonHC(polyData);      /* get cleared polygon data area */
 #if( DEBUG > 1 )
   fprintf( _ulog, " SetPolygonHC:  pp [%p]  nv %d\n", pp, nVrt );
 #endif
@@ -347,9 +345,9 @@ Polygon *SetPolygonHC( char *memPoly, const int nVrt, const Vec2 *polyVrt, const
   for( j=0; j<nVrt; jm1=j++ )  /* loop through vertices */
     {
     if( pp->firstVE )
-      pv = pv->next = GetVrtEdgeHC(memPoly);
+      pv = pv->next = GetVrtEdgeHC(polyData);
     else
-      pv = pp->firstVE = GetVrtEdgeHC(memPoly);
+      pv = pp->firstVE = GetVrtEdgeHC(polyData);
     pv->x = polyVrt[j].x;
     pv->y = polyVrt[j].y;
     pv->a = polyVrt[jm1].y - polyVrt[j].y; /* compute HC values */
@@ -369,13 +367,13 @@ Polygon *SetPolygonHC( char *memPoly, const int nVrt, const Vec2 *polyVrt, const
 
   if( pp->area < _epsArea )  /* polygon too small to save */
     {
-    FreePolygons( pp, NULL );
+    FreePolygons( polyData, pp, NULL );
     pp = NULL;
     }
   else
     {
-    pp->next = _nextUsedPD;     /* link polygon to current list */
-    _nextUsedPD = pp;           /* prepare for next linked polygon */
+    pp->next = polyData.nextUsedPD;     /* link polygon to current list */
+    polyData.nextUsedPD = pp;           /* prepare for next linked polygon */
     }
 
   return pp;
@@ -388,18 +386,18 @@ Polygon *SetPolygonHC( char *memPoly, const int nVrt, const Vec2 *polyVrt, const
  *  This is taken from the list of unused structures if possible.  
  *  Otherwise, a new structure will be allocated.  */
 
-Polygon *GetPolygonHC(char *memPoly)
+Polygon *GetPolygonHC(PolyData polyData)
   {
   Polygon *pp;  /* pointer to polygon structure */
 
-  if( _nextFreePD )
+  if( polyData.nextFreePD )
     {
-    pp = _nextFreePD;
-    _nextFreePD = _nextFreePD->next;
+    pp = polyData.nextFreePD;
+    polyData.nextFreePD = polyData.nextFreePD->next;
     memset( pp, 0, sizeof(Polygon) );  /* clear pointers */
     }
   else
-    pp = Alc_EC( &memPoly, sizeof(Polygon), __FILE__, __LINE__ );
+    pp = Alc_EC( &(polyData.memPoly), sizeof(Polygon), __FILE__, __LINE__ );
 
   return pp;
 
@@ -411,17 +409,17 @@ Polygon *GetPolygonHC(char *memPoly)
  *  This is taken from the list of unused structures if possible.  
  *  Otherwise, a new structure will be allocated.  */
 
-PolygonVertexEdge *GetVrtEdgeHC(char *memPoly)
+PolygonVertexEdge *GetVrtEdgeHC(PolyData polyData)
   {
   PolygonVertexEdge *pv;  /* pointer to vertex/edge structure */
 
-  if( _nextFreeVE )
+  if( polyData.nextFreeVE )
     {
-    pv = _nextFreeVE;
-    _nextFreeVE = _nextFreeVE->next;
+    pv = polyData.nextFreeVE;
+    polyData.nextFreeVE = polyData.nextFreeVE->next;
     }
   else
-    pv = Alc_EC( &memPoly, sizeof(PolygonVertexEdge), __FILE__, __LINE__ );
+    pv = Alc_EC( &(polyData.memPoly), sizeof(PolygonVertexEdge), __FILE__, __LINE__ );
 
   return pv;
 
@@ -431,7 +429,7 @@ PolygonVertexEdge *GetVrtEdgeHC(char *memPoly)
 
 /*  Restore list of polygon descriptions to free space.  */
 
-void FreePolygons( Polygon *first, Polygon *last )
+void FreePolygons( PolyData polyData, Polygon *first, Polygon *last )
 /* first;  - pointer to first polygon in linked list (not NULL).
  * last;   - pointer to polygon AFTER last one freed (NULL = complete list). */
   {
@@ -447,12 +445,12 @@ void FreePolygons( Polygon *first, Polygon *last )
     pv = pp->firstVE->next;           /* free vertices (circular list) */
     while( pv->next != pp->firstVE )  /* find "end" of vertex list */
       pv = pv->next;
-    pv->next = _nextFreeVE;           /* reset vertex links */
-    _nextFreeVE = pp->firstVE;
+    pv->next = polyData.nextFreeVE;           /* reset vertex links */
+    polyData.nextFreeVE = pp->firstVE;
     if( pp->next == last ) break;
     }
-  pp->next = _nextFreePD;       /* reset polygon links */
-  _nextFreePD = first;
+  pp->next = polyData.nextFreePD;       /* reset polygon links */
+  polyData.nextFreePD = first;
 
   }  /*  end of FreePolygons  */
 
@@ -460,9 +458,9 @@ void FreePolygons( Polygon *first, Polygon *last )
 
 /*  Start a new stack (linked list) of polygons.  */
 
-void NewPolygonStack( void )
+void NewPolygonStack( PolyData polyData )
   {
-  _nextUsedPD = NULL;  /* define bottom of stack */
+  polyData.nextUsedPD = NULL;  /* define bottom of stack */
 
   }  /* end NewPolygonStack */
 
@@ -470,9 +468,9 @@ void NewPolygonStack( void )
 
 /*  Return pointer to top of active polygon stack.  */
 
-Polygon *TopOfPolygonStack( void )
+Polygon *TopOfPolygonStack( PolyData polyData )
   {
-  return _nextUsedPD;
+  return polyData.nextUsedPD;
 
   }  /* end TopOfPolygonStack */
 
@@ -523,32 +521,34 @@ int GetPolygonVrt3D( const Polygon *pp, Vec3 *polyVrt )
 
 /*  Initialize polygon processing memory and globals.  */
 
-char *InitPolygonMem( const double epsdist, const double epsarea )
+PolyData InitPolygonMem( const double epsdist, const double epsarea )
   {
-  char *memPoly = NULL; /* memory block for polygon descriptions; must start NULL */
+  PolyData polyData;
+  polyData.memPoly = NULL;
   /* allocate polygon structures heap pointer */
-  memPoly = Alc_ECI( 8000, __FILE__, __LINE__ );
+  polyData.memPoly = Alc_ECI( 8000, __FILE__, __LINE__ );
 
   _epsDist = epsdist;
   _epsArea = epsarea;
-  _nextFreeVE = NULL;
-  _nextFreePD = NULL;
-  _nextUsedPD = NULL;
+
+  polyData.nextFreeVE = NULL;
+  polyData.nextFreePD = NULL;
+  polyData.nextUsedPD = NULL;
 #if( DEBUG > 1 )
   fprintf( _ulog, "InitPolygonMem: epsDist %g epsArea %g at [%p]\n",
-    _epsDist, _epsArea, memPoly );
+    _epsDist, _epsArea, polyData.memPoly );
 #endif
-  return memPoly;
+  return polyData;
   }  /* end InitPolygonMem */
 
 /***  FreePolygonMem.c  ******************************************************/
 
 /*  Free polygon processing memory.  */
 
-void FreePolygonMem(memPoly)
+void FreePolygonMem(PolyData polyData)
   {
-  if( memPoly )
-    memPoly = (char *)Fre_EC( memPoly, __FILE__, __LINE__ );
+  if( polyData.memPoly )
+    polyData.memPoly = (char *)Fre_EC( polyData.memPoly, __FILE__, __LINE__ );
 
   }  /* end FreePolygonMem */
 
@@ -748,21 +748,21 @@ void DumpHC( char *title, const Polygon *pfp, const Polygon *plp ){
 }  /* end of DumpHC */
 
 
-void DumpFreePolygons( void ){
+void DumpFreePolygons( PolyData polyData ){
   Polygon *pp;
 
   fprintf( _ulog, "FREE POLYGONS:" );
-  for( pp=_nextFreePD; pp; pp=pp->next )
+  for( pp=polyData.nextFreePD; pp; pp=pp->next )
     fprintf( _ulog, " [%p]", pp );
   fprintf( _ulog, "\n" );
 }  /* end DumpFreePolygons */
 
 
-void DumpFreeVertices( void ){
+void DumpFreeVertices( PolyData polyData ){
   PolygonVertexEdge *pv;
 
   fprintf( _ulog, "FREE VERTICES:" );
-  for( pv=_nextFreeVE; pv; pv=pv->next )
+  for( pv=polyData.nextFreeVE; pv; pv=pv->next )
     fprintf( _ulog, " [%p]", pv );
   fprintf( _ulog, "\n" );
 }  /* end DumpFreeVertices */

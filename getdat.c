@@ -342,7 +342,7 @@ void GetSrfD( FILE *inHandle, char **name, float *emit, int *base, int *cmbn
 ){
   int n;
   char string[LINELEN + 1]; /* buffer for a character string */
-  
+
   n = ReadIX( inHandle, 0 );              /* base surface number */
   base[ns] = n;
   if( n<0 || n>vfCtrl->nAllSrf ) error( 2, __FILE__, __LINE__,
@@ -619,7 +619,7 @@ InData InDataFromRaw(RawInData *rawInData) {
   inData.cmbn = Alc_V( 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
   inData.xyz = Alc_V( 1, vfCtrl.nVertices, sizeof(Vec3), __FILE__, __LINE__ );
   inData.srf = Alc_V( 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
-  InitPolygonMem(0, 0);
+  PolyData polyData = InitPolygonMem(0, 0);
 
   /* Convert vertices */
   for (i = 1; i <= rawInData->nVertices; i++) {
@@ -1075,17 +1075,18 @@ void TestSubSrf( SRFDAT3D *srf, const int *baseSrf, View3DControlData *vfCtrl ){
       vM[j].y = srfT->v[srfT->nv-1-j].y;
     }
                                 /* begin with cleared small structures area */
-    InitPolygonMem( eps, eps );
-    base = SetPolygonHC( srfM.nv, vM, 1.0 );  /* convert to HC */
-    subs = SetPolygonHC( srfN.nv, vN, 1.0 );
+    PolyData polyData = InitPolygonMem( eps, eps );
+    base = SetPolygonHC( polyData, srfM.nv, vM, 1.0 );  /* convert to HC */
+    subs = SetPolygonHC( polyData, srfN.nv, vN, 1.0 );
     if( subs && base ){
-      if( PolygonOverlap( base, subs, 3, 0 ) != 1 )  /* 1 = enclosed */
+      if( PolygonOverlap(polyData, base, subs, 3, 0 ) != 1 )  /* 1 = enclosed */
         error( 2, __FILE__, __LINE__, " Subsurface ",
           IntStr(n), " is not (entirely?) within its base", "" );
     }else{
       fprintf( _ulog, "Enclosure test: base = %d, subs = %d, dot = %g\n", n, m, dot );
       error( 3, __FILE__, __LINE__, " Enclosure test failure", "" );
     }
+    FreePolygonMem(polyData);
   }  /* end surface loop */
 
 }  /* end of TestSubSrf */

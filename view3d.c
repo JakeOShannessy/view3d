@@ -99,7 +99,8 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
       m1 = vfCtrl->col;      /* or a single view factor, */
     }
 
-  ViewsInit( 4, 1 );  /* initialize Gaussian integration coefficients */
+  EdgeData dummyEdgeData;
+  EdgeData edgeData = ViewsInit( 4, 1, dummyEdgeData);  /* initialize Gaussian integration coefficients */
   InitViewMethod( vfCtrl );
 
   possibleObstrN = Alc_V( 1, vfCtrl->nAllSrf, sizeof(int), __FILE__, __LINE__ );
@@ -324,7 +325,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
           ViewMethod( &srfN, &srfM, distNM, vfCtrl );
 /*        minArea = MIN( srfN.area, srfM.area ); */
           vfCtrl->epsAF = minArea * vfCtrl->epsAdap;
-          AF[n][m] = ViewUnobstructed( vfCtrl, _row, _col );
+          AF[n][m] = ViewUnobstructed( vfCtrl, _row, _col, edgeData );
           if( vfCtrl->failViewALI )
             {
             fprintf( _ulog, " row %d, col %d,  line integral did not converge, AF %g\n",
@@ -388,7 +389,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
   fprintf( _ulog, "  fix %7u %7u %7u %7u %7u fixes\n",
      bins[0][5], bins[1][5], bins[2][5], bins[3][5], bins[4][5] );
 #endif
-  ViewsInit( 4, 0 );
+  ViewsInit( 4, 0, edgeData );
 #ifdef LOGGING
   fprintf( _ulog, "Adaptive line integral evaluations used: %8lu\n",
     vfCtrl->usedV1LIadapt );

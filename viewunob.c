@@ -27,10 +27,8 @@
 
 /* The following variables are "global" to this file.
  * They are allocated and freed in ViewsInit(). */
-EdgeDir *_rc1; /* edge DirCos of surface 1 */
-EdgeDir *_rc2; /* edge DirCos of surface 2 */
-EdgeDivision **_dv1;  /* edge divisions of surface 1 */
-EdgeDivision **_dv2;  /* edge divisions of surface 2 */
+/* These globals need to be removed. They proven to be problematic */
+/* This is just a counter, so is not great but won't cause crashes */
 long _usedV1LIpart=0L;  /* number of calls to V1LIpart() */
 
 /* forward decls */
@@ -70,7 +68,7 @@ static int GQTriangle( const int nDiv, const Vec3 *vt, Vec3 *p, double *w );
 
 /*  Compute view factor (AF) -- no view obstructions.  */
 
-double ViewUnobstructed( View3DControlData *vfCtrl, int row, int col )
+double ViewUnobstructed( View3DControlData *vfCtrl, int row, int col, EdgeData edgeData )
   {
   Vec3 pt1[16], pt2[16];
   double area1[16], area2[16];
@@ -130,8 +128,8 @@ double ViewUnobstructed( View3DControlData *vfCtrl, int row, int col )
     for( nDiv=1; nDiv<5; nDiv++ )
       {
       AF0 = AF1;
-      DivideEdges( nDiv, srf1->nv, srf1->v, _rc1, _dv1 );
-      AF1 = View1LI( nDiv, srf1->nv, _rc1, _dv1, srf1->v, srf2->nv, srf2->v );
+      DivideEdges( nDiv, srf1->nv, srf1->v, edgeData.rc1, edgeData.dv1 );
+      AF1 = View1LI( nDiv, srf1->nv, edgeData.rc1, edgeData.dv1, srf1->v, srf2->nv, srf2->v );
 #if( DEBUG > 1 )
       fprintf( _ulog, " %g", AF1 );
 #endif
@@ -146,9 +144,9 @@ double ViewUnobstructed( View3DControlData *vfCtrl, int row, int col )
     for( nDiv=1; nDiv<5; nDiv++ )
       {
       AF0 = AF1;
-      DivideEdges( nDiv, srf1->nv, srf1->v, _rc1, _dv1 );
-      DivideEdges( nDiv, srf2->nv, srf2->v, _rc2, _dv2 );
-      AF1 = View2LI( nDiv, srf1->nv, _rc1, _dv1, nDiv, srf2->nv, _rc2, _dv2 );
+      DivideEdges( nDiv, srf1->nv, srf1->v, edgeData.rc1, edgeData.dv1 );
+      DivideEdges( nDiv, srf2->nv, srf2->v, edgeData.rc2, edgeData.dv2 );
+      AF1 = View2LI( nDiv, srf1->nv, edgeData.rc1, edgeData.dv1, nDiv, srf2->nv, edgeData.rc2, edgeData.dv2 );
 #if( DEBUG > 1 )
       fprintf( _ulog, " %g", AF1 );
 #endif
@@ -622,7 +620,7 @@ double ViewALI( const int nv1, const Vec3 *v1,
  *  Initialize Gaussian integration coefficients.
  *  Store G coefficients in vectors emulating triangular arrays.  */
 
-void ViewsInit( int maxDiv, int init )
+EdgeData ViewsInit( int maxDiv, int init, EdgeData edgeDataOld )
   {
   static int maxRC1;    /* max number of values in RC1 */
   static int maxRC2;    /* max number of values in RC2 */
@@ -631,26 +629,30 @@ void ViewsInit( int maxDiv, int init )
 
   if( init )
     {
+    /* If init is true, then we want to allocate the edge data and return */
+    EdgeData edgeData;
     maxRC1 = MAXNV1;
-    _rc1 = Alc_V( 0, maxRC1, sizeof(EdgeDir), __FILE__, __LINE__ );
+    edgeData.rc1 = Alc_V( 0, maxRC1, sizeof(EdgeDir), __FILE__, __LINE__ );
     maxDV1 = maxDiv - 1;
-    _dv1 = Alc_MC( 0, maxRC1, 0, maxDV1, sizeof(EdgeDivision), __FILE__, __LINE__ );
+    edgeData.dv1 = Alc_MC( 0, maxRC1, 0, maxDV1, sizeof(EdgeDivision), __FILE__, __LINE__ );
     maxRC2 = _maxNVT;  /* MAXNVT @@@ needs work; 2005/11/02; */
-    _rc2 = Alc_V( 0, maxRC2, sizeof(EdgeDir), __FILE__, __LINE__ );
+    edgeData.rc2 = Alc_V( 0, maxRC2, sizeof(EdgeDir), __FILE__, __LINE__ );
     maxDV2 = maxDiv - 1;
-    _dv2 = Alc_MC( 0, maxRC2, 0, maxDV2, sizeof(EdgeDivision), __FILE__, __LINE__ );
+    edgeData.dv2 = Alc_MC( 0, maxRC2, 0, maxDV2, sizeof(EdgeDivision), __FILE__, __LINE__ );
+    return edgeData;
     }
 
   else
     {
-    Fre_MC( _dv2, 0, maxRC2, 0, maxDV2, sizeof(EdgeDivision), __FILE__, __LINE__ );
-    Fre_V( _rc2, 0, maxRC2, sizeof(EdgeDir), __FILE__, __LINE__ );
-    Fre_MC( _dv1, 0, maxRC1, 0, maxDV1, sizeof(EdgeDivision), __FILE__, __LINE__ );
-    Fre_V( _rc1, 0, maxRC1, sizeof(EdgeDir), __FILE__, __LINE__ );
+    Fre_MC( edgeDataOld.dv2, 0, maxRC2, 0, maxDV2, sizeof(EdgeDivision), __FILE__, __LINE__ );
+    Fre_V( edgeDataOld.rc2, 0, maxRC2, sizeof(EdgeDir), __FILE__, __LINE__ );
+    Fre_MC( edgeDataOld.dv1, 0, maxRC1, 0, maxDV1, sizeof(EdgeDivision), __FILE__, __LINE__ );
+    Fre_V( edgeDataOld.rc1, 0, maxRC1, sizeof(EdgeDir), __FILE__, __LINE__ );
 #ifdef LOGGING
     fprintf( _ulog, "Total line integral points evaluated:    %8lu\n",
       _usedV1LIpart );
 #endif
+    return edgeDataOld;
     }
 
   }  /* end ViewsInit */

@@ -10,7 +10,6 @@
 #include <float.h>
 
 extern  int _echo;      /* if true, echo NXT input file */
-extern char *_nxtbuf;   /* large buffer for NXT input file */
 
 int LongCon( char *str, long *i);
 
