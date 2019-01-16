@@ -27,7 +27,6 @@ pub fn process_path(infile: String) -> VFResults {
     unsafe {
 
         let in_data = parseInPath(infile_c.as_ptr());
-        // println!("{:?}", in_data);
         let vf_res = calculateVFs(in_data);
         // From here we copy the data into a Rust native struct. This is more
         // expensive then simply abstracting over the underlying C type, but it
@@ -138,7 +137,7 @@ pub struct RawInData {
 
 impl std::fmt::Debug for RawInData {
     fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(formatter, "RawInData {{
+        let _props = write!(formatter, "RawInData {{
     opts: {:?},
     n_all_srf: {:?},
     n_rad_srf: {:?},
@@ -147,12 +146,14 @@ impl std::fmt::Debug for RawInData {
     vertices: [Vec3; 256],
     surfaces: [RawSurf; 256],
 }}", self.opts, self.n_all_srf, self.n_rad_srf, self.n_obstr_srf, self.n_vertices);
-        for vertex in self.vertices.iter() {
-            write!(formatter, "{:?}\n", vertex);
-        }
-        for surface in self.surfaces.iter() {
-            write!(formatter, "{:?}\n", surface);
-        }
+        let _verts : std::result::Result<(), std::fmt::Error> = self.vertices
+            .into_iter()
+            .map(|vertex| write!(formatter, "{:?}\n", vertex))
+            .collect();
+        let _surfs : std::result::Result<(), std::fmt::Error> = self.surfaces
+            .into_iter()
+            .map(|surface| write!(formatter, "{:?}\n", surface))
+            .collect();
         Ok(())
     }
     
@@ -382,7 +383,6 @@ pub fn print_vf_results<T: Write>(handle: &mut T,  results: &VFResults) -> std::
     Ok(())
 }
 
-#[cfg(test)]
 pub fn analytic_1(width: f64, height: f64) -> f64 {
     if width <= 0_f64 || height <= 0_f64 {
         panic!("Cannot use analytic_1 with non-positive values");
