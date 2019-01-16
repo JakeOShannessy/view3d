@@ -27,7 +27,7 @@ int LimitPolygon( int nVrt, Vec2 polyVrt[],
   const double maxX, const double minX, const double maxY, const double minY );
 void DumpHC( char *title, const Polygon *pfp, const Polygon *plp );
 void DumpFreePolygons( PolyData polyData );
-void DumpFreeVertices( void );
+void DumpFreeVertices( PolyData polyData );
 void DumpP2D( char *title, const int nvs, Vec2 *vs );
 void DumpP3D( char *title, const int nvs, Vec3 *vs );
 

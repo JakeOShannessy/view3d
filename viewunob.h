@@ -10,7 +10,7 @@ typedef struct {
   EdgeDivision **dv2;  /* edge divisions of surface 2 */
 } EdgeData;
 
-double ViewUnobstructed( View3DControlData *vfCtrl, int row, int col );
+double ViewUnobstructed( View3DControlData *vfCtrl, int row, int col, EdgeData edgeData );
 EdgeData ViewsInit( int maxDiv, int init, EdgeData edgeDataOld);
 
 int SubSrf( const int nDiv, const int nv, const Vec3 *v, const double area,

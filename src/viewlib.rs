@@ -7,7 +7,6 @@ use std::os::raw::c_char;
 use std::f64;
 use libc::{c_double, c_float, FILE};
 use std::slice;
-use std::fs::File;
 use std::io::{Write};
 #[cfg(test)]
 use quickcheck::*;

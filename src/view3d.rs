@@ -3,7 +3,6 @@ extern crate time;
 extern crate libc;
 
 #[cfg(test)]
-#[macro_use]
 extern crate quickcheck;
 
 use clap::{Arg, App};
