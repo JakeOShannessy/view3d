@@ -24,6 +24,8 @@
 #include "test2d.h"
 #include "readvs.h"
 
+/* 18 decimal digits of pi, more accurate than 64-bit floating point allows,
+   which is about 16 decimal digits */
 #define PI 3.141592653589793238
 #define deg2rad(x)  ((x)*PI/180.) /* angle: degrees -> radians */
 #define rad2deg(x)  ((x)*180./PI)  /* angle: radians -> degrees */
@@ -47,12 +49,12 @@ void GetCtrl( char *str, View3DControlData *vfCtrl){
   char *p;
   int i;
   float r;
-  char **context; /* parsing state pointer, needed for thread-safety */
+  char *context; /* parsing state pointer, needed for thread-safety */
 
-  p = strtok_r( str, "= ,", context );
+  p = strtok_r( str, "= ,", &context );
   while( p ){
     if( streqli( p, "eps" ) ){
-      p = strtok_r( NULL, "= ,", context );
+      p = strtok_r( NULL, "= ,", &context );
       if( FltCon( p, &r ) )
         error( 2, __FILE__, __LINE__, "Bad float value: ", p, "" );
       else{
@@ -64,13 +66,13 @@ void GetCtrl( char *str, View3DControlData *vfCtrl){
       }
     }
     else if( streqli( p, "list" )){
-      p = strtok_r( NULL, "= ,", context );
+      p = strtok_r( NULL, "= ,", &context );
       if( IntCon( p, &i ) )
         error( 2, __FILE__, __LINE__, "Bad integer value: ", p, "" );
       else
         _list = i;
     }else if( streqli( p, "out" ) ){
-      p = strtok_r( NULL, "= ,", context );
+      p = strtok_r( NULL, "= ,", &context );
       if( IntCon( p, &i ) )
         error( 2, __FILE__, __LINE__, "Bad integer value: ", p, "" );
       else
@@ -79,19 +81,19 @@ void GetCtrl( char *str, View3DControlData *vfCtrl){
         else
           vfCtrl->outFormat = i;
     }else if( streqli( p, "encl" )){
-      p = strtok_r( NULL, "= ,", context );
+      p = strtok_r( NULL, "= ,", &context );
       if( IntCon( p, &i ) )
         error( 2, __FILE__, __LINE__, "Bad integer value: ", p, "" );
       else
         if( i ) vfCtrl->enclosure = 1;
     }else if( streqli( p, "emit" )){
-      p = strtok_r( NULL, "= ,", context );
+      p = strtok_r( NULL, "= ,", &context );
       if( IntCon( p, &i ) )
         error( 2, __FILE__, __LINE__, "Bad integer value: ", p, "" );
       else
         if( i ) vfCtrl->emittances = 1;
     }else if( streqli( p, "maxU" ) ){
-      p = strtok_r( NULL, "= ,", context );
+      p = strtok_r( NULL, "= ,", &context );
       if( IntCon( p, &i ) )
         error( 2, __FILE__, __LINE__, "Bad integer value: ", p, "" );
       else{
@@ -106,7 +108,7 @@ void GetCtrl( char *str, View3DControlData *vfCtrl){
         vfCtrl->maxRecursALI = i;
       }
     }else if( streqli( p, "maxO" )){
-      p = strtok_r( NULL, "= ,", context );
+      p = strtok_r( NULL, "= ,", &context );
       if( IntCon( p, &i ) )
         error( 2, __FILE__, __LINE__, "Bad integer value: ", p, "" );
       else{
@@ -121,7 +123,7 @@ void GetCtrl( char *str, View3DControlData *vfCtrl){
         vfCtrl->maxRecursion = i;
       }
     }else if( streqli( p, "minO" )){
-      p = strtok_r( NULL, "= ,", context );
+      p = strtok_r( NULL, "= ,", &context );
       if( IntCon( p, &i ) )
         error( 2, __FILE__, __LINE__, "Bad integer value: ", p, "" );
       else{
@@ -133,7 +135,7 @@ void GetCtrl( char *str, View3DControlData *vfCtrl){
         vfCtrl->minRecursion = i;
       }
     }else if( streqli( p, "row" ) ){
-      p = strtok_r( NULL, "= ,", context );
+      p = strtok_r( NULL, "= ,", &context );
       if( IntCon( p, &i ) )
         error( 2, __FILE__, __LINE__, "Bad integer value: ", p, "" );
       else{
@@ -142,7 +144,7 @@ void GetCtrl( char *str, View3DControlData *vfCtrl){
         vfCtrl->row = i;
       }
     }else if( streqli( p, "col" ) ){
-      p = strtok_r( NULL, "= ,", context );
+      p = strtok_r( NULL, "= ,", &context );
       if( IntCon( p, &i ) )
         error( 2, __FILE__, __LINE__, "Bad integer value: ", p, "" );
       else{
@@ -151,23 +153,23 @@ void GetCtrl( char *str, View3DControlData *vfCtrl){
         vfCtrl->col = i;
       }
     }else if( streqli( p, "prjD" ) ){
-      p = strtok_r( NULL, "= ,", context );
+      p = strtok_r( NULL, "= ,", &context );
       if( IntCon( p, &i ) )
         error( 2, __FILE__, __LINE__, "Bad integer value: ", p, "" );
       else
         if( i ) vfCtrl->prjReverse = 1;
     }else if( streqli( p, "maxV" ) ){
-      p = strtok_r( NULL, "= ,", context );
+      p = strtok_r( NULL, "= ,", &context );
       if( IntCon( p, &i ) )
         error( 2, __FILE__, __LINE__, "Bad integer value: ", p, "" );
       else
         _maxNVT = i;
     }else{
       error( 1, __FILE__, __LINE__, "Invalid control word: ", p, "" );
-      p = strtok_r( NULL, "= ,", context );
+      p = strtok_r( NULL, "= ,", &context );
     }
 
-    p = strtok_r( NULL, "= ,", context );    /* get next word */
+    p = strtok_r( NULL, "= ,", &context );    /* get next word */
   }
 
   if( vfCtrl->col && !vfCtrl->row )
