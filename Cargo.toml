@@ -27,3 +27,4 @@ cc = "1.0"
 
 [dev-dependencies]
 quickcheck = "0.8.0"
+assert_cmd = "0.10.2"

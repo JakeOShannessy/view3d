@@ -52,3 +52,24 @@ fn main() {
         }
     }
 }
+
+#[cfg(test)]
+mod integration {
+    use assert_cmd;
+    use assert_cmd::prelude::*;
+    use std::process::Command;
+
+    /// We currently ignore this test as the output formats are not the same
+    #[test]
+    #[ignore]
+    fn calling_deploy_example() {
+        let expected = std::fs::read_to_string("test/3d/test.expected.out")
+            .expect("something went wrong reading the expected output file");
+
+        let result = Command::cargo_bin("view3d").unwrap()
+            .args(&["test/3d/test.vs3"])
+            .output()
+            .unwrap();
+        assert_eq!(expected, String::from_utf8(result.stdout).expect("Output invalid utf8"));
+    }
+}
