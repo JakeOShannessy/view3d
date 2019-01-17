@@ -22,3 +22,6 @@ build/
 
 # Project-specific
 config.h
+
+# Editor/IDE
+.vscode
