@@ -121,6 +121,11 @@ RawInData parseIn(FILE *inHandle) {
   vfCtrl.maxRecursALI = 12; /* maximum number of recursion levels */
   vfCtrl.maxRecursion = 8;  /* maximum number of recursion levels */
   CountVS3D(inHandle, title, &vfCtrl );
+  rawInData.nAllSrf = vfCtrl.nAllSrf;
+  rawInData.nRadSrf = vfCtrl.nRadSrf;
+  rawInData.nObstrSrf = vfCtrl.nObstrSrf;
+  rawInData.nMaskSrf = vfCtrl.nMaskSrf;
+  rawInData.nVertices = vfCtrl.nVertices;
   /* Copy vfCtrl data to opts */
   rawInData.opts.epsAdap = vfCtrl.epsAdap;
   rawInData.opts.enclosure = vfCtrl.enclosure;

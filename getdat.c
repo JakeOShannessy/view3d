@@ -702,7 +702,6 @@ void GetVS3DNew( FILE *inHandle, RawInData *inData) {
       case 'O':
         n = ReadIX( inHandle, 0 );
         ns += 1;
-        inData->nRadSrf++;
         if (ns > 255) error( 2, __FILE__, __LINE__,
           "Exceeded maximum number of surface", "" );
         if( n!= ns ) error( 2, __FILE__, __LINE__,

@@ -92,15 +92,22 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
   nn = vfCtrl->nRadSrf;
   if( nn>1 )
     nAFtot = (double)((nn-1)*nn);
+
   if( vfCtrl->row > 0 )
     {
-    n1 = nn = vfCtrl->row;   /* can process a single row of view factors, */
+    /* If a a row has been selected, we will only process a single row of view
+    factors. Set the first row (n1) and the last row (nn) to be processed to the
+    value supplied by vfCtrl->row. */
+    n1 = nn = vfCtrl->row;
     if( vfCtrl->col > 0 )
-      m1 = vfCtrl->col;      /* or a single view factor, */
+      /* If a column has been selected we will only process a single view factor
+      relationship. Set the first column to be processed to vfCtrl->col. */
+      m1 = vfCtrl->col;
     }
 
   EdgeData dummyEdgeData;
-  EdgeData edgeData = ViewsInit( 4, 1, dummyEdgeData);  /* initialize Gaussian integration coefficients */
+  /* initialize Gaussian integration coefficients */
+  EdgeData edgeData = ViewsInit( 4, 1, dummyEdgeData);
   InitViewMethod( vfCtrl );
 
   possibleObstrN = Alc_V( 1, vfCtrl->nAllSrf, sizeof(int), __FILE__, __LINE__ );
@@ -352,8 +359,6 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
       else
         if( AF[n][m] < 1.0e-12 * srf[m].area )
           AF[n][m] = 0.0;
-#ifdef XXX
-#endif
 
 #ifdef LOGGING
       if( _list>0 && vfCtrl->row )

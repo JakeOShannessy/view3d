@@ -350,6 +350,7 @@ typedef struct {
   int nAllSrf;
   int nRadSrf;
   int nObstrSrf;
+  int nMaskSrf;
   int nVertices;
   Vec3 vertices[256];
   RawSurf surfaces[256];

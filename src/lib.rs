@@ -126,6 +126,7 @@ pub struct RawInData {
     pub n_all_srf: i32,
     pub n_rad_srf: i32,
     pub n_obstr_srf: i32,
+    pub n_mask_srf: i32,
     pub n_vertices: i32,
     pub vertices: [Vec3; 256],
     pub surfaces: [RawSurf; 256],
@@ -158,10 +159,10 @@ impl std::fmt::Debug for RawInData {
 /// Input data using native Rust types
 pub struct InData {
     pub opts: InOptions,
-    pub n_all_srf: i32,
+    pub n_all_srf: i32, // TODO: should not be necessary
     pub n_rad_srf: i32,
     pub n_obstr_srf: i32,
-    pub n_vertices: i32,
+    pub n_mask_srf: i32,
     pub vertices: Vec<Vec3>,
     pub surfaces: Vec<RawSurf>,
 }
@@ -177,7 +178,7 @@ impl From<RawInData> for InData {
             n_all_srf: raw.n_all_srf,
             n_rad_srf: raw.n_rad_srf,
             n_obstr_srf: raw.n_obstr_srf,
-            n_vertices: raw.n_vertices,
+            n_mask_srf: raw.n_mask_srf,
             vertices,
             surfaces,
         }
@@ -201,7 +202,8 @@ impl From<InData> for RawInData {
             n_all_srf: input.n_all_srf,
             n_rad_srf: input.n_rad_srf,
             n_obstr_srf: input.n_obstr_srf,
-            n_vertices: input.n_vertices,
+            n_mask_srf: input.n_mask_srf,
+            n_vertices: input.vertices.len() as i32,
             vertices,
             surfaces,
         }
@@ -451,7 +453,6 @@ mod tests {
             n_all_srf: 2,
             n_rad_srf: 2,
             n_obstr_srf: 0,
-            n_vertices: 8,
             vertices: vec![
                 Vec3 {x: 0_f64, y: 0_f64, z: 0_f64},
                 Vec3 {x: width, y: 0_f64, z: 0_f64},
@@ -526,7 +527,6 @@ mod tests {
             n_all_srf: 2,
             n_rad_srf: 2,
             n_obstr_srf: 0,
-            n_vertices: 8,
             vertices: vec![
                 Vec3 {x: 0_f64, y: eta1,  z: xi1},
                 Vec3 {x: 0_f64, y: eta2,  z: xi1},
