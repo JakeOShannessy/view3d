@@ -152,7 +152,7 @@ impl std::fmt::Debug for RawInData {
             .collect();
         Ok(())
     }
-    
+
 }
 
 /// Input data using native Rust types
@@ -180,7 +180,7 @@ impl From<RawInData> for InData {
             n_vertices: raw.n_vertices,
             vertices,
             surfaces,
-        } 
+        }
     }
 }
 
@@ -204,7 +204,7 @@ impl From<InData> for RawInData {
             n_vertices: input.n_vertices,
             vertices,
             surfaces,
-        } 
+        }
     }
 }
 
@@ -250,7 +250,7 @@ impl From<RawInOptions> for InOptions {
             row: raw.row,
             col: raw.col,
             prj_reverse: if raw.prj_reverse == 0 {false} else {true},
-        } 
+        }
     }
 }
 
@@ -270,7 +270,7 @@ impl From<InOptions> for RawInOptions {
             row: input.row,
             col: input.col,
             prj_reverse: if input.prj_reverse {1} else {0},
-        } 
+        }
     }
 }
 
@@ -468,7 +468,7 @@ mod tests {
             ],
         }
     }
-    
+
     #[test]
     fn from_file_matches_from_code() {
         let vf_results_file = process_path("examples\\ParallelPlanes.vs3".to_string());
@@ -484,11 +484,131 @@ mod tests {
             if width <= 0_f64 || height <= 0_f64 {
                 return TestResult::discard()
             }
-            print!("width: {} m, height: {} m > ", width, height);
+            // print!("width: {} m, height: {} m > ", width, height);
             let analytic_result = analytic_1(width, height);
             let vf_results = process_v3d(create_parallel_planes_example(width, height));
             let numerical_result = vf_results.vf(1,2).unwrap();
             let epsilon = 0.0001_f64;
+            // println!("analytic: {}, numerical: {}, {:?}", analytic_result, numerical_result,((analytic_result - numerical_result).abs() < epsilon));
+            TestResult::from_bool((analytic_result - numerical_result).abs() < epsilon)
+        }
+    }
+
+    fn create_perpendicular_offset_planes_example(
+    x1: f64,
+    x2: f64,
+    y1: f64,
+    y2: f64,
+    eta1: f64,
+    eta2: f64,
+    xi1: f64,
+    xi2: f64) -> InData {
+        let mut name1 = String::new();
+        name1.push_str("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
+        name1.truncate(24);
+        let mut name1_c : [i8; 16] = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        let byte_name: Vec<i8> = name1.into_bytes().into_iter().map(|x| x as i8).collect();
+        name1_c.clone_from_slice(&byte_name[..16]);
+        let name2_c = name1_c.clone();
+        InData {
+            opts: InOptions {
+                title: String::from("test"),
+                eps_adap: 1.0e-4_f32,
+                max_recurs_ali: 12,
+                min_recursion: 0,
+                max_recursion: 8,
+                enclosure: false,
+                emittances: false,
+                row: 0,
+                col: 0,
+                prj_reverse: false,
+            },
+            n_all_srf: 2,
+            n_rad_srf: 2,
+            n_obstr_srf: 0,
+            n_vertices: 8,
+            vertices: vec![
+                Vec3 {x: 0_f64, y: eta1,  z: xi1},
+                Vec3 {x: 0_f64, y: eta2,  z: xi1},
+                Vec3 {x: 0_f64, y: eta2,  z: xi2},
+                Vec3 {x: 0_f64, y: eta1,  z: xi2},
+                Vec3 {x: x1,    y: y1,    z: 0_f64},
+                Vec3 {x: x2,    y: y1,    z: 0_f64},
+                Vec3 {x: x2,    y: y2,    z: 0_f64},
+                Vec3 {x: x1,    y: y2,    z: 0_f64},
+                ],
+            surfaces: vec![
+                RawSurf { nr: 1, nv: 4, type_: 0, base: 0, cmbn: 0, emit: 0.9, vertex_indices: [5,6,7,8], name: name1_c},
+                RawSurf { nr: 2, nv: 4, type_: 0, base: 0, cmbn: 0, emit: 0.9, vertex_indices: [1,2,3,4], name: name2_c},
+            ],
+        }
+    }
+
+    quickcheck! {
+        fn matches_analytic_c15_prop(
+        x1: f64,
+        x2: f64,
+        y1: f64,
+        y2: f64,
+        eta1: f64,
+        eta2: f64,
+        xi1: f64,
+        xi2: f64) -> TestResult {
+            if x1 < 0_f64
+                || x2 < 0_f64
+                || y1 < 0_f64
+                || y2 < 0_f64
+                || eta1 < 0_f64
+                || eta2 < 0_f64
+                || xi1 < 0_f64
+                || xi2 < 0_f64
+            {
+                return TestResult::discard()
+            }
+            if x1 == 0_f64 && xi1 == 0_f64 {
+                return TestResult::discard()
+            }
+            if y1 == eta1 {
+                return TestResult::discard()
+            }
+            if x2 <= x1 {
+                return TestResult::discard()
+            }
+            if y2 <= y1 {
+                return TestResult::discard()
+            }
+            if eta2 <= eta1 {
+                return TestResult::discard()
+            }
+            if xi2 <= xi1 {
+                return TestResult::discard()
+            }
+
+            let analytic_result = analytic_c15(
+                x1,
+                x2,
+                y1,
+                y2,
+                eta1,
+                eta2,
+                xi1,
+                xi2,
+            );
+            if analytic_result.is_nan() {
+                return TestResult::discard()
+            }
+            let vf_results = process_v3d(create_perpendicular_offset_planes_example(
+                x1,
+                x2,
+                y1,
+                y2,
+                eta1,
+                eta2,
+                xi1,
+                xi2));
+            let numerical_result = vf_results.vf(1,2).unwrap();
+            let epsilon = 0.001_f64;
+            print!("x1: {} m, x2: {} m, y1: {} m, y2: {} m, eta1: {} m, eta2: {} m, xi1: {} m, xi2: {} m > ", x1,x2,y1,y2,eta1,eta2,xi1,xi2);
             println!("analytic: {}, numerical: {}, {:?}", analytic_result, numerical_result,((analytic_result - numerical_result).abs() < epsilon));
             TestResult::from_bool((analytic_result - numerical_result).abs() < epsilon)
         }
