@@ -414,7 +414,7 @@ mod tests {
     #[test]
     fn matches_analytic_1a() {
         let analytic_result = analytic_1(1_f64,1_f64);
-        let vf_results = process_path("examples\\ParallelPlanes.vs3".to_string());
+        let vf_results = process_path("examples/ParallelPlanes.vs3".to_string());
         let numerical_result = vf_results.vf(1,2).unwrap();
         assert_eq_err!(analytic_result, numerical_result, 0.0000001);
     }
@@ -422,7 +422,7 @@ mod tests {
     #[test]
     fn matches_analytic_1b() {
         let analytic_result = analytic_1(1_f64,2_f64);
-        let vf_results = process_path("examples\\ParallelPlanes2.vs3".to_string());
+        let vf_results = process_path("examples/ParallelPlanes2.vs3".to_string());
         let numerical_result = vf_results.vf(1,2).unwrap();
         assert_eq_err!(analytic_result, numerical_result, 0.0000001);
     }
@@ -471,7 +471,7 @@ mod tests {
 
     #[test]
     fn from_file_matches_from_code() {
-        let vf_results_file = process_path("examples\\ParallelPlanes.vs3".to_string());
+        let vf_results_file = process_path("examples/ParallelPlanes.vs3".to_string());
         let indata_code = create_parallel_planes_example(1_f64, 1_f64);
         let vf_results_code = process_v3d(indata_code);
         let vf_results_file_12 = vf_results_file.vf(1,2).unwrap();
