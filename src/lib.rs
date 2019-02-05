@@ -615,4 +615,20 @@ mod tests {
             TestResult::from_bool((analytic_result - numerical_result).abs() < epsilon)
         }
     }
+
+    /// Test the masking functionality.
+    #[test]
+    fn parallel_planes_masked() {
+        // Parallel planes analytic
+        let base_planes = analytic_1(1_f64, 1_f64);
+        // View factor of masking area
+        let masked_area = analytic_coaxial_squares(1_f64,0.2_f64,1_f64);
+        let vf_results_file = process_path("examples/ParallelPlanesMasked.vs3".to_string());
+        let numerical_result = vf_results_file.vf(1,2).unwrap();
+        let adjusted_view_factor = base_planes - masked_area;
+        println!("{}", numerical_result);
+        let epsilon = 0.00001_f64;
+        assert_eq_err!(adjusted_view_factor, numerical_result, epsilon);
+    }
+
 }
