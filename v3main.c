@@ -37,6 +37,7 @@ double VolPrism(Vec3 *a, Vec3 *b, Vec3 *c);
 RawInData parseIn(FILE *file);
 RawInData parseInPath(char *path);
 VFResultsC calculateVFs(RawInData rawInData);
+void freeVFResultsC(VFResultsC results);
 
 void ReportAF( const int nSrf, const int encl, const char *title, char **name,
   const float *area, const float *emit, const int *base, double **AF, int flag

@@ -105,7 +105,7 @@ void View3D( SRFDAT3D *srf, const int *base, int *possibleObstr,
       m1 = vfCtrl->col;
     }
 
-  EdgeData dummyEdgeData;
+  EdgeData dummyEdgeData = {0};
   /* initialize Gaussian integration coefficients */
   EdgeData edgeData = ViewsInit( 4, 1, dummyEdgeData);
   InitViewMethod( vfCtrl );

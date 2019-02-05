@@ -73,7 +73,7 @@ extern void printVFs(int format, FILE *file, VFResultsC results);
 extern void freeVFResultsC(VFResultsC results);
 
 void printVFs(int format, FILE *file, VFResultsC results) {
-  return SaveVFNew(file, results);
+  SaveVFNew(file, results);
 }
 
 /* TODO: currently RawInData does not need to be freed as it uses static arrays

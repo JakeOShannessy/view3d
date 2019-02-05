@@ -322,7 +322,7 @@ typedef struct {
 
 typedef struct {
   char *title;
-  float epsAdap;
+  double epsAdap;
   int maxRecursALI;
   int minRecursion;
   int maxRecursion;
