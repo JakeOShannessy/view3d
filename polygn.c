@@ -20,7 +20,7 @@
 #include <string.h> /* prototype: memset, memcpy */
 #include <math.h>   /* prototype: fabs */
 #include <limits.h> /* define UINT_MAX */
-#include "types.h" 
+#include "types.h"
 #include "view3d.h"
 #include "misc.h"
 #include "heap.h"
@@ -32,19 +32,19 @@ static int TransferVrt(Vec2 *toVrt, const Vec2 *fromVrt, int nFromVrt);
 double _epsDist;   /* minimum distance between vertices */
 double _epsArea;   /* minimum surface area */
 
-/*  Extensive use is made of 'homogeneous coordinates' (HC) which are not 
- *  familiar to most engineers.  The important properties of HC are 
+/*  Extensive use is made of 'homogeneous coordinates' (HC) which are not
+ *  familiar to most engineers.  The important properties of HC are
  *  summarized below:
- *  A 2-D point (X,Y) is represented by a 3-element vector (w*X,w*Y,w), 
- *  where w may be any real number except 0.  A line is also represented 
- *  by a 3-element vector (a,b,c).  The directed line from point 
- *  (w*X1,w*Y1,w) to point (v*X2,v*Y2,v) is given by 
- *    (a,b,c) = (w*X1,w*Y1,w) cross (v*X2,v*Y2,v). 
- *  The sequence of the cross product is a convention to determine sign. 
- *  A point lies on a line if (a,b,c) dot (w*X,w*Y,w) = 0. 
- *  'Normalize' the representation of a point by setting w to 1.  Then 
- *  if (a,b,c) dot (X,Y,1) > 0.0, the point is to the left of the line. 
- *  If it is less than zero, the point is to the right of the line. 
+ *  A 2-D point (X,Y) is represented by a 3-element vector (w*X,w*Y,w),
+ *  where w may be any real number except 0.  A line is also represented
+ *  by a 3-element vector (a,b,c).  The directed line from point
+ *  (w*X1,w*Y1,w) to point (v*X2,v*Y2,v) is given by
+ *    (a,b,c) = (w*X1,w*Y1,w) cross (v*X2,v*Y2,v).
+ *  The sequence of the cross product is a convention to determine sign.
+ *  A point lies on a line if (a,b,c) dot (w*X,w*Y,w) = 0.
+ *  'Normalize' the representation of a point by setting w to 1.  Then
+ *  if (a,b,c) dot (X,Y,1) > 0.0, the point is to the left of the line.
+ *  If it is less than zero, the point is to the right of the line.
  *  The point where two lines intersect is given by
  *    (w*X,w*Y,w) = (a1,b1,c1) cross (a2,b2,c2).
  *  Reference:  W.M. Newman and R.F. Sproull, "Principles of Interactive
@@ -55,9 +55,9 @@ double _epsArea;   /* minimum surface area */
 /*  Process two convex polygons.  Vertices are in clockwise sequence!!
  *
  *  There are three processing options -- savePD:
- *  (1)  Determine the portion of polygon P2 which is within polygon P1; 
+ *  (1)  Determine the portion of polygon P2 which is within polygon P1;
  *       this may create one convex polygon.
- *  (3)  Determine the portion of polygon P2 which is outside polygon P1; 
+ *  (3)  Determine the portion of polygon P2 which is outside polygon P1;
  *       this may create one or more convex polygons.
  *  (2)  Do both (1) and (3).
  *
@@ -65,7 +65,7 @@ double _epsArea;   /* minimum surface area */
  *  Return 0 if P2 outside P1, 1 if P2 inside P1, 2 for partial overlap.
  */
 
-int PolygonOverlap(PolyData polyData, const Polygon *p1, Polygon *p2, const int savePD, int freeP2){
+int PolygonOverlap(PolyData *polyData, const Polygon *p1, Polygon *p2, const int savePD, int freeP2){
   Polygon *pp;     /* pointer to polygon */
   Polygon *initUsedPD;  /* initial top-of-stack pointer */
   PolygonVertexEdge *pv1;    /* pointer to edge of P1 */
@@ -90,7 +90,7 @@ int PolygonOverlap(PolyData polyData, const Polygon *p1, Polygon *p2, const int 
     p1, p2, savePD );
 #endif
 
-  initUsedPD = polyData.nextUsedPD;
+  initUsedPD = polyData->nextUsedPD;
   nTempVrt = GetPolygonVrt2D( p2, tempVrt );
 
 #if( DEBUG > 1 )
@@ -107,7 +107,7 @@ int PolygonOverlap(PolyData polyData, const Polygon *p1, Polygon *p2, const int 
 #if( DEBUG > 1 )
     fprintf(_ulog, "Test against edge of P1\nU:" );
 #endif
- 
+
         /* compute and save u[j] - relations of vertices to edge */
     a1 = pv1->a; b1 = pv1->b; c1 = pv1->c;
     pv1 = pv1->next;
@@ -127,7 +127,7 @@ int PolygonOverlap(PolyData polyData, const Polygon *p1, Polygon *p2, const int 
 #if( DEBUG > 1 )
     fprintf( _ulog, "\nQuick test:  right %d; left %d;\n", right, left );
 #endif
- 
+
         /* use quick tests to skip unnecessary calculations */
     if( right ) continue;
     if( left ) goto p2_outside_p1;
@@ -240,8 +240,8 @@ p2_outside_p1:     /* no overlap between P1 and P2 */
 #endif
   if( savePD > 1 )    /* save outside polygon - P2 */
     {
-    if( initUsedPD != polyData.nextUsedPD )  /* remove previous outside polygons */
-      FreePolygons( polyData, polyData.nextUsedPD, initUsedPD );
+    if( initUsedPD != polyData->nextUsedPD )  /* remove previous outside polygons */
+      FreePolygons( polyData, polyData->nextUsedPD, initUsedPD );
 
     if( freeP2 )         /* transfer P2 to new stack */
       {
@@ -269,7 +269,7 @@ p2_outside_p1:     /* no overlap between P1 and P2 */
 #endif
       }
     pp->next = initUsedPD;   /* link PP to stack */
-    polyData.nextUsedPD = pp;
+    polyData->nextUsedPD = pp;
     }
 
 finish:
@@ -288,7 +288,7 @@ finish:
 /***  TransferVrt.c  *********************************************************/
 
 /*  Transfer vertices from polygon fromVrt to polygon toVrt eliminating nearly
- *  duplicate vertices.  Closeness of vertices determined by _epsDist.  
+ *  duplicate vertices.  Closeness of vertices determined by _epsDist.
  *  Return number of vertices in polygon toVrt.  */
 
 int TransferVrt(Vec2 *toVrt, const Vec2 *fromVrt, int nFromVrt){
@@ -326,7 +326,7 @@ int TransferVrt(Vec2 *toVrt, const Vec2 *fromVrt, int nFromVrt){
  *  Return NULL if polygon area too small; otherwise return pointer to polygon.
  */
 
-Polygon *SetPolygonHC( PolyData polyData, const int nVrt, const Vec2 *polyVrt, const double trns )
+Polygon *SetPolygonHC( PolyData *polyData, const int nVrt, const Vec2 *polyVrt, const double trns )
 /* nVrt    - number of vertices (vertices in clockwise sequence);
  * polyVrt - X,Y coordinates of vertices (1st vertex not repeated at end),
              index from 0 to nVrt-1. */
@@ -372,8 +372,8 @@ Polygon *SetPolygonHC( PolyData polyData, const int nVrt, const Vec2 *polyVrt, c
     }
   else
     {
-    pp->next = polyData.nextUsedPD;     /* link polygon to current list */
-    polyData.nextUsedPD = pp;           /* prepare for next linked polygon */
+    pp->next = polyData->nextUsedPD;     /* link polygon to current list */
+    polyData->nextUsedPD = pp;           /* prepare for next linked polygon */
     }
 
   return pp;
@@ -382,22 +382,22 @@ Polygon *SetPolygonHC( PolyData polyData, const int nVrt, const Vec2 *polyVrt, c
 
 /***  GetPolygonHC.c  ********************************************************/
 
-/*  Return pointer to a cleared polygon structure.  
- *  This is taken from the list of unused structures if possible.  
+/*  Return pointer to a cleared polygon structure.
+ *  This is taken from the list of unused structures if possible.
  *  Otherwise, a new structure will be allocated.  */
 
-Polygon *GetPolygonHC(PolyData polyData)
+Polygon *GetPolygonHC(PolyData *polyData)
   {
   Polygon *pp;  /* pointer to polygon structure */
 
-  if( polyData.nextFreePD )
+  if( polyData->nextFreePD )
     {
-    pp = polyData.nextFreePD;
-    polyData.nextFreePD = polyData.nextFreePD->next;
+    pp = polyData->nextFreePD;
+    polyData->nextFreePD = polyData->nextFreePD->next;
     memset( pp, 0, sizeof(Polygon) );  /* clear pointers */
     }
   else
-    pp = Alc_EC( &(polyData.memPoly), sizeof(Polygon), __FILE__, __LINE__ );
+    pp = Alc_EC( &(polyData->memPoly), sizeof(Polygon), __FILE__, __LINE__ );
 
   return pp;
 
@@ -405,21 +405,21 @@ Polygon *GetPolygonHC(PolyData polyData)
 
 /***  GetVrtEdgeHC.c  ********************************************************/
 
-/*  Return pointer to an uncleared vertex/edge structure.  
- *  This is taken from the list of unused structures if possible.  
+/*  Return pointer to an uncleared vertex/edge structure.
+ *  This is taken from the list of unused structures if possible.
  *  Otherwise, a new structure will be allocated.  */
 
-PolygonVertexEdge *GetVrtEdgeHC(PolyData polyData)
+PolygonVertexEdge *GetVrtEdgeHC(PolyData *polyData)
   {
   PolygonVertexEdge *pv;  /* pointer to vertex/edge structure */
 
-  if( polyData.nextFreeVE )
+  if( polyData->nextFreeVE )
     {
-    pv = polyData.nextFreeVE;
-    polyData.nextFreeVE = polyData.nextFreeVE->next;
+    pv = polyData->nextFreeVE;
+    polyData->nextFreeVE = polyData->nextFreeVE->next;
     }
   else
-    pv = Alc_EC( &(polyData.memPoly), sizeof(PolygonVertexEdge), __FILE__, __LINE__ );
+    pv = Alc_EC( &(polyData->memPoly), sizeof(PolygonVertexEdge), __FILE__, __LINE__ );
 
   return pv;
 
@@ -429,7 +429,7 @@ PolygonVertexEdge *GetVrtEdgeHC(PolyData polyData)
 
 /*  Restore list of polygon descriptions to free space.  */
 
-void FreePolygons( PolyData polyData, Polygon *first, Polygon *last )
+void FreePolygons( PolyData *polyData, Polygon *first, Polygon *last )
 /* first;  - pointer to first polygon in linked list (not NULL).
  * last;   - pointer to polygon AFTER last one freed (NULL = complete list). */
   {
@@ -445,12 +445,12 @@ void FreePolygons( PolyData polyData, Polygon *first, Polygon *last )
     pv = pp->firstVE->next;           /* free vertices (circular list) */
     while( pv->next != pp->firstVE )  /* find "end" of vertex list */
       pv = pv->next;
-    pv->next = polyData.nextFreeVE;           /* reset vertex links */
-    polyData.nextFreeVE = pp->firstVE;
+    pv->next = polyData->nextFreeVE;           /* reset vertex links */
+    polyData->nextFreeVE = pp->firstVE;
     if( pp->next == last ) break;
     }
-  pp->next = polyData.nextFreePD;       /* reset polygon links */
-  polyData.nextFreePD = first;
+  pp->next = polyData->nextFreePD;       /* reset polygon links */
+  polyData->nextFreePD = first;
 
   }  /*  end of FreePolygons  */
 
@@ -558,7 +558,7 @@ void FreePolygonMem(PolyData polyData)
  *  the base surface. Vertices may be in clockwise or counter-clockwise order.
  *  The polygon is checked against each edge of the window, with the portion
  *  inside the edge saved in the tempVrt or polyVrt array in turn.
- *  The code is long, but the loops are short.  
+ *  The code is long, but the loops are short.
  *  Return the number of number of vertices in the clipped polygon
  *  and the clipped vertices in polyVrt.
  */
@@ -573,7 +573,7 @@ int LimitPolygon( int nVrt, Vec2 polyVrt[],
   Vec2 *tempVrt = Alc_V( 0, _maxNVT, sizeof(Vec2), __FILE__, __LINE__ );
 
   polyVrt[nVrt].x = polyVrt[0].x;
-  polyVrt[nVrt].y = polyVrt[0].y; 
+  polyVrt[nVrt].y = polyVrt[0].y;
   for( n=m=0; n<nVrt; n++ )
     {
     if( polyVrt[n].x < maxX)
@@ -607,7 +607,7 @@ int LimitPolygon( int nVrt, Vec2 polyVrt[],
     return 0;
                          /* test vertices against minX */
   tempVrt[nVrt].x = tempVrt[0].x;
-  tempVrt[nVrt].y = tempVrt[0].y; 
+  tempVrt[nVrt].y = tempVrt[0].y;
   for( n=m=0; n<nVrt; n++ )
     {
     if( tempVrt[n].x > minX)
@@ -641,7 +641,7 @@ int LimitPolygon( int nVrt, Vec2 polyVrt[],
     return 0;
                          /* test vertices against maxY */
   polyVrt[nVrt].y = polyVrt[0].y;
-  polyVrt[nVrt].x = polyVrt[0].x; 
+  polyVrt[nVrt].x = polyVrt[0].x;
   for( n=m=0; n<nVrt; n++ )
     {
     if( polyVrt[n].y < maxY)
@@ -675,7 +675,7 @@ int LimitPolygon( int nVrt, Vec2 polyVrt[],
     return 0;
                          /* test vertices against minY */
   tempVrt[nVrt].y = tempVrt[0].y;
-  tempVrt[nVrt].x = tempVrt[0].x; 
+  tempVrt[nVrt].x = tempVrt[0].x;
   for( n=m=0; n<nVrt; n++ )
     {
     if( tempVrt[n].y > minY)

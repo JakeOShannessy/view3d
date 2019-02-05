@@ -453,6 +453,7 @@ mod tests {
             n_all_srf: 2,
             n_rad_srf: 2,
             n_obstr_srf: 0,
+            n_mask_srf: 0,
             vertices: vec![
                 Vec3 {x: 0_f64, y: 0_f64, z: 0_f64},
                 Vec3 {x: width, y: 0_f64, z: 0_f64},
@@ -527,6 +528,7 @@ mod tests {
             n_all_srf: 2,
             n_rad_srf: 2,
             n_obstr_srf: 0,
+            n_mask_srf: 0,
             vertices: vec![
                 Vec3 {x: 0_f64, y: eta1,  z: xi1},
                 Vec3 {x: 0_f64, y: eta2,  z: xi1},

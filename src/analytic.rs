@@ -132,6 +132,20 @@ fn analytic_c15_g(x: f64, y: f64, eta: f64, xi: f64) -> f64 {
                     - (y - eta).powi(2) * ((1_f64 + (1_f64 / k.powi(2))).ln())))
 }
 
+pub fn analytic_coaxial_squares(width1: f64, width2: f64, distance: f64) -> f64 {
+    let w1 = width1/distance;
+    let w2 = width2/distance;
+    let p = (w1.powi(2)+w2.powi(2)+2_f64).powi(2);
+    let x = w2-w1;
+    let y = w2+w1;
+    let q = (x.powi(2)+2_f64)*(y.powi(2)+2_f64);
+    let u = (x.powi(2)+4_f64).sqrt();
+    let v = (y.powi(2)+4_f64).sqrt();
+    let s = u*(x*(x/u).atan()-y*(y/u).atan());
+    let t = v*(x*(x/v).atan()-y*(y/v).atan());
+    (1_f64/(std::f64::consts::PI*w1.powi(2)))*((p/q).ln()+s-t)
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::*;
@@ -200,6 +214,22 @@ mod tests {
         let res = analytic_c15(3_f64, 4_f64, 1_f64, 2_f64, 3_f64, 4_f64, 3_f64, 4_f64);
         println!("analytic_c15_b: {}", res);
         let expected = 0.004768347753645874_f64;
+        assert_eq_err!(res, expected, 0.0000001);
+    }
+
+     #[test]
+    fn use_analytic_coaxial_squares() {
+        let res = analytic_coaxial_squares(1_f64,1_f64,1_f64);
+        println!("analytic_coaxial_squares: {}", res);
+        let expected = 0.19982489569838732_f64;
+        assert_eq_err!(res, expected, 0.0000001);
+    }
+
+    #[test]
+    fn use_analytic_coaxial_squares2() {
+        let res = analytic_coaxial_squares(1_f64,1_f64,1_f64);
+        println!("analytic_coaxial_squares: {}", res);
+        let expected = 0.19982489569838732_f64;
         assert_eq_err!(res, expected, 0.0000001);
     }
 }

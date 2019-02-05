@@ -595,9 +595,10 @@ InData InDataFromRaw(RawInData *rawInData) {
 
   vfCtrl.nRadSrf = rawInData->nRadSrf;
   vfCtrl.nVertices = rawInData->nVertices;
-  /* vfCtrl.nAllSrf = rawInData->nAllSrf;   */
+  vfCtrl.nAllSrf = rawInData->nAllSrf;
+  vfCtrl.nMaskSrf = rawInData->nMaskSrf;
   vfCtrl.nObstrSrf = rawInData->nObstrSrf;
-  vfCtrl.nAllSrf = vfCtrl.nRadSrf + vfCtrl.nObstrSrf;
+  /* vfCtrl.nAllSrf = vfCtrl.nRadSrf + vfCtrl.nObstrSrf; */
 
   /* CountVS3D(inHandle, title, &vfCtrl ); */
   /* TODO: allocate memory and copy title string. */
@@ -662,6 +663,8 @@ InData InDataFromRaw(RawInData *rawInData) {
 
   }
 
+  TestSubSrf( inData.srf, inData.base, &vfCtrl );
+
   /* reads the  file a second time */
   /* read v/s data file */
   if(_list>2)
@@ -689,7 +692,6 @@ void GetVS3DNew( FILE *inHandle, RawInData *inData) {
       case 'V':
         n = ReadIX( inHandle, 0 );
         nv += 1;
-        inData->nVertices++;
         if( n!= nv ) error( 2, __FILE__, __LINE__,
           "Vertex: ", IntStr(n), " out of sequence", "" );
         inData->vertices[nv].x = ReadR8( inHandle, 0 );
@@ -749,7 +751,8 @@ void GetVS3DNew( FILE *inHandle, RawInData *inData) {
           inData->surfaces[ns].vertexIndices[3] = n;
         }
 
-        /* SetPlane( inData->srf+ns ); */          /* compute plane polygon values */
+        /* TODO: this setplane action needs to be fixed */
+        /* SetPlane( inData->surfaces+ns ); */         /* compute plane polygon values */
 
 
         if( c!='O' )
@@ -778,8 +781,6 @@ void GetVS3DNew( FILE *inHandle, RawInData *inData) {
   }
 
 finish:
-  /* TestSubSrf( srf, base, vfCtrl ); */
-
   if( error( -1, __FILE__, __LINE__, "" )>0 )
     error( 3, __FILE__, __LINE__, "Fix errors in input data", "" );
 
@@ -1075,17 +1076,17 @@ void TestSubSrf( SRFDAT3D *srf, const int *baseSrf, View3DControlData *vfCtrl ){
     }
                                 /* begin with cleared small structures area */
     PolyData polyData = InitPolygonMem( eps, eps );
-    base = SetPolygonHC( polyData, srfM.nv, vM, 1.0 );  /* convert to HC */
-    subs = SetPolygonHC( polyData, srfN.nv, vN, 1.0 );
+    base = SetPolygonHC( &polyData, srfM.nv, vM, 1.0 );  /* convert to HC */
+    subs = SetPolygonHC( &polyData, srfN.nv, vN, 1.0 );
     if( subs && base ){
-      if( PolygonOverlap(polyData, base, subs, 3, 0 ) != 1 )  /* 1 = enclosed */
+      if( PolygonOverlap(&polyData, base, subs, 3, 0 ) != 1 )  /* 1 = enclosed */
         error( 2, __FILE__, __LINE__, " Subsurface ",
           IntStr(n), " is not (entirely?) within its base", "" );
     }else{
       fprintf( _ulog, "Enclosure test: base = %d, subs = %d, dot = %g\n", n, m, dot );
       error( 3, __FILE__, __LINE__, " Enclosure test failure", "" );
     }
-    FreePolygonMem(polyData);
+    FreePolygonMem(&polyData);
   }  /* end surface loop */
 
 }  /* end of TestSubSrf */
