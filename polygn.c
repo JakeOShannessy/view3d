@@ -458,9 +458,9 @@ void FreePolygons( PolyData *polyData, Polygon *first, Polygon *last )
 
 /*  Start a new stack (linked list) of polygons.  */
 
-void NewPolygonStack( PolyData polyData )
+void NewPolygonStack( PolyData *polyData )
   {
-  polyData.nextUsedPD = NULL;  /* define bottom of stack */
+  polyData->nextUsedPD = NULL;  /* define bottom of stack */
 
   }  /* end NewPolygonStack */
 
@@ -468,9 +468,9 @@ void NewPolygonStack( PolyData polyData )
 
 /*  Return pointer to top of active polygon stack.  */
 
-Polygon *TopOfPolygonStack( PolyData polyData )
+Polygon *TopOfPolygonStack( PolyData *polyData )
   {
-  return polyData.nextUsedPD;
+  return polyData->nextUsedPD;
 
   }  /* end TopOfPolygonStack */
 
@@ -545,10 +545,10 @@ PolyData InitPolygonMem( const double epsdist, const double epsarea )
 
 /*  Free polygon processing memory.  */
 
-void FreePolygonMem(PolyData polyData)
+void FreePolygonMem(PolyData *polyData)
   {
-  if( polyData.memPoly )
-    polyData.memPoly = (char *)Fre_EC( polyData.memPoly, __FILE__, __LINE__ );
+  if( polyData->memPoly )
+    polyData->memPoly = (char *)Fre_EC( polyData->memPoly, __FILE__, __LINE__ );
 
   }  /* end FreePolygonMem */
 
@@ -748,21 +748,21 @@ void DumpHC( char *title, const Polygon *pfp, const Polygon *plp ){
 }  /* end of DumpHC */
 
 
-void DumpFreePolygons( PolyData polyData ){
+void DumpFreePolygons( PolyData *polyData ){
   Polygon *pp;
 
   fprintf( _ulog, "FREE POLYGONS:" );
-  for( pp=polyData.nextFreePD; pp; pp=pp->next )
+  for( pp=polyData->nextFreePD; pp; pp=pp->next )
     fprintf( _ulog, " [%p]", pp );
   fprintf( _ulog, "\n" );
 }  /* end DumpFreePolygons */
 
 
-void DumpFreeVertices( PolyData polyData ){
+void DumpFreeVertices( PolyData *polyData ){
   PolygonVertexEdge *pv;
 
   fprintf( _ulog, "FREE VERTICES:" );
-  for( pv=polyData.nextFreeVE; pv; pv=pv->next )
+  for( pv=polyData->nextFreeVE; pv; pv=pv->next )
     fprintf( _ulog, " [%p]", pv );
   fprintf( _ulog, "\n" );
 }  /* end DumpFreeVertices */
