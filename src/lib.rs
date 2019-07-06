@@ -71,7 +71,8 @@ pub fn process_path(infile: String) -> VFResults {
 /// Process input data to produce view factor results.
 pub fn process_v3d(in_data: InData) -> VFResults {
     unsafe {
-        // Run the calculation. We convert the in_data into the C type before we do this.
+        // Run the calculation. We convert the in_data into the C type before we
+        // do this.
         let vf_res = calculateVFs(in_data.into());
         // From here we copy the data into a Rust native struct. This is more
         // expensive then simply abstracting over the underlying C type, but it

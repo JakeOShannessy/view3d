@@ -79,115 +79,63 @@ double ViewUnobstructed( View3DControlData *vfCtrl, int row, int col, EdgeData e
   int nmax, mmax;
   int nDiv;
 
-#if( DEBUG > 1 )
-  fprintf( _ulog, " VU %.2e", vfCtrl->epsAF );
-#endif
-
   srf1 = &vfCtrl->srf1T;
   srf2 = &vfCtrl->srf2T;
+
   if( vfCtrl->method < ALI )
     AF1 = 2.0 * srf1->area;
-  if( vfCtrl->method == DAI )  /* double area integration */
-    {
-#if( DEBUG > 1 )
-    fprintf( _ulog, " 2AI" );
-#endif
-    for( nDiv=1; nDiv<5; nDiv++ )
-      {
-      AF0 = AF1;
-      nmax = SubSrf( nDiv, srf1->nv, srf1->v, srf1->area, pt1, area1 );
-      mmax = SubSrf( nDiv, srf2->nv, srf2->v, srf2->area, pt2, area2 );
-      AF1 = View2AI( nmax, &srf1->dc, pt1, area1, mmax, &srf2->dc, pt2, area2 );
-#if( DEBUG > 1 )
-      fprintf( _ulog, " %g", AF1 );
-#endif
-      if( fabs(AF1 - AF0) < vfCtrl->epsAF ) goto done;
+  /* Execute the algorithm indicated by vfCtrl->method */
+  switch (vfCtrl->method) {
+    case DAI: /* double area integration */
+      for( nDiv=1; nDiv<5; nDiv++ ) {
+        AF0 = AF1;
+        nmax = SubSrf( nDiv, srf1->nv, srf1->v, srf1->area, pt1, area1 );
+        mmax = SubSrf( nDiv, srf2->nv, srf2->v, srf2->area, pt2, area2 );
+        AF1 = View2AI( nmax, &srf1->dc, pt1, area1, mmax, &srf2->dc, pt2, area2 );
+        if( fabs(AF1 - AF0) < vfCtrl->epsAF ) goto done;
       }
-    }
-  else if( vfCtrl->method == SAI )  /* single area integration */
-    {
-#if( DEBUG > 1 )
-    fprintf( _ulog, " 1AI" );
-#endif
-    for( nDiv=1; nDiv<5; nDiv++ )
-      {
-      AF0 = AF1;
-      nmax = SubSrf( nDiv, srf1->nv, srf1->v, srf1->area, pt1, area1 );
-      AF1 = -View1AI( nmax, pt1, area1, &srf1->dc, srf2 );
-#if( DEBUG > 1 )
-      fprintf( _ulog, " %g", AF1 );
-#endif
-      if( fabs(AF1 - AF0) < vfCtrl->epsAF ) goto done;
+      break;
+    case SAI: /* single area integration */
+      for( nDiv=1; nDiv<5; nDiv++ ) {
+        AF0 = AF1;
+        nmax = SubSrf( nDiv, srf1->nv, srf1->v, srf1->area, pt1, area1 );
+        AF1 = -View1AI( nmax, pt1, area1, &srf1->dc, srf2 );
+        if( fabs(AF1 - AF0) < vfCtrl->epsAF ) goto done;
       }
-    }
-  else if( vfCtrl->method == SLI )  /* single line integration */
-    {
-#if( DEBUG > 1 )
-    fprintf( _ulog, " 1LI" );
-#endif
-    for( nDiv=1; nDiv<5; nDiv++ )
-      {
-      AF0 = AF1;
-      DivideEdges( nDiv, srf1->nv, srf1->v, edgeData.rc1, edgeData.dv1 );
-      AF1 = View1LI( nDiv, srf1->nv, edgeData.rc1, edgeData.dv1, srf1->v, srf2->nv, srf2->v );
-#if( DEBUG > 1 )
-      fprintf( _ulog, " %g", AF1 );
-#endif
-      if( fabs(AF1 - AF0) < vfCtrl->epsAF ) goto done;
+      break;
+    case SLI: /* single line integration */
+      for( nDiv=1; nDiv<5; nDiv++ ) {
+        AF0 = AF1;
+        DivideEdges( nDiv, srf1->nv, srf1->v, edgeData.rc1, edgeData.dv1 );
+        AF1 = View1LI( nDiv, srf1->nv, edgeData.rc1, edgeData.dv1, srf1->v, srf2->nv, srf2->v );
+        if( fabs(AF1 - AF0) < vfCtrl->epsAF ) goto done;
       }
-    }
-  else if( vfCtrl->method == DLI )  /* double line integration */
-    {
-#if( DEBUG > 1 )
-    fprintf( _ulog, " 2LI" );
-#endif
-    for( nDiv=1; nDiv<5; nDiv++ )
-      {
-      AF0 = AF1;
-      DivideEdges( nDiv, srf1->nv, srf1->v, edgeData.rc1, edgeData.dv1 );
-      DivideEdges( nDiv, srf2->nv, srf2->v, edgeData.rc2, edgeData.dv2 );
-      AF1 = View2LI( nDiv, srf1->nv, edgeData.rc1, edgeData.dv1, nDiv, srf2->nv, edgeData.rc2, edgeData.dv2 );
-#if( DEBUG > 1 )
-      fprintf( _ulog, " %g", AF1 );
-#endif
-      if( fabs(AF1 - AF0) < vfCtrl->epsAF ) goto done;
+      break;
+    case DLI: /* double line integration */
+      for( nDiv=1; nDiv<5; nDiv++ ) {
+        AF0 = AF1;
+        DivideEdges( nDiv, srf1->nv, srf1->v, edgeData.rc1, edgeData.dv1 );
+        DivideEdges( nDiv, srf2->nv, srf2->v, edgeData.rc2, edgeData.dv2 );
+        AF1 = View2LI( nDiv, srf1->nv, edgeData.rc1, edgeData.dv1, nDiv, srf2->nv, edgeData.rc2, edgeData.dv2 );
+        if( fabs(AF1 - AF0) < vfCtrl->epsAF ) goto done;
       }
-    }
+      break;
+    default:
+      break;
+  }
 
   /* adaptive single line integration - method==ALI or simpler methods fail */
-#if( DEBUG > 1 )
-  if( vfCtrl->method < ALI )
-    fprintf( _ulog, " Fixing view factor\n" );
-  fprintf( _ulog, " ALI" );
-#endif
-#if( DEBUG == 1 )
-  if( vfCtrl->method < ALI )
-    fprintf( _ulog, " row %d, col %d,  Fix %s (r %.2f, s %.2f) AF0 %g Af1 %g\n",
-      row, col, methods[vfCtrl->method],
-      vfCtrl->rcRatio, vfCtrl->relSep, AF0, AF1 );
-#endif
-
   AF1 = ViewALI( srf1->nv, srf1->v, srf2->nv, srf2->v, vfCtrl );
 
-#if( DEBUG == 1 )
-  if( vfCtrl->method < ALI )
-    fprintf( _ulog, "AF %g\n", AF1 );
-#endif
   if( vfCtrl->method == ALI )  /* adaptive line integration */
     nDiv = 2;                /* for bins[][] report */
-#if( DEBUG > 1 )
-  fprintf( _ulog, " %g", AF1 );
-#endif
 
 done:
-#if( DEBUG > 1 )
-  fprintf( _ulog, "\n" );
-#endif
   vfCtrl->nEdgeDiv = nDiv;
 
   return AF1;
 
-  }  /* end ViewUnobstructed */
+}  /* end ViewUnobstructed */
 
 /***  View2AI.c  *************************************************************/
 
