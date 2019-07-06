@@ -12,8 +12,8 @@
 #include <string.h> /* prototype: memcpy */
 #include <math.h>   /* prototypes: fabs, sqrt */
 #include <float.h>  /* define: FLT_EPSILON */
-#include "types.h" 
-#include "misc.h" 
+#include "types.h"
+#include "misc.h"
 #include "test3d.h"
 #include "common.h"
 
@@ -53,7 +53,7 @@ void CTScale( const double s, double t[4][4] )
 
 /***  CTShift.c  *************************************************************/
 
-/*  Add shift {S} to transformation matrix [T]. That is, point {S} in the 
+/*  Add shift {S} to transformation matrix [T]. That is, point {S} in the
  *  original coordinate system becomes the origin in the new coordinate system.
  *  The shift transformation matrix is:
  *         |  1  0  0 -sx  |   | t00 t01 t02 t03 |
@@ -132,8 +132,8 @@ void CTRotateZ( const double cosAngle, const double sinAngle, double t[4][4] )
   }  /* end of CTRotateZ */
 
 /***  CTRotateU.c  ***********************************************************/
- 
-/*  Add double rotation to transformation matrix [T] so as to view the origin 
+
+/*  Add double rotation to transformation matrix [T] so as to view the origin
  *  from direction U.  This is done by a Z-rotation followed by an X-rotation.
  */
 
@@ -163,7 +163,7 @@ void CTRotateU( const DirCos *u, double t[4][4] )
  *     | q0 |   | t00 t01 t02 t03 |   | p0 |  (x coordinate)
  *     | q1 | = | t10 t11 t12 t13 | * | p1 |  (y)
  *     | q2 |   | t20 t21 t22 t23 |   | p2 |  (z)
- *     | 1. |   | 0.0 0.0 0.0 1.0 |   | 1. | 
+ *     | 1. |   | 0.0 0.0 0.0 1.0 |   | 1. |
  *  (Constants in row 4 are assumed; i.e., no perspective transformation.)
  */
 
@@ -182,9 +182,8 @@ void CT3D( const int nv, double t[4][4], const Vec3 *p, Vec3 *q )
 
 /***  CoordTrans3D.c  ********************************************************/
 
-/*  Coordinate transformation so that surface 2 is centered 
+/*  Coordinate transformation so that surface 2 is centered
  *  in the Z=0 plane and fits within the -1<x<1 and -1<y<1 square.  */
-
 void CoordTrans3D( SRFDAT3D *srf, SRFDATNM *srf1, SRFDATNM *srf2,
   int *probableObstr, View3DControlData *vfCtrl )
 /* srf  - data for all surfaces.
@@ -382,4 +381,3 @@ void DumpVA( char *title, const int rows, const int cols, double *a )
   fflush( _ulog );
 
   }  /* end of DumpVA */
-

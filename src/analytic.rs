@@ -171,8 +171,8 @@ mod tests {
         analytic_1(-1_f64, 1_f64);
     }
 
-    /// Test that the analytic results of 1 matches the results of c11 when
-    /// they use the same geometry.
+    // Test that the analytic results of 1 matches the results of c11 when
+    // they use the same geometry.
     quickcheck! {
         fn matches_1_c11_prop(width: f64, height: f64) -> TestResult {
             if width <= 0_f64 || height <= 0_f64 {
