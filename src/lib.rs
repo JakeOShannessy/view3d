@@ -157,6 +157,7 @@ impl std::fmt::Debug for RawInData {
 }
 
 /// Input data using native Rust types
+#[derive(Debug)]
 pub struct InData {
     pub opts: InOptions,
     pub n_all_srf: i32, // TODO: should not be necessary
@@ -214,7 +215,7 @@ impl From<InData> for RawInData {
 #[repr(C)]
 pub struct RawInOptions {
   pub title: *const c_char,
-  pub eps_adap: c_float,
+  pub eps_adap: c_double,
   pub max_recurs_ali: i32,
   pub min_recursion: i32,
   pub max_recursion: i32,
@@ -228,7 +229,7 @@ pub struct RawInOptions {
 #[derive(Debug)]
 pub struct InOptions {
   pub title: String,
-  pub eps_adap: f32,
+  pub eps_adap: f64,
   pub max_recurs_ali: i32,
   pub min_recursion: i32,
   pub max_recursion: i32,
@@ -440,7 +441,7 @@ mod tests {
         InData {
             opts: InOptions {
                 title: String::from("test"),
-                eps_adap: 1.0e-4_f32,
+                eps_adap: 1.0e-4_f64,
                 max_recurs_ali: 12,
                 min_recursion: 0,
                 max_recursion: 8,
@@ -515,7 +516,7 @@ mod tests {
         InData {
             opts: InOptions {
                 title: String::from("test"),
-                eps_adap: 1.0e-4_f32,
+                eps_adap: 1.0e-4_f64,
                 max_recurs_ali: 12,
                 min_recursion: 0,
                 max_recursion: 8,

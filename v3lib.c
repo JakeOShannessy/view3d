@@ -117,7 +117,7 @@ RawInData parseIn(FILE *inHandle) {
   char title[LINELEN]; /* project title */
   RawInData rawInData = {0};
   /* non-zero control values: */
-  vfCtrl.epsAdap = 1.0e-4f; /* convergence for adaptive integration */
+  vfCtrl.epsAdap = 0.0001; /* convergence for adaptive integration */
   vfCtrl.maxRecursALI = 12; /* maximum number of recursion levels */
   vfCtrl.maxRecursion = 8;  /* maximum number of recursion levels */
   CountVS3D(inHandle, title, &vfCtrl );
