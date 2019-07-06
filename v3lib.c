@@ -245,7 +245,7 @@ VFResultsC calculateVFs(RawInData rawInData){
   InData inData = InDataFromRaw(&rawInData);
   _ulog = stderr;
   double **AF;         /* triangular array of area*view factor values [1:nSrf][] */
-  int *possibleObstr;  /* list of possible view obstructing surfaces */
+  int *possibleObstr;  /* list of (indices of) possible view obstructing surfaces */
 
   int encl = inData.vfCtrl.enclosure; /* 1 = surfaces form enclosure */
   int nSrf0 = inData.vfCtrl.nRadSrf; /* initial number of surfaces */
@@ -268,22 +268,14 @@ VFResultsC calculateVFs(RawInData rawInData){
   vfCtrl.nPossObstr = SetPosObstr3D( vfCtrl.nAllSrf, srf, possibleObstr );
 
   /* If row is specified (i.e. we are only interested in the view factors of
-   * one surface) then we allocate an array big enough for those values.
-   */
+   * one surface) then we allocate an array big enough for those values. */
   if( vfCtrl.row ){  /* may not work with some compilers. GNW 2008/01/22 */
     AF = Alc_MC( vfCtrl.row, vfCtrl.row, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
   /* Otherwise we want every surface to every surface and must allocate a
    * sufficiently sized array.
    */
   } else {
-#ifdef __TURBOC__
-    AF = Alc_MSR( 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
-#else
     AF = Alc_MSC( 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
-#endif
-#ifdef LOGGING
-    fprintf( _ulog, "\nComputing view factors for all %d surfaces\n\n", nSrf0 );
-#endif
   }
 
   /*----- view factor calculation -----*/
@@ -306,7 +298,7 @@ VFResultsC calculateVFs(RawInData rawInData){
       base[n] = 0;
   }
 
-  /* Here we being adusting the view factors */
+  /* Here we begin adusting the view factors */
 
   /* Determine if any of the surfaces are NULS */
   for(n = nSrf; n; n-- ) {
@@ -314,8 +306,8 @@ VFResultsC calculateVFs(RawInData rawInData){
      * them.
      */
     if( srf[n].type==NULS ) {
-      /* This will trigger once at least one such surface is found, DelNull
-       * is then applied to the whole geometry.
+      /* This will trigger once at least one such surface is found, DelNull is
+       * then applied to the whole geometry.
        */
       nSrf = DelNull( nSrf, srf, base, cmbn, emit, area, name, AF );
       /* And we can break from the loop. */
@@ -419,19 +411,8 @@ VFResultsC calculateVFs(RawInData rawInData){
   res_struct.nSrf0 = nSrf0;
 
   /* Begin: Free memory of data structures */
-  /* We no longer want to free AF as we pass it out of the function */
-  /* TODO: make sure we free AF later */
-  /*
-  if( vfCtrl.row ){
-    Fre_MC( AF, vfCtrl.row, vfCtrl.row, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
-  }else{
-#ifdef __TURBOC__
-    Fre_MSR( (void **)AF, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
-#else
-    Fre_MSC( (void **)AF, 1, nSrf0, sizeof(double), __FILE__, __LINE__ );
-#endif
-  }
-  */
+  /* AF is not freed here as it is passed of the function. It is freed by
+  freeVFResultsC */
   Fre_V( srf, 1, vfCtrl.nAllSrf, sizeof(SRFDAT3D), __FILE__, __LINE__ );
   Fre_V( cmbn, 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
   Fre_V( base, 1, nSrf0, sizeof(int), __FILE__, __LINE__ );
