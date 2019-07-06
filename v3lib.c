@@ -238,7 +238,8 @@ double getEnclosureVolume(View3DControlData vfCtrl, SRFDAT3D *srf) {
 }
 
 /*----------------------------------------------------------------------------*/
-/* This is modified to be the simplest possible (and with little logging). */
+/* This is modified to be the simplest possible (and with little logging). This
+is the function which handles view factor calculations. */
 VFResultsC calculateVFs(RawInData rawInData){
   int i, m, n; /* for loop counters ONLY */
   InData inData = InDataFromRaw(&rawInData);

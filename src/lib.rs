@@ -10,13 +10,19 @@ use std::io::{Write};
 // Link in the C lib via FFI
 #[link(name = "view3d", kind = "static")]
 extern "C" {
+    /// Parse the data from a given file path. This is preferred to be done by
+    /// the binding.
     pub fn parseInPath(infile: *const c_char) -> RawInData;
+    /// Perform the calculation and return the results.
     pub fn calculateVFs(rawInData: RawInData) -> VFResultsC;
     pub fn processPaths2d(infile: *const c_char, outfile: *const c_char);
+    /// Print the formatted results to a particular handle.
     pub fn printVFs(format: i32, file: *mut FILE, results: VFResultsC);
+    /// Free the memory allocated for VFResultsC.
     pub fn freeVFResultsC(results: VFResultsC);
 }
 
+/// Read in an input file and produce view factor results.
 pub fn process_path(infile: String) -> VFResults {
     // Convert these arguments to C strings to use in FFI
     let infile_c = CString::new(infile).expect("CString::new failed");
@@ -62,6 +68,7 @@ pub fn process_path(infile: String) -> VFResults {
     }
 }
 
+/// Process input data to produce view factor results.
 pub fn process_v3d(in_data: InData) -> VFResults {
     unsafe {
         // Run the calculation. We convert the in_data into the C type before we do this.
@@ -160,8 +167,10 @@ impl std::fmt::Debug for RawInData {
 #[derive(Debug)]
 pub struct InData {
     pub opts: InOptions,
+    /// The number of surfaces that participate in emitting and receiving.
     pub n_all_srf: i32, // TODO: should not be necessary
     pub n_rad_srf: i32,
+    /// The number of surfaces that only obstruct.
     pub n_obstr_srf: i32,
     pub n_mask_srf: i32,
     pub vertices: Vec<Vec3>,
@@ -211,6 +220,8 @@ impl From<InData> for RawInData {
     }
 }
 
+/// A raw representation of configuration options that are passed to the C
+/// library.
 #[derive(Debug)]
 #[repr(C)]
 pub struct RawInOptions {
@@ -226,6 +237,7 @@ pub struct RawInOptions {
   pub prj_reverse: i32,
 }
 
+/// Configuration options for a calculation.
 #[derive(Debug)]
 pub struct InOptions {
   pub title: String,
@@ -277,20 +289,26 @@ impl From<InOptions> for RawInOptions {
     }
 }
 
+/// A raw C representation of a surface.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct RawSurf {
-  pub nr: i32,
-  pub nv: i32,
-  pub type_: i32,
-  pub base: i32,
-  pub cmbn: i32,
-  pub emit: c_float,
-  pub vertex_indices: [i32; 4],
-  pub name: [c_char; 16],
+    /// Surface number.
+    pub nr: i32,
+    /// Number of vertices.
+    pub nv: i32,
+    /// Surface data type.
+    pub type_: i32,
+    pub base: i32,
+    pub cmbn: i32,
+    /// Emittance.
+    pub emit: c_float,
+    pub vertex_indices: [i32; 4],
+    pub name: [c_char; 16],
 //   char name[NAMELEN];
 }
 
+/// A 3-dimensional vector.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub  struct Vec3 {
@@ -299,6 +317,7 @@ pub  struct Vec3 {
   z: c_double,
 }
 
+/// The results of a view factor calculation.
 #[derive(Debug)]
 pub struct VFResults {
     pub n_surfs: u32,
@@ -318,17 +337,6 @@ impl VFResults {
         }
     }
 }
-// pub struct VFResultsC {
-//     program: CString,
-//     program_version: CString,
-//     format: i32,
-//     encl: i32,
-//     didemit: i32,
-//     nSrf: i32,
-//     float *area,
-//     float *emit,
-//     double **AF,
-// }
 
 /// Print the view factor results to Writable handle, e.g. a file open for
 /// writing or stdout etc.

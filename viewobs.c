@@ -339,6 +339,12 @@ double V1AIpart( const int nv, const Vec3 p2[],
  *  and associated areas for numerical (Gaussian) integration.  */
 
 double View1AI( int nss, Vec3 *p1, double *area1, DirCos *dc1, SRFDAT3X *srf2 )
+  /* nss   number of elements of P1
+  *  p1    coordinates of elements of P1 (i.e. centroids of small elements)
+  *  area1 coordinates of elements of P1
+  *  dc1   unit normal vector of P1
+  *  srf2  P2
+  */
   {
   int j;
   double sum=0.0;

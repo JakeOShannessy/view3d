@@ -35,17 +35,20 @@ pub fn analytic_c11(a: f64, b: f64, c: f64) -> f64 {
     f12
 }
 
-/// From http://www.thermalradiation.net.
-/// C-15: Rectangle to rectangle in a perpendicular plane; all boundaries are
-/// parallel or perpendicular to x and ξ boundaries.(Form revised from Ehlert
-/// and Smith) (Note that the expression fails if the rectangles share a common
-/// edge)
+/// C-15: Rectangle to rectangle in a perpendicular plane.
+///
+/// All boundaries are parallel or perpendicular to x and ξ boundaries.(Form
+/// revised from Ehlert and Smith) (Note that the expression fails if the
+/// rectangles share a common edge).
+///
 /// \[
 /// F_{12}=\frac{1}{\left(x_{2}-x_{1}\right)\left(y_{2}-y_{1}\right)}
 /// \sum_{l=1}^{2}\sum_{k=1}^{2}\sum_{k=1}^{2}\sum_{j=1}^{2}\left[
 /// \left(-1\right)^{\left(i+j+k+l\right)}G\left(x_{i},y_{j},\eta_{k},
 /// \xi_{l}\right)\right]
 /// \]
+///
+/// From http://www.thermalradiation.net.
 pub fn analytic_c15(
     x1: f64,
     x2: f64,
